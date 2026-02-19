@@ -54,6 +54,7 @@
                 <p class="text-indigo-200 text-lg font-medium">Map your world, your way.</p>
             </div>
 
+            <!-- Auth Form Card -->
             <div id="auth-card" class="bg-white rounded-[2rem] p-8 shadow-2xl space-y-6">
                 <div id="auth-initial" class="space-y-4">
                     <button id="show-email-auth" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2">
@@ -96,7 +97,7 @@
                     </div>
                 </div>
             </div>
-            <p class="text-indigo-300/60 text-[10px] font-bold uppercase tracking-[0.3em]">Version 2.4 • Live GPS Engine</p>
+            <p class="text-indigo-300/60 text-[10px] font-bold uppercase tracking-[0.3em]">Version 2.3 • Navigation Engine</p>
         </div>
     </div>
 
@@ -112,7 +113,7 @@
                 <h1 class="text-white font-black text-xl tracking-tighter italic uppercase">CustomRoutes</h1>
             </div>
             <div class="flex items-center gap-4">
-                <div id="auth-status" class="bg-black/20 px-3 py-1 rounded-full text-white text-[10px] font-bold tracking-widest uppercase">Connected</div>
+                <div id="auth-status" class="bg-black/20 px-3 py-1 rounded-full text-white text-[10px] font-bold tracking-widest uppercase">Connecting...</div>
                 <button id="sign-out-btn" class="text-white/70 hover:text-white text-[10px] font-bold uppercase tracking-widest">Sign Out</button>
             </div>
         </header>
@@ -139,7 +140,7 @@
                     </div>
 
                     <div id="idle-msg" class="text-center py-8 px-4 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
-                        <p class="text-xs text-slate-400 font-bold uppercase tracking-widest leading-relaxed">Click a point on the map to start your custom path.</p>
+                        <p class="text-xs text-slate-400 font-bold uppercase tracking-widest leading-relaxed">Click points on the map to define your custom path.</p>
                     </div>
                 </div>
 
@@ -175,7 +176,7 @@
                         </div>
                         <div>
                             <p id="nav-target-name" class="text-white font-black uppercase tracking-tighter text-xl leading-none">Navigating...</p>
-                            <p id="nav-status-text" class="text-emerald-200 text-[10px] font-bold uppercase tracking-widest mt-1">Acquiring Location...</p>
+                            <p class="text-emerald-200 text-[10px] font-bold uppercase tracking-widest mt-1">Live GPS Tracking Active</p>
                         </div>
                     </div>
                     <button id="finish-navigation-btn" class="bg-white text-emerald-900 px-6 py-3 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-emerald-50 transition-all">
@@ -212,8 +213,17 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // APP INITIALIZATION
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'custom-routes-v2';
-        const firebaseConfig = JSON.parse(__firebase_config);
+        
+        // Handle potentially missing config
+        let firebaseConfig = {};
+        try {
+            firebaseConfig = JSON.parse(__firebase_config);
+        } catch (e) {
+            console.error("Firebase config not found. Buttons might not work.");
+        }
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -222,9 +232,9 @@
         let isDrawing = false, isSignUp = false, isNavigating = false;
         let selectedRouteData = null;
         let navUserMarker = null;
-        let watchId = null; // To store Geolocation watch ID
+        let gpsWatchId = null;
 
-        // UI Helpers
+        // UI HELPERS
         function showToast(msg) {
             const toast = document.getElementById('toast');
             document.getElementById('toast-text').innerText = msg.toUpperCase();
@@ -238,50 +248,41 @@
             setTimeout(() => { if (map) google.maps.event.trigger(map, "resize"); }, 800);
         }
 
-        // Auth Controls
-        const authInitial = document.getElementById('auth-initial');
-        const emailAuthContainer = document.getElementById('email-auth-container');
-        const showEmailBtn = document.getElementById('show-email-auth');
-        const backBtn = document.getElementById('back-to-initial');
-        const authEmailInput = document.getElementById('auth-email');
-        const authPasswordInput = document.getElementById('auth-password');
-        const toggleAuthBtn = document.getElementById('toggle-auth-mode');
-        const formTitle = document.getElementById('form-title');
-        const submitAuthBtn = document.getElementById('submit-auth');
-        const submitText = document.getElementById('submit-text');
-        const submitLoader = document.getElementById('submit-loader');
-
-        showEmailBtn.onclick = () => {
-            authInitial.classList.add('hidden');
-            emailAuthContainer.classList.remove('hidden');
+        // AUTH HANDLERS
+        document.getElementById('show-email-auth').onclick = () => {
+            document.getElementById('auth-initial').classList.add('hidden');
+            document.getElementById('email-auth-container').classList.remove('hidden');
         };
 
-        backBtn.onclick = () => {
-            authInitial.classList.remove('hidden');
-            emailAuthContainer.classList.add('hidden');
+        document.getElementById('back-to-initial').onclick = () => {
+            document.getElementById('auth-initial').classList.remove('hidden');
+            document.getElementById('email-auth-container').classList.add('hidden');
         };
 
-        toggleAuthBtn.onclick = () => {
+        document.getElementById('toggle-auth-mode').onclick = () => {
             isSignUp = !isSignUp;
-            formTitle.innerText = isSignUp ? "Sign Up" : "Sign In";
-            toggleAuthBtn.innerText = isSignUp ? "Already have an account? Sign In" : "Need an account? Sign Up";
+            document.getElementById('form-title').innerText = isSignUp ? "Sign Up" : "Sign In";
+            document.getElementById('toggle-auth-mode').innerText = isSignUp ? "Already have an account? Sign In" : "Need an account? Sign Up";
         };
 
-        submitAuthBtn.onclick = async () => {
-            const email = authEmailInput.value.trim();
-            const password = authPasswordInput.value.trim();
+        document.getElementById('submit-auth').onclick = async () => {
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value.trim();
             if (!email || !password) return showToast("Enter credentials");
-            submitText.classList.add('hidden');
-            submitLoader.classList.remove('hidden');
-            submitAuthBtn.disabled = true;
+
+            const btn = document.getElementById('submit-auth');
+            document.getElementById('submit-text').classList.add('hidden');
+            document.getElementById('submit-loader').classList.remove('hidden');
+            btn.disabled = true;
+
             try {
                 if (isSignUp) await createUserWithEmailAndPassword(auth, email, password);
                 else await signInWithEmailAndPassword(auth, email, password);
             } catch (err) {
                 showToast(err.code?.replace("auth/", "").replace(/-/g, " ") || "Auth failed");
-                submitText.classList.remove('hidden');
-                submitLoader.classList.add('hidden');
-                submitAuthBtn.disabled = false;
+                document.getElementById('submit-text').classList.remove('hidden');
+                document.getElementById('submit-loader').classList.add('hidden');
+                btn.disabled = false;
             }
         };
 
@@ -293,7 +294,7 @@
             signOut(auth).then(() => location.reload());
         };
 
-        // Map Initialization
+        // MAP ENGINE
         function initMap() {
             const defaultPos = { lat: 40.7128, lng: -74.0060 };
             map = new google.maps.Map(document.getElementById('map'), {
@@ -301,13 +302,28 @@
                 zoom: 14, 
                 mapTypeControl: false, 
                 streetViewControl: false,
+                fullscreenControl: false,
                 styles: [{ featureType: "poi", elementType: "all", stylers: [{ visibility: "off" }] }]
             });
-            polyline = new google.maps.Polyline({ path: [], strokeColor: '#10b981', strokeWeight: 6, map: map });
+
+            polyline = new google.maps.Polyline({ 
+                path: [], 
+                strokeColor: '#10b981', 
+                strokeWeight: 6, 
+                map: map 
+            });
+
             map.addListener('click', (e) => { 
                 if (isDrawing) addPoint(e.latLng); 
                 else if (!isNavigating) deselectRoute();
             });
+
+            // Try to center on current location immediately
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    map.setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                });
+            }
         }
 
         function addPoint(latLng) {
@@ -326,11 +342,6 @@
             polyline.setPath([]); 
             markers.forEach(m => m.setMap(null)); 
             markers = [];
-            if (navUserMarker) { navUserMarker.setMap(null); navUserMarker = null; }
-            if (watchId !== null) {
-                navigator.geolocation.clearWatch(watchId);
-                watchId = null;
-            }
         }
 
         function deselectRoute() {
@@ -339,7 +350,7 @@
             clearCurrent();
         }
 
-        // Auth Listener & Firestore Data
+        // DATA SYNC
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 currentUser = user;
@@ -383,16 +394,28 @@
             if (isDrawing || isNavigating) return;
             clearCurrent();
             selectedRouteData = data;
+            
             document.getElementById('route-detail-panel').classList.remove('hidden');
             document.getElementById('selected-route-name').innerText = data.name;
-            const dist = calculateDistance(data.path);
-            document.getElementById('selected-route-stats').innerText = `${dist} Miles • ${data.path.length} Points`;
+            
+            // Calc distance using geometry library
+            let total = 0;
+            for (let i = 0; i < data.path.length - 1; i++) {
+                total += google.maps.geometry.spherical.computeDistanceBetween(
+                    new google.maps.LatLng(data.path[i].lat, data.path[i].lng),
+                    new google.maps.LatLng(data.path[i+1].lat, data.path[i+1].lng)
+                );
+            }
+            const miles = (total / 1609.34).toFixed(2);
+            document.getElementById('selected-route-stats').innerText = `${miles} Miles • ${data.path.length} Points`;
+
             polyline.setOptions({strokeColor: '#4f46e5', strokeWeight: 6});
             const bounds = new google.maps.LatLngBounds();
             data.path.forEach((pt, index) => {
                 const ll = new google.maps.LatLng(pt.lat, pt.lng);
                 routePath.push(pt);
                 bounds.extend(ll);
+                
                 if (index === 0 || index === data.path.length - 1) {
                     markers.push(new google.maps.Marker({
                         position: ll,
@@ -406,111 +429,86 @@
             if (data.path.length > 0) map.fitBounds(bounds);
         }
 
-        function calculateDistance(path) {
-            let total = 0;
-            for (let i = 0; i < path.length - 1; i++) {
-                total += google.maps.geometry.spherical.computeDistanceBetween(
-                    new google.maps.LatLng(path[i].lat, path[i].lng),
-                    new google.maps.LatLng(path[i+1].lat, path[i+1].lng)
-                );
-            }
-            return (total / 1609.34).toFixed(2);
-        }
-
-        // LIVE NAVIGATION LOGIC
-        function startTracking() {
-            if (!navigator.geolocation) {
-                showToast("GPS not supported");
-                return;
-            }
-
-            document.getElementById('nav-status-text').innerText = "Acquiring GPS...";
-
-            const options = {
-                enableHighAccuracy: true,
-                maximumAge: 1000,
-                timeout: 10000
-            };
-
-            watchId = navigator.geolocation.watchPosition(
-                (position) => {
-                    const { latitude, longitude } = position.coords;
-                    const pos = { lat: latitude, lng: longitude };
-
-                    document.getElementById('nav-status-text').innerText = "Live Tracking Active";
-
-                    if (!navUserMarker) {
-                        navUserMarker = new google.maps.Marker({
-                            position: pos,
-                            map: map,
-                            icon: {
-                                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-                                scale: 8,
-                                fillColor: "#ffffff",
-                                fillOpacity: 1,
-                                strokeColor: "#059669",
-                                strokeWeight: 4
-                            }
-                        });
-                    } else {
-                        navUserMarker.setPosition(pos);
-                    }
-
-                    // Smoothly center the map on user
-                    map.panTo(pos);
-                    if (map.getZoom() < 17) map.setZoom(18);
-                },
-                (error) => {
-                    console.error("GPS Error:", error);
-                    document.getElementById('nav-status-text').innerText = "GPS Error: " + error.message;
-                    showToast("GPS Connection Lost");
-                },
-                options
-            );
-        }
-
+        // NAVIGATION & LIVE TRACKING
         document.getElementById('start-navigation-btn').onclick = () => {
             if (!selectedRouteData) return;
+            if (!navigator.geolocation) return showToast("GPS unavailable");
+
             isNavigating = true;
             document.body.classList.add('nav-mode-active');
             document.getElementById('sidebar').style.transform = 'translateX(-100%)';
             document.getElementById('navigation-overlay').classList.remove('hidden');
             document.getElementById('nav-target-name').innerText = selectedRouteData.name;
-            polyline.setOptions({ strokeColor: '#10b981', strokeWeight: 8 });
             
+            polyline.setOptions({ strokeColor: '#10b981', strokeWeight: 8 });
+
+            // Initialize User Marker
+            navUserMarker = new google.maps.Marker({
+                position: selectedRouteData.path[0],
+                map: map,
+                icon: {
+                    path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                    scale: 7,
+                    fillColor: "#ffffff",
+                    fillOpacity: 1,
+                    strokeColor: "#059669",
+                    strokeWeight: 4
+                }
+            });
+
+            // Start Geolocation Watcher
+            gpsWatchId = navigator.geolocation.watchPosition((pos) => {
+                const userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                
+                // Update marker position
+                navUserMarker.setPosition(userLoc);
+                
+                // Move map to follow user
+                map.panTo(userLoc);
+                map.setZoom(18); // Tight zoom for navigation
+
+            }, (err) => {
+                console.error("GPS Error:", err);
+                showToast("GPS Signal Lost");
+            }, {
+                enableHighAccuracy: true,
+                maximumAge: 0,
+                timeout: 5000
+            });
+
             showToast("Navigation Started");
-            startTracking();
         };
 
         document.getElementById('finish-navigation-btn').onclick = () => {
             isNavigating = false;
+            
+            // STOP the GPS watch
+            if (gpsWatchId !== null) {
+                navigator.geolocation.clearWatch(gpsWatchId);
+                gpsWatchId = null;
+            }
+
             document.body.classList.remove('nav-mode-active');
             document.getElementById('sidebar').style.transform = 'translateX(0)';
             document.getElementById('navigation-overlay').classList.add('hidden');
             
-            if (watchId !== null) {
-                navigator.geolocation.clearWatch(watchId);
-                watchId = null;
-            }
             if (navUserMarker) navUserMarker.setMap(null);
-            navUserMarker = null;
-            
             polyline.setOptions({ strokeColor: '#4f46e5', strokeWeight: 6 });
             showToast("Route Finished");
         };
 
-        // Drawing Controls
+        // DRAWING CONTROLS
         document.getElementById('new-route-btn').onclick = () => {
             deselectRoute();
             isDrawing = true;
             document.getElementById('active-controls').classList.remove('hidden');
             document.getElementById('idle-msg').classList.add('hidden');
             polyline.setOptions({strokeColor: '#10b981', strokeWeight: 6});
-            showToast("Mapping Started");
+            showToast("Route Drafting Active");
         };
 
         document.getElementById('end-route-btn').onclick = () => {
-            if (routePath.length < 2) return showToast("Add more points");
+            if (routePath.length < 2) return showToast("Add at least 2 points");
             document.getElementById('save-modal').classList.remove('hidden');
         };
 
@@ -518,23 +516,28 @@
             const name = document.getElementById('modal-route-name').value || "New Route";
             try {
                 await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'routes'), { 
-                    name, path: routePath, timestamp: new Date().toISOString()
+                    name, 
+                    path: routePath,
+                    timestamp: new Date().toISOString()
                 });
                 document.getElementById('save-modal').classList.add('hidden');
                 isDrawing = false;
                 document.getElementById('active-controls').classList.add('hidden');
                 document.getElementById('idle-msg').classList.remove('hidden');
-                showToast("Path Saved");
+                showToast("Route Saved Successfully");
                 clearCurrent();
-            } catch (err) { showToast("Save failed"); }
+            } catch (err) {
+                showToast("Failed to save route");
+            }
         };
 
         document.getElementById('modal-cancel').onclick = () => document.getElementById('save-modal').classList.add('hidden');
         document.getElementById('cancel-btn').onclick = () => { 
-            isDrawing = false; clearCurrent(); 
+            isDrawing = false; 
+            clearCurrent(); 
             document.getElementById('active-controls').classList.add('hidden'); 
             document.getElementById('idle-msg').classList.remove('hidden'); 
-            showToast("Path Discarded");
+            showToast("Draft Discarded");
         };
 
         window.onload = initMap;
