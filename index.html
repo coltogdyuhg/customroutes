@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CustomRoutes - Personal Path Navigator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&libraries=geometry"></script>
+    <style>
+        #map { height: calc(100vh - 64px); width: 100%; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #ddd6fe; border-radius: 10px; }
+        .modal-overlay { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); }
+        .gradient-header { background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%); }
+        .drawing-active-glow { box-shadow: 0 0 15px rgba(245, 158, 11, 0.4); }
+        .nav-active-glow { box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); }
+        
+        #landing-page {
+            background: radial-gradient(circle at top right, #4338ca, #1e1b4b);
+            transition: transform 0.8s cubic-bezier(0.77, 0, 0.175, 1);
+        }
+        .hero-pattern {
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        .loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid #fff;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .nav-mode-active #map { filter: grayscale(10%) brightness(95%); }
+        .navigation-banner {
+            background: linear-gradient(to right, #064e3b, #065f46);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 overflow-hidden font-sans">
+
+    <!-- Landing / Auth Screen -->
+    <div id="landing-page" class="fixed inset-0 z-[100] flex items-center justify-center p-6">
+        <div class="absolute inset-0 hero-pattern"></div>
+        <div class="relative max-w-md w-full text-center space-y-8 animate-in fade-in zoom-in duration-500">
+            <div id="welcome-content" class="space-y-4">
+                <div class="inline-flex bg-white/10 p-4 rounded-3xl backdrop-blur-xl border border-white/20 mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    </svg>
+                </div>
+                <h1 class="text-5xl font-black text-white tracking-tighter italic uppercase">CustomRoutes</h1>
+                <p class="text-indigo-200 text-lg font-medium">Map your world, your way.</p>
+            </div>
+
+            <!-- Auth Form Card -->
+            <div id="auth-card" class="bg-white rounded-[2rem] p-8 shadow-2xl space-y-6">
+                <div id="auth-initial" class="space-y-4">
+                    <button id="show-email-auth" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2">
+                        Sign In with Email
+                    </button>
+                    <div class="relative">
+                        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-100"></div></div>
+                        <div class="relative flex justify-center text-xs uppercase"><span class="bg-white px-4 text-slate-300 font-bold tracking-widest">or</span></div>
+                    </div>
+                    <button id="skip-btn" class="w-full bg-slate-100 text-slate-600 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-slate-200 transition-all">
+                        Skip as Guest
+                    </button>
+                </div>
+
+                <div id="email-auth-container" class="hidden space-y-4 text-left">
+                    <div class="flex items-center justify-between mb-2">
+                        <button type="button" id="back-to-initial" class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7" /></svg>
+                            Back
+                        </button>
+                        <h2 id="form-title" class="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Sign In</h2>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 px-1">Email Address</label>
+                            <input type="email" id="auth-email" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 focus:bg-white outline-none transition-all font-bold text-slate-700">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 px-1">Password</label>
+                            <input type="password" id="auth-password" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 focus:bg-white outline-none transition-all font-bold text-slate-700">
+                        </div>
+                        <button id="submit-auth" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-100 mt-2 flex items-center justify-center">
+                            <span id="submit-text">Continue</span>
+                            <div id="submit-loader" class="hidden loading-spinner"></div>
+                        </button>
+                        <button type="button" id="toggle-auth-mode" class="w-full text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-colors py-2">
+                            Need an account? Sign Up
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <p class="text-indigo-300/60 text-[10px] font-bold uppercase tracking-[0.3em]">Version 2.3 • Navigation Engine</p>
+        </div>
+    </div>
+
+    <!-- Main App Interface -->
+    <div id="app-interface" class="opacity-0 transition-opacity duration-1000">
+        <header class="h-16 gradient-header flex items-center justify-between px-6 shadow-lg z-10 relative">
+            <div class="flex items-center gap-2">
+                <div class="bg-white/20 p-1.5 rounded-lg backdrop-blur-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    </svg>
+                </div>
+                <h1 class="text-white font-black text-xl tracking-tighter italic uppercase">CustomRoutes</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <div id="auth-status" class="bg-black/20 px-3 py-1 rounded-full text-white text-[10px] font-bold tracking-widest uppercase">Connected</div>
+                <button id="sign-out-btn" class="text-white/70 hover:text-white text-[10px] font-bold uppercase tracking-widest">Sign Out</button>
+            </div>
+        </header>
+
+        <main class="flex h-screen relative">
+            <!-- Sidebar -->
+            <div id="sidebar" class="w-80 bg-white shadow-2xl flex flex-col z-20 overflow-y-auto border-r border-slate-200 transition-transform duration-500">
+                <div class="p-5 border-b border-slate-100">
+                    <button id="new-route-btn" class="w-full mb-4 bg-indigo-600 text-white py-4 rounded-xl hover:bg-indigo-500 transition-all font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 shadow-xl shadow-indigo-200">
+                        Create New Route
+                    </button>
+
+                    <div id="active-controls" class="hidden space-y-3 animate-in fade-in slide-in-from-top-4 duration-300">
+                        <div class="bg-amber-50 border-2 border-amber-200 p-4 rounded-xl drawing-active-glow">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="relative flex h-3 w-3">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                                </span>
+                                <p class="text-xs font-black text-amber-700 uppercase tracking-tighter">Drafting Path...</p>
+                            </div>
+                            <button id="end-route-btn" class="w-full bg-emerald-500 text-white py-3 rounded-lg font-black text-sm uppercase tracking-wider">End Route</button>
+                            <button id="cancel-btn" class="w-full mt-3 text-amber-700 text-[10px] font-bold uppercase tracking-widest">Discard</button>
+                        </div>
+                    </div>
+
+                    <div id="idle-msg" class="text-center py-8 px-4 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                        <p class="text-xs text-slate-400 font-bold uppercase tracking-widest leading-relaxed">Click a point on the map to start your custom path.</p>
+                    </div>
+                </div>
+
+                <!-- Selected Route Detail -->
+                <div id="route-detail-panel" class="hidden p-5 border-b border-indigo-50 bg-indigo-50/30 animate-in slide-in-from-left duration-300">
+                    <h3 id="selected-route-name" class="font-black text-indigo-900 uppercase tracking-tight text-lg mb-1">Route Name</h3>
+                    <p id="selected-route-stats" class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-4">0.0 Miles • 0 Points</p>
+                    <button id="start-navigation-btn" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 hover:bg-emerald-500 transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                        Start Route
+                    </button>
+                </div>
+
+                <div class="p-5 bg-white flex-grow">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Saved Routes</h2>
+                        <span class="bg-indigo-100 text-indigo-600 text-[10px] px-2 py-0.5 rounded-full font-bold" id="route-count">0</span>
+                    </div>
+                    <div id="saved-routes-list" class="space-y-3"></div>
+                </div>
+            </div>
+
+            <!-- Navigation UI Overlay -->
+            <div id="navigation-overlay" class="hidden absolute inset-0 z-30 pointer-events-none flex flex-col items-center p-6">
+                <div class="w-full max-w-xl navigation-banner p-4 rounded-2xl shadow-2xl flex items-center justify-between pointer-events-auto border-2 border-white/20 animate-in slide-in-from-top duration-500 nav-active-glow">
+                    <div class="flex items-center gap-4">
+                        <div class="bg-white/20 p-3 rounded-xl">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p id="nav-target-name" class="text-white font-black uppercase tracking-tighter text-xl leading-none">Navigating...</p>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                <p class="text-emerald-200 text-[10px] font-bold uppercase tracking-widest">Live GPS tracking active</p>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="finish-navigation-btn" class="bg-white text-emerald-900 px-6 py-3 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-emerald-50 transition-all">
+                        Finish
+                    </button>
+                </div>
+            </div>
+
+            <!-- Map -->
+            <div id="map-container" class="flex-grow">
+                <div id="map"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Save Modal -->
+    <div id="save-modal" class="fixed inset-0 z-50 flex items-center justify-center modal-overlay hidden animate-in fade-in duration-200">
+        <div class="bg-white rounded-3xl shadow-2xl p-8 w-[340px] max-w-full m-4">
+            <h3 class="text-2xl font-black text-slate-800 mb-6 tracking-tight">Route Name</h3>
+            <input id="modal-route-name" type="text" placeholder="e.g. My Secret Path" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 outline-none mb-6 font-bold">
+            <div class="flex gap-3">
+                <button id="modal-cancel" class="flex-1 px-4 py-3 bg-slate-100 text-slate-500 rounded-xl font-bold text-xs uppercase tracking-widest">Back</button>
+                <button id="modal-confirm" class="flex-[2] px-4 py-3 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 transform translate-y-20 opacity-0 transition-all duration-500 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl z-50 flex items-center gap-3">
+        <span class="text-xs font-black uppercase tracking-widest" id="toast-text">Notification</span>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'custom-routes-v2';
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let map, polyline, markers = [], routePath = [], currentUser = null;
+        let isDrawing = false, isSignUp = false, isNavigating = false;
+        let selectedRouteData = null;
+        let navUserMarker = null;
+        let gpsWatchId = null;
+
+        // UI Helpers
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-text').innerText = msg.toUpperCase();
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
+        }
+
+        function enterApp() {
+            document.getElementById('landing-page').style.transform = 'translateY(-100%)';
+            document.getElementById('app-interface').classList.remove('opacity-0');
+            setTimeout(() => { if (map) google.maps.event.trigger(map, "resize"); }, 800);
+        }
+
+        // Auth Logic Setup
+        const authInitial = document.getElementById('auth-initial');
+        const emailAuthContainer = document.getElementById('email-auth-container');
+        const showEmailBtn = document.getElementById('show-email-auth');
+        const backBtn = document.getElementById('back-to-initial');
+        const authEmailInput = document.getElementById('auth-email');
+        const authPasswordInput = document.getElementById('auth-password');
+        const toggleAuthBtn = document.getElementById('toggle-auth-mode');
+        const formTitle = document.getElementById('form-title');
+        const submitAuthBtn = document.getElementById('submit-auth');
+        const submitText = document.getElementById('submit-text');
+        const submitLoader = document.getElementById('submit-loader');
+
+        showEmailBtn.onclick = () => {
+            authInitial.classList.add('hidden');
+            emailAuthContainer.classList.remove('hidden');
+        };
+
+        backBtn.onclick = () => {
+            authInitial.classList.remove('hidden');
+            emailAuthContainer.classList.add('hidden');
+        };
+
+        toggleAuthBtn.onclick = () => {
+            isSignUp = !isSignUp;
+            formTitle.innerText = isSignUp ? "Sign Up" : "Sign In";
+            toggleAuthBtn.innerText = isSignUp ? "Already have an account? Sign In" : "Need an account? Sign Up";
+        };
+
+        submitAuthBtn.onclick = async () => {
+            const email = authEmailInput.value.trim();
+            const password = authPasswordInput.value.trim();
+            if (!email || !password) return showToast("Enter credentials");
+
+            submitText.classList.add('hidden');
+            submitLoader.classList.remove('hidden');
+            submitAuthBtn.disabled = true;
+
+            try {
+                if (isSignUp) await createUserWithEmailAndPassword(auth, email, password);
+                else await signInWithEmailAndPassword(auth, email, password);
+            } catch (err) {
+                showToast(err.code?.replace("auth/", "").replace(/-/g, " ") || "Auth failed");
+                submitText.classList.remove('hidden');
+                submitLoader.classList.add('hidden');
+                submitAuthBtn.disabled = false;
+            }
+        };
+
+        document.getElementById('skip-btn').onclick = async () => {
+            try { await signInAnonymously(auth); } catch (err) { showToast("Guest login failed"); }
+        };
+
+        document.getElementById('sign-out-btn').onclick = () => {
+            signOut(auth).then(() => location.reload());
+        };
+
+        // Map & Routes Initialization
+        function initMap() {
+            const defaultPos = { lat: 40.7128, lng: -74.0060 };
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: defaultPos, 
+                zoom: 14, 
+                mapTypeControl: false, 
+                streetViewControl: false,
+                styles: [{ featureType: "poi", elementType: "all", stylers: [{ visibility: "off" }] }]
+            });
+            polyline = new google.maps.Polyline({ path: [], strokeColor: '#10b981', strokeWeight: 6, map: map });
+            map.addListener('click', (e) => { 
+                if (isDrawing) addPoint(e.latLng); 
+                else if (!isNavigating) deselectRoute();
+            });
+        }
+
+        function addPoint(latLng) {
+            routePath.push({ lat: latLng.lat(), lng: latLng.lng() });
+            polyline.setPath(routePath);
+            const marker = new google.maps.Marker({ 
+                position: latLng, 
+                map: map, 
+                icon: { path: google.maps.SymbolPath.CIRCLE, scale: 4, fillColor: '#10b981', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 } 
+            });
+            markers.push(marker);
+        }
+
+        function clearCurrent() {
+            routePath = []; 
+            polyline.setPath([]); 
+            markers.forEach(m => m.setMap(null)); 
+            markers = [];
+            if (navUserMarker) { navUserMarker.setMap(null); navUserMarker = null; }
+        }
+
+        function deselectRoute() {
+            selectedRouteData = null;
+            document.getElementById('route-detail-panel').classList.add('hidden');
+            clearCurrent();
+        }
+
+        // Firebase Auth Listener
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('auth-status').innerText = user.isAnonymous ? "Guest Mode" : user.email;
+                enterApp();
+                setupRealtimeListener(user.uid);
+            }
+        });
+
+        function setupRealtimeListener(uid) {
+            const q = query(collection(db, 'artifacts', appId, 'users', uid, 'routes'));
+            onSnapshot(q, (snapshot) => {
+                const list = document.getElementById('saved-routes-list');
+                list.innerHTML = "";
+                document.getElementById('route-count').innerText = snapshot.size;
+                snapshot.forEach(d => {
+                    const data = d.data();
+                    const el = document.createElement('div');
+                    el.className = "bg-white p-4 rounded-xl border border-slate-100 shadow-sm cursor-pointer hover:border-indigo-300 transition-colors flex justify-between items-center group relative";
+                    el.innerHTML = `
+                        <div class="flex flex-col">
+                            <span class="font-black text-xs truncate uppercase text-slate-700">${data.name}</span>
+                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">${data.path.length} Points</span>
+                        </div>
+                        <button class="delete-route text-rose-400 opacity-0 group-hover:opacity-100 p-2 hover:bg-rose-50 rounded-lg transition-all text-[10px] font-bold">DEL</button>
+                    `;
+                    el.onclick = (e) => {
+                        if (e.target.closest('.delete-route')) {
+                            deleteDoc(doc(db, 'artifacts', appId, 'users', uid, 'routes', d.id));
+                            deselectRoute();
+                        } else {
+                            loadRoute(data);
+                        }
+                    };
+                    list.appendChild(el);
+                });
+            }, (err) => console.error("Snapshot error:", err));
+        }
+
+        function calculateDistance(path) {
+            let total = 0;
+            for (let i = 0; i < path.length - 1; i++) {
+                total += google.maps.geometry.spherical.computeDistanceBetween(
+                    new google.maps.LatLng(path[i].lat, path[i].lng),
+                    new google.maps.LatLng(path[i+1].lat, path[i+1].lng)
+                );
+            }
+            return (total / 1609.34).toFixed(2); // meters to miles
+        }
+
+        function loadRoute(data) {
+            if (isDrawing || isNavigating) return;
+            clearCurrent();
+            selectedRouteData = data;
+            
+            document.getElementById('route-detail-panel').classList.remove('hidden');
+            document.getElementById('selected-route-name').innerText = data.name;
+            document.getElementById('selected-route-stats').innerText = `${calculateDistance(data.path)} Miles • ${data.path.length} Points`;
+
+            polyline.setOptions({strokeColor: '#4f46e5', strokeWeight: 6});
+            const bounds = new google.maps.LatLngBounds();
+            data.path.forEach((pt, index) => {
+                const ll = new google.maps.LatLng(pt.lat, pt.lng);
+                routePath.push(pt);
+                bounds.extend(ll);
+                
+                if (index === 0 || index === data.path.length - 1) {
+                    markers.push(new google.maps.Marker({
+                        position: ll,
+                        map: map,
+                        label: { text: index === 0 ? "A" : "B", color: "white", fontWeight: "bold" },
+                        icon: {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            scale: 12,
+                            fillColor: index === 0 ? "#4f46e5" : "#10b981",
+                            fillOpacity: 1,
+                            strokeWeight: 2,
+                            strokeColor: "white"
+                        }
+                    }));
+                }
+            });
+            polyline.setPath(routePath);
+            if (data.path.length > 0) map.fitBounds(bounds);
+        }
+
+        // Navigation Mode Logic with Real-Time GPS Tracking
+        document.getElementById('start-navigation-btn').onclick = () => {
+            if (!selectedRouteData) return;
+            
+            // UI State Change
+            isNavigating = true;
+            document.body.classList.add('nav-mode-active');
+            document.getElementById('sidebar').style.transform = 'translateX(-100%)';
+            document.getElementById('navigation-overlay').classList.remove('hidden');
+            document.getElementById('nav-target-name').innerText = selectedRouteData.name;
+            
+            // Map Styling
+            polyline.setOptions({ strokeColor: '#10b981', strokeWeight: 8 });
+            
+            // Create user location marker (initially at start point until GPS lock)
+            navUserMarker = new google.maps.Marker({
+                position: selectedRouteData.path[0],
+                map: map,
+                icon: {
+                    path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                    scale: 7,
+                    fillColor: "#3b82f6", // Blue for user location
+                    fillOpacity: 1,
+                    strokeColor: "#ffffff",
+                    strokeWeight: 3
+                },
+                zIndex: 999
+            });
+
+            // Start GPS Watcher
+            if ("geolocation" in navigator) {
+                gpsWatchId = navigator.geolocation.watchPosition(
+                    (position) => {
+                        const userPos = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+
+                        // Update Marker Position
+                        navUserMarker.setPosition(userPos);
+
+                        // Auto-pan camera to follow user
+                        map.panTo(userPos);
+                        if (map.getZoom() < 17) map.setZoom(18);
+
+                        // Rotate arrow if heading is available
+                        if (position.coords.heading !== null) {
+                            const icon = navUserMarker.getIcon();
+                            icon.rotation = position.coords.heading;
+                            navUserMarker.setIcon(icon);
+                        }
+                    },
+                    (error) => {
+                        console.error("GPS Error:", error);
+                        let msg = "GPS Signal Lost";
+                        if (error.code === 1) msg = "Please Enable Location Access";
+                        showToast(msg);
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        maximumAge: 0,
+                        timeout: 10000
+                    }
+                );
+            } else {
+                showToast("Geolocation not supported on this device");
+            }
+            
+            showToast("Navigation Started");
+        };
+
+        document.getElementById('finish-navigation-btn').onclick = () => {
+            isNavigating = false;
+            
+            // Stop GPS Watcher
+            if (gpsWatchId !== null) {
+                navigator.geolocation.clearWatch(gpsWatchId);
+                gpsWatchId = null;
+            }
+
+            document.body.classList.remove('nav-mode-active');
+            document.getElementById('sidebar').style.transform = 'translateX(0)';
+            document.getElementById('navigation-overlay').classList.add('hidden');
+            
+            if (navUserMarker) navUserMarker.setMap(null);
+            polyline.setOptions({ strokeColor: '#4f46e5', strokeWeight: 6 });
+            showToast("Route Finished");
+        };
+
+        // Drawing Controls
+        document.getElementById('new-route-btn').onclick = () => {
+            deselectRoute();
+            isDrawing = true;
+            document.getElementById('active-controls').classList.remove('hidden');
+            document.getElementById('idle-msg').classList.add('hidden');
+            polyline.setOptions({strokeColor: '#10b981', strokeWeight: 6});
+            showToast("Platting Started");
+        };
+
+        document.getElementById('end-route-btn').onclick = () => {
+            if (routePath.length < 2) return showToast("Add more points");
+            document.getElementById('save-modal').classList.remove('hidden');
+        };
+
+        document.getElementById('modal-confirm').onclick = async () => {
+            const name = document.getElementById('modal-route-name').value || "New Route";
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'routes'), { 
+                    name, 
+                    path: routePath,
+                    timestamp: new Date().toISOString()
+                });
+                document.getElementById('save-modal').classList.add('hidden');
+                isDrawing = false;
+                document.getElementById('active-controls').classList.add('hidden');
+                document.getElementById('idle-msg').classList.remove('hidden');
+                showToast("Path Saved");
+                clearCurrent();
+            } catch (err) {
+                showToast("Save failed");
+            }
+        };
+
+        document.getElementById('modal-cancel').onclick = () => document.getElementById('save-modal').classList.add('hidden');
+        document.getElementById('cancel-btn').onclick = () => { 
+            isDrawing = false; 
+            clearCurrent(); 
+            document.getElementById('active-controls').classList.add('hidden'); 
+            document.getElementById('idle-msg').classList.remove('hidden'); 
+            showToast("Path Discarded");
+        };
+
+        window.onload = initMap;
+    </script>
+</body>
+</html>
