@@ -32,7 +32,7 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        .nav-mode-active #map { filter: grayscale(10%) brightness(95%); }
+        .nav-mode-active #map { filter: grayscale(20%) brightness(90%); }
         .navigation-banner {
             background: linear-gradient(to right, #064e3b, #065f46);
         }
@@ -54,7 +54,6 @@
                 <p class="text-indigo-200 text-lg font-medium">Map your world, your way.</p>
             </div>
 
-            <!-- Auth Form Card -->
             <div id="auth-card" class="bg-white rounded-[2rem] p-8 shadow-2xl space-y-6">
                 <div id="auth-initial" class="space-y-4">
                     <button id="show-email-auth" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2">
@@ -97,7 +96,7 @@
                     </div>
                 </div>
             </div>
-            <p class="text-indigo-300/60 text-[10px] font-bold uppercase tracking-[0.3em]">Version 2.3 • Navigation Engine</p>
+            <p class="text-indigo-300/60 text-[10px] font-bold uppercase tracking-[0.3em]">Version 2.4 • Live GPS Engine</p>
         </div>
     </div>
 
@@ -119,7 +118,6 @@
         </header>
 
         <main class="flex h-screen relative">
-            <!-- Sidebar -->
             <div id="sidebar" class="w-80 bg-white shadow-2xl flex flex-col z-20 overflow-y-auto border-r border-slate-200 transition-transform duration-500">
                 <div class="p-5 border-b border-slate-100">
                     <button id="new-route-btn" class="w-full mb-4 bg-indigo-600 text-white py-4 rounded-xl hover:bg-indigo-500 transition-all font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 shadow-xl shadow-indigo-200">
@@ -145,7 +143,6 @@
                     </div>
                 </div>
 
-                <!-- Selected Route Detail -->
                 <div id="route-detail-panel" class="hidden p-5 border-b border-indigo-50 bg-indigo-50/30 animate-in slide-in-from-left duration-300">
                     <h3 id="selected-route-name" class="font-black text-indigo-900 uppercase tracking-tight text-lg mb-1">Route Name</h3>
                     <p id="selected-route-stats" class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-4">0.0 Miles • 0 Points</p>
@@ -178,10 +175,7 @@
                         </div>
                         <div>
                             <p id="nav-target-name" class="text-white font-black uppercase tracking-tighter text-xl leading-none">Navigating...</p>
-                            <div class="flex items-center gap-2 mt-1">
-                                <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                                <p class="text-emerald-200 text-[10px] font-bold uppercase tracking-widest">Live GPS tracking active</p>
-                            </div>
+                            <p id="nav-status-text" class="text-emerald-200 text-[10px] font-bold uppercase tracking-widest mt-1">Acquiring Location...</p>
                         </div>
                     </div>
                     <button id="finish-navigation-btn" class="bg-white text-emerald-900 px-6 py-3 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-emerald-50 transition-all">
@@ -190,7 +184,6 @@
                 </div>
             </div>
 
-            <!-- Map -->
             <div id="map-container" class="flex-grow">
                 <div id="map"></div>
             </div>
@@ -229,7 +222,7 @@
         let isDrawing = false, isSignUp = false, isNavigating = false;
         let selectedRouteData = null;
         let navUserMarker = null;
-        let gpsWatchId = null;
+        let watchId = null; // To store Geolocation watch ID
 
         // UI Helpers
         function showToast(msg) {
@@ -245,7 +238,7 @@
             setTimeout(() => { if (map) google.maps.event.trigger(map, "resize"); }, 800);
         }
 
-        // Auth Logic Setup
+        // Auth Controls
         const authInitial = document.getElementById('auth-initial');
         const emailAuthContainer = document.getElementById('email-auth-container');
         const showEmailBtn = document.getElementById('show-email-auth');
@@ -278,11 +271,9 @@
             const email = authEmailInput.value.trim();
             const password = authPasswordInput.value.trim();
             if (!email || !password) return showToast("Enter credentials");
-
             submitText.classList.add('hidden');
             submitLoader.classList.remove('hidden');
             submitAuthBtn.disabled = true;
-
             try {
                 if (isSignUp) await createUserWithEmailAndPassword(auth, email, password);
                 else await signInWithEmailAndPassword(auth, email, password);
@@ -302,7 +293,7 @@
             signOut(auth).then(() => location.reload());
         };
 
-        // Map & Routes Initialization
+        // Map Initialization
         function initMap() {
             const defaultPos = { lat: 40.7128, lng: -74.0060 };
             map = new google.maps.Map(document.getElementById('map'), {
@@ -336,6 +327,10 @@
             markers.forEach(m => m.setMap(null)); 
             markers = [];
             if (navUserMarker) { navUserMarker.setMap(null); navUserMarker = null; }
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
         }
 
         function deselectRoute() {
@@ -344,7 +339,7 @@
             clearCurrent();
         }
 
-        // Firebase Auth Listener
+        // Auth Listener & Firestore Data
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 currentUser = user;
@@ -384,6 +379,33 @@
             }, (err) => console.error("Snapshot error:", err));
         }
 
+        function loadRoute(data) {
+            if (isDrawing || isNavigating) return;
+            clearCurrent();
+            selectedRouteData = data;
+            document.getElementById('route-detail-panel').classList.remove('hidden');
+            document.getElementById('selected-route-name').innerText = data.name;
+            const dist = calculateDistance(data.path);
+            document.getElementById('selected-route-stats').innerText = `${dist} Miles • ${data.path.length} Points`;
+            polyline.setOptions({strokeColor: '#4f46e5', strokeWeight: 6});
+            const bounds = new google.maps.LatLngBounds();
+            data.path.forEach((pt, index) => {
+                const ll = new google.maps.LatLng(pt.lat, pt.lng);
+                routePath.push(pt);
+                bounds.extend(ll);
+                if (index === 0 || index === data.path.length - 1) {
+                    markers.push(new google.maps.Marker({
+                        position: ll,
+                        map: map,
+                        label: { text: index === 0 ? "A" : "B", color: "white", fontWeight: "bold" },
+                        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 12, fillColor: index === 0 ? "#4f46e5" : "#10b981", fillOpacity: 1, strokeWeight: 2, strokeColor: "white" }
+                    }));
+                }
+            });
+            polyline.setPath(routePath);
+            if (data.path.length > 0) map.fitBounds(bounds);
+        }
+
         function calculateDistance(path) {
             let total = 0;
             for (let i = 0; i < path.length - 1; i++) {
@@ -392,130 +414,87 @@
                     new google.maps.LatLng(path[i+1].lat, path[i+1].lng)
                 );
             }
-            return (total / 1609.34).toFixed(2); // meters to miles
+            return (total / 1609.34).toFixed(2);
         }
 
-        function loadRoute(data) {
-            if (isDrawing || isNavigating) return;
-            clearCurrent();
-            selectedRouteData = data;
-            
-            document.getElementById('route-detail-panel').classList.remove('hidden');
-            document.getElementById('selected-route-name').innerText = data.name;
-            document.getElementById('selected-route-stats').innerText = `${calculateDistance(data.path)} Miles • ${data.path.length} Points`;
+        // LIVE NAVIGATION LOGIC
+        function startTracking() {
+            if (!navigator.geolocation) {
+                showToast("GPS not supported");
+                return;
+            }
 
-            polyline.setOptions({strokeColor: '#4f46e5', strokeWeight: 6});
-            const bounds = new google.maps.LatLngBounds();
-            data.path.forEach((pt, index) => {
-                const ll = new google.maps.LatLng(pt.lat, pt.lng);
-                routePath.push(pt);
-                bounds.extend(ll);
-                
-                if (index === 0 || index === data.path.length - 1) {
-                    markers.push(new google.maps.Marker({
-                        position: ll,
-                        map: map,
-                        label: { text: index === 0 ? "A" : "B", color: "white", fontWeight: "bold" },
-                        icon: {
-                            path: google.maps.SymbolPath.CIRCLE,
-                            scale: 12,
-                            fillColor: index === 0 ? "#4f46e5" : "#10b981",
-                            fillOpacity: 1,
-                            strokeWeight: 2,
-                            strokeColor: "white"
-                        }
-                    }));
-                }
-            });
-            polyline.setPath(routePath);
-            if (data.path.length > 0) map.fitBounds(bounds);
+            document.getElementById('nav-status-text').innerText = "Acquiring GPS...";
+
+            const options = {
+                enableHighAccuracy: true,
+                maximumAge: 1000,
+                timeout: 10000
+            };
+
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    const pos = { lat: latitude, lng: longitude };
+
+                    document.getElementById('nav-status-text').innerText = "Live Tracking Active";
+
+                    if (!navUserMarker) {
+                        navUserMarker = new google.maps.Marker({
+                            position: pos,
+                            map: map,
+                            icon: {
+                                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                                scale: 8,
+                                fillColor: "#ffffff",
+                                fillOpacity: 1,
+                                strokeColor: "#059669",
+                                strokeWeight: 4
+                            }
+                        });
+                    } else {
+                        navUserMarker.setPosition(pos);
+                    }
+
+                    // Smoothly center the map on user
+                    map.panTo(pos);
+                    if (map.getZoom() < 17) map.setZoom(18);
+                },
+                (error) => {
+                    console.error("GPS Error:", error);
+                    document.getElementById('nav-status-text').innerText = "GPS Error: " + error.message;
+                    showToast("GPS Connection Lost");
+                },
+                options
+            );
         }
 
-        // Navigation Mode Logic with Real-Time GPS Tracking
         document.getElementById('start-navigation-btn').onclick = () => {
             if (!selectedRouteData) return;
-            
-            // UI State Change
             isNavigating = true;
             document.body.classList.add('nav-mode-active');
             document.getElementById('sidebar').style.transform = 'translateX(-100%)';
             document.getElementById('navigation-overlay').classList.remove('hidden');
             document.getElementById('nav-target-name').innerText = selectedRouteData.name;
-            
-            // Map Styling
             polyline.setOptions({ strokeColor: '#10b981', strokeWeight: 8 });
             
-            // Create user location marker (initially at start point until GPS lock)
-            navUserMarker = new google.maps.Marker({
-                position: selectedRouteData.path[0],
-                map: map,
-                icon: {
-                    path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-                    scale: 7,
-                    fillColor: "#3b82f6", // Blue for user location
-                    fillOpacity: 1,
-                    strokeColor: "#ffffff",
-                    strokeWeight: 3
-                },
-                zIndex: 999
-            });
-
-            // Start GPS Watcher
-            if ("geolocation" in navigator) {
-                gpsWatchId = navigator.geolocation.watchPosition(
-                    (position) => {
-                        const userPos = {
-                            lat: position.coords.latitude,
-                            lng: position.coords.longitude
-                        };
-
-                        // Update Marker Position
-                        navUserMarker.setPosition(userPos);
-
-                        // Auto-pan camera to follow user
-                        map.panTo(userPos);
-                        if (map.getZoom() < 17) map.setZoom(18);
-
-                        // Rotate arrow if heading is available
-                        if (position.coords.heading !== null) {
-                            const icon = navUserMarker.getIcon();
-                            icon.rotation = position.coords.heading;
-                            navUserMarker.setIcon(icon);
-                        }
-                    },
-                    (error) => {
-                        console.error("GPS Error:", error);
-                        let msg = "GPS Signal Lost";
-                        if (error.code === 1) msg = "Please Enable Location Access";
-                        showToast(msg);
-                    },
-                    {
-                        enableHighAccuracy: true,
-                        maximumAge: 0,
-                        timeout: 10000
-                    }
-                );
-            } else {
-                showToast("Geolocation not supported on this device");
-            }
-            
             showToast("Navigation Started");
+            startTracking();
         };
 
         document.getElementById('finish-navigation-btn').onclick = () => {
             isNavigating = false;
-            
-            // Stop GPS Watcher
-            if (gpsWatchId !== null) {
-                navigator.geolocation.clearWatch(gpsWatchId);
-                gpsWatchId = null;
-            }
-
             document.body.classList.remove('nav-mode-active');
             document.getElementById('sidebar').style.transform = 'translateX(0)';
             document.getElementById('navigation-overlay').classList.add('hidden');
             
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
             if (navUserMarker) navUserMarker.setMap(null);
+            navUserMarker = null;
+            
             polyline.setOptions({ strokeColor: '#4f46e5', strokeWeight: 6 });
             showToast("Route Finished");
         };
@@ -527,7 +506,7 @@
             document.getElementById('active-controls').classList.remove('hidden');
             document.getElementById('idle-msg').classList.add('hidden');
             polyline.setOptions({strokeColor: '#10b981', strokeWeight: 6});
-            showToast("Platting Started");
+            showToast("Mapping Started");
         };
 
         document.getElementById('end-route-btn').onclick = () => {
@@ -539,9 +518,7 @@
             const name = document.getElementById('modal-route-name').value || "New Route";
             try {
                 await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'routes'), { 
-                    name, 
-                    path: routePath,
-                    timestamp: new Date().toISOString()
+                    name, path: routePath, timestamp: new Date().toISOString()
                 });
                 document.getElementById('save-modal').classList.add('hidden');
                 isDrawing = false;
@@ -549,15 +526,12 @@
                 document.getElementById('idle-msg').classList.remove('hidden');
                 showToast("Path Saved");
                 clearCurrent();
-            } catch (err) {
-                showToast("Save failed");
-            }
+            } catch (err) { showToast("Save failed"); }
         };
 
         document.getElementById('modal-cancel').onclick = () => document.getElementById('save-modal').classList.add('hidden');
         document.getElementById('cancel-btn').onclick = () => { 
-            isDrawing = false; 
-            clearCurrent(); 
+            isDrawing = false; clearCurrent(); 
             document.getElementById('active-controls').classList.add('hidden'); 
             document.getElementById('idle-msg').classList.remove('hidden'); 
             showToast("Path Discarded");
