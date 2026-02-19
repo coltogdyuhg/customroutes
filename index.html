@@ -156,7 +156,7 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // APP STATE
+        // APP CONFIG & STATE
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'custom-routes-final';
         const firebaseConfig = JSON.parse(__firebase_config);
         const app = initializeApp(firebaseConfig);
@@ -167,6 +167,7 @@
         let map, polyline, markers = [], routePath = [];
         let isDrawing = false, isViewing = false, isNavigating = false;
         let userMarker = null;
+        let unsubscribeRoutes = null;
 
         // AUTH INITIALIZATION (MANDATORY RULE 3)
         const initAuth = async () => {
@@ -203,13 +204,15 @@
         function clearLayers() {
             markers.forEach(m => map.removeLayer(m));
             markers = [];
-            polyline.setLatLngs([]);
+            if (polyline) polyline.setLatLngs([]);
             routePath = [];
             updateUI();
         }
 
         // MAP LOGIC
         function initMap() {
+            if (map) return; // Prevent double init
+            
             map = L.map('map', { zoomControl: true, attributionControl: false }).setView([40.7128, -74.0060], 13);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
             polyline = L.polyline([], { color: '#6366f1', weight: 5, lineCap: 'round', opacity: 0.8 }).addTo(map);
@@ -219,7 +222,13 @@
                     const latLng = [e.latlng.lat, e.latlng.lng];
                     routePath.push(latLng);
                     polyline.setLatLngs(routePath);
-                    const marker = L.circleMarker(latLng, { radius: 5, fillColor: "#4f46e5", color: "#fff", weight: 2, fillOpacity: 1 }).addTo(map);
+                    const marker = L.circleMarker(latLng, { 
+                        radius: 5, 
+                        fillColor: "#4f46e5", 
+                        color: "#fff", 
+                        weight: 2, 
+                        fillOpacity: 1 
+                    }).addTo(map);
                     markers.push(marker);
                     updateUI();
                 } else if (isNavigating) {
@@ -238,50 +247,67 @@
         function updateUserLocation(lat, lng) {
             if (!userMarker) {
                 userMarker = L.marker([lat, lng], {
-                    icon: L.divIcon({ className: 'user-location-marker', iconSize: [16, 16], iconAnchor: [8, 8] })
+                    icon: L.divIcon({ 
+                        className: 'user-location-marker', 
+                        iconSize: [16, 16], 
+                        iconAnchor: [8, 8] 
+                    })
                 }).addTo(map);
             } else {
                 userMarker.setLatLng([lat, lng]);
             }
         }
 
-        // FIRESTORE SYNC
+        // FIRESTORE SYNC (RULE 3: Auth Before Queries)
         onAuthStateChanged(auth, (user) => {
             currentUser = user;
             const badge = document.getElementById('auth-status-badge');
+            
+            // Cleanup existing listeners if any
+            if (unsubscribeRoutes) unsubscribeRoutes();
+
             if (user) {
                 badge.innerText = "Sync Active";
                 badge.className = "bg-emerald-500/20 px-3 py-1 rounded-full text-emerald-400 text-[10px] font-bold tracking-widest uppercase border border-emerald-500/20";
                 
                 // Set up listener (RULE 1: Correct path)
                 const q = collection(db, 'artifacts', appId, 'users', user.uid, 'routes');
-                onSnapshot(q, (snapshot) => {
+                unsubscribeRoutes = onSnapshot(q, (snapshot) => {
                     const list = document.getElementById('saved-routes-list');
                     list.innerHTML = snapshot.empty ? `<p class='text-[9px] text-slate-300 font-bold text-center py-4'>No saved routes</p>` : "";
                     
                     snapshot.forEach(d => {
                         const data = d.data();
-                        const p = JSON.parse(data.path);
+                        let p = [];
+                        try { p = JSON.parse(data.path); } catch(e) { console.error("Data parse error", e); }
+                        
                         const el = document.createElement('div');
                         el.className = "p-3 bg-slate-50 rounded-xl border border-slate-100 cursor-pointer hover:border-indigo-300 flex justify-between items-center group";
                         el.innerHTML = `
-                            <div>
-                                <p class="font-black text-[10px] uppercase text-slate-800">${data.name}</p>
+                            <div class="flex-1">
+                                <p class="font-black text-[10px] uppercase text-slate-800 truncate pr-2">${data.name}</p>
                                 <p class="text-[8px] text-indigo-400 font-bold uppercase">${p.length} Waypoints</p>
                             </div>
-                            <button class='del-btn opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-500 transition-all'>×</button>
+                            <button class='del-btn opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-500 transition-all text-xl px-2'>&times;</button>
                         `;
+
                         el.onclick = (e) => {
                             if (e.target.closest('.del-btn')) {
+                                e.stopPropagation();
                                 deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'routes', d.id));
                                 return;
                             }
-                            isViewing = true; isDrawing = false; isNavigating = false;
+                            isViewing = true; 
+                            isDrawing = false; 
+                            isNavigating = false;
                             loadRoute(p);
                         };
                         list.appendChild(el);
                     });
                 }, (err) => console.error("Snapshot error:", err));
+            } else {
+                badge.innerText = "Disconnected";
+                badge.className = "bg-rose-500/20 px-3 py-1 rounded-full text-rose-400 text-[10px] font-bold tracking-widest uppercase border border-rose-500/20";
             }
         });
 
@@ -291,15 +317,29 @@
             routePath = p;
             polyline.setLatLngs(routePath);
             polyline.setStyle({ dashArray: '5, 10', color: '#94a3b8' });
-            p.forEach(l => markers.push(L.circleMarker(l, { radius: 4, fillColor: "#94a3b8", color: "#fff", weight: 1, fillOpacity: 1 }).addTo(map)));
-            map.fitBounds(L.latLngBounds(routePath), { padding: [40, 40] });
+            
+            p.forEach(l => {
+                const marker = L.circleMarker(l, { 
+                    radius: 4, 
+                    fillColor: "#94a3b8", 
+                    color: "#fff", 
+                    weight: 1, 
+                    fillOpacity: 1 
+                }).addTo(map);
+                markers.push(marker);
+            });
+            
+            if (routePath.length > 0) {
+                map.fitBounds(L.latLngBounds(routePath), { padding: [40, 40] });
+            }
             updateUI();
         }
 
-        // BUTTONS
+        // EVENT LISTENERS
         document.getElementById('new-route-btn').onclick = () => {
             isDrawing = true; isViewing = false; isNavigating = false;
             clearLayers();
+            polyline.setStyle({ dashArray: null, color: '#6366f1' });
             updateUI();
         };
 
@@ -310,14 +350,15 @@
         document.getElementById('undo-point-btn').onclick = () => {
             if (routePath.length > 0) {
                 routePath.pop();
-                map.removeLayer(markers.pop());
+                const lastMarker = markers.pop();
+                if (lastMarker) map.removeLayer(lastMarker);
                 polyline.setLatLngs(routePath);
                 updateUI();
             }
         };
 
         document.getElementById('end-route-btn').onclick = () => {
-            if (routePath.length < 2) return showToast("Add more points!");
+            if (routePath.length < 2) return showToast("Add at least 2 points!");
             document.getElementById('save-modal').classList.remove('hidden');
         };
 
@@ -326,9 +367,8 @@
         };
 
         document.getElementById('modal-confirm').onclick = async () => {
-            const name = document.getElementById('modal-route-name').value || "Unnamed Route";
+            const name = document.getElementById('modal-route-name').value.trim() || "Unnamed Route";
             
-            // Guard against saving before Auth is ready
             if (!currentUser) {
                 showToast("Wait... connecting...");
                 await initAuth();
@@ -336,7 +376,6 @@
             }
 
             try {
-                // RULE 1: Use strictly specific collection path
                 const collectionRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'routes');
                 await addDoc(collectionRef, {
                     name,
@@ -356,11 +395,12 @@
         };
 
         document.getElementById('start-navigation-btn').onclick = () => {
-            isNavigating = true; isViewing = false;
+            isNavigating = true; 
+            isViewing = false;
             polyline.setStyle({ dashArray: null, color: '#4f46e5' });
             markers.forEach(m => m.setStyle({ fillColor: '#4f46e5' }));
             updateUI();
-            showToast("Navigation Start: Click map to move");
+            showToast("Navigation Active: Click map to move user");
         };
 
         document.getElementById('stop-nav-btn').onclick = () => {
@@ -371,20 +411,20 @@
             isViewing = false; clearLayers(); updateUI();
         };
 
-        // RUN
+        // BOOTSTRAP
         window.onload = async () => {
             const bar = document.getElementById('progress-bar-el');
             let p = 0;
             const timer = setInterval(() => {
-                p += 10;
+                p += 5;
                 bar.style.width = p + '%';
                 if (p >= 100) {
                     clearInterval(timer);
                     document.getElementById('loading-screen').style.transform = 'translateY(-100%)';
                     document.getElementById('app-interface').classList.remove('opacity-0');
-                    initMap();
+                    setTimeout(initMap, 500); // Ensure layout is settled
                 }
-            }, 50);
+            }, 30);
 
             await initAuth();
         };
