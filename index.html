@@ -82,7 +82,7 @@
                 <h1 class="text-white font-black text-xl tracking-tighter italic uppercase">CustomRoutes</h1>
             </div>
             <div class="flex items-center gap-3">
-                <div id="auth-status" class="bg-white/10 px-3 py-1 rounded-full text-white text-[10px] font-bold tracking-widest uppercase border border-white/10">GPS Active</div>
+                <div id="auth-status-badge" class="bg-white/10 px-3 py-1 rounded-full text-white text-[10px] font-bold tracking-widest uppercase border border-white/10">Connecting...</div>
             </div>
         </header>
 
@@ -181,28 +181,86 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // APP INITIALIZATION
+        // APP INITIALIZATION & FIREBASE SETUP
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'custom-routes-v2';
-        let db = null, auth = null;
-        
-        try {
-            const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-            if (firebaseConfig.apiKey) {
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-            }
-        } catch (e) {
-            console.warn("Firebase config missing. Running in local-only mode.");
-        }
-
-        let map, polyline, markers = [], routePath = [], currentUser = null;
+        let db = null, auth = null, currentUser = null;
+        let map, polyline, markers = [], routePath = [];
         let isDrawing = false, isViewing = false, isNavigating = false;
         let userMarker = null, watchId = null, isAutoTracking = false;
         const fallbackPos = [40.7128, -74.0060]; 
+
+        async function initFirebase() {
+            try {
+                const configString = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
+                if (!configString) throw new Error("Config missing");
+                
+                const firebaseConfig = JSON.parse(configString);
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // Authentication Protocol
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    currentUser = user;
+                    if (user) {
+                        document.getElementById('auth-status-badge').innerText = "Cloud Sync Active";
+                        setupFirestoreListener(user);
+                    } else {
+                        document.getElementById('auth-status-badge').innerText = "Offline Mode";
+                    }
+                });
+            } catch (e) {
+                console.warn("Firebase initialization failed:", e.message);
+                document.getElementById('auth-status-badge').innerText = "Local Only";
+            }
+        }
+
+        function setupFirestoreListener(user) {
+            if (!db) return;
+            const q = query(collection(db, 'artifacts', appId, 'users', user.uid, 'routes'));
+            onSnapshot(q, (snapshot) => {
+                const list = document.getElementById('saved-routes-list');
+                list.innerHTML = snapshot.empty ? `<p class='text-[9px] text-slate-300 font-bold text-center py-4'>No saved routes</p>` : "";
+                snapshot.forEach(d => {
+                    const data = d.data();
+                    const path = JSON.parse(data.path);
+                    const el = document.createElement('div');
+                    el.className = "p-3 bg-slate-50 rounded-xl border border-slate-100 cursor-pointer hover:border-indigo-300 flex justify-between items-center transition-all group";
+                    el.innerHTML = `<div><p class="font-black text-[10px] uppercase text-slate-800">${data.name}</p><p class="text-[8px] text-indigo-400 font-bold uppercase">${path.length} pts</p></div><button class='delete-btn text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity px-2'>×</button>`;
+                    el.onclick = (e) => {
+                        if (e.target.closest('.delete-btn')) {
+                            deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'routes', d.id));
+                        } else if (!isDrawing && !isNavigating) {
+                            loadRoutePreview(path);
+                        }
+                    };
+                    list.appendChild(el);
+                });
+            }, (err) => console.error("Firestore sync error:", err));
+        }
+
+        function loadRoutePreview(path) {
+            clearRouteLayers();
+            isViewing = true;
+            document.getElementById('view-controls').classList.remove('hidden');
+            document.getElementById('idle-msg').classList.add('hidden');
+            routePath = path;
+            polyline.setLatLngs(routePath);
+            polyline.setStyle({ dashArray: '5, 10', color: '#94a3b8' });
+            routePath.forEach(latLng => {
+                markers.push(L.circleMarker(latLng, { radius: 3, fillColor: "#94a3b8", color: "#fff", weight: 1, fillOpacity: 1 }).addTo(map));
+            });
+            map.fitBounds(L.latLngBounds(routePath), { padding: [50, 50] });
+        }
 
         function showToast(msg, isError = false) {
             const toast = document.getElementById('gps-toast');
@@ -212,27 +270,19 @@
             setTimeout(() => toast.classList.add('hidden'), 3000);
         }
 
-        // LOADING LOGIC
         async function startLoadingSequence() {
             let progress = 0;
             const bar = document.getElementById('progress-bar');
             const timer = setInterval(() => {
-                progress += 1;
+                progress += 2;
                 if (bar) bar.style.width = progress + '%';
                 if (progress >= 100) {
                     clearInterval(timer);
                     revealApp();
                 }
-            }, 30); // 3-second visual load
+            }, 30);
 
-            // Attempt Auth if Firebase exists
-            if (auth) {
-                try { 
-                    await signInAnonymously(auth); 
-                } catch (e) { 
-                    console.error("Auth failed:", e);
-                }
-            }
+            await initFirebase();
         }
 
         function revealApp() {
@@ -320,44 +370,6 @@
             document.getElementById('point-count').innerText = `${routePath.length} Points`;
         }
 
-        // FIRESTORE LISTENER
-        if (auth) {
-            onAuthStateChanged(auth, (user) => {
-                if (!user) return;
-                currentUser = user;
-                const q = query(collection(db, 'artifacts', appId, 'users', user.uid, 'routes'));
-                onSnapshot(q, (snapshot) => {
-                    const list = document.getElementById('saved-routes-list');
-                    list.innerHTML = snapshot.empty ? `<p class='text-[9px] text-slate-300 font-bold text-center py-4'>No saved routes</p>` : "";
-                    snapshot.forEach(d => {
-                        const data = d.data();
-                        const path = JSON.parse(data.path);
-                        const el = document.createElement('div');
-                        el.className = "p-3 bg-slate-50 rounded-xl border border-slate-100 cursor-pointer hover:border-indigo-300 flex justify-between items-center transition-all group";
-                        el.innerHTML = `<div><p class="font-black text-[10px] uppercase text-slate-800">${data.name}</p><p class="text-[8px] text-indigo-400 font-bold uppercase">${path.length} pts</p></div><button class='delete-btn text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity px-2'>×</button>`;
-                        el.onclick = (e) => {
-                            if (e.target.closest('.delete-btn')) {
-                                deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'routes', d.id));
-                            } else if (!isDrawing && !isNavigating) {
-                                clearRouteLayers();
-                                isViewing = true;
-                                document.getElementById('view-controls').classList.remove('hidden');
-                                document.getElementById('idle-msg').classList.add('hidden');
-                                routePath = path;
-                                polyline.setLatLngs(routePath);
-                                polyline.setStyle({ dashArray: '5, 10', color: '#94a3b8' });
-                                routePath.forEach(latLng => {
-                                    markers.push(L.circleMarker(latLng, { radius: 3, fillColor: "#94a3b8", color: "#fff", weight: 1, fillOpacity: 1 }).addTo(map));
-                                });
-                                map.fitBounds(L.latLngBounds(routePath), { padding: [50, 50] });
-                            }
-                        };
-                        list.appendChild(el);
-                    });
-                }, (err) => console.error(err));
-            });
-        }
-
         // BUTTON HANDLERS
         document.getElementById('start-navigation-btn').onclick = () => {
             if (!isViewing) return;
@@ -431,15 +443,27 @@
         document.getElementById('modal-confirm').onclick = async () => {
             const name = document.getElementById('modal-route-name').value || "Saved Path";
             if (db && currentUser) {
-                await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'routes'), { name, path: JSON.stringify(routePath), timestamp: Date.now() });
+                try {
+                    await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'routes'), { 
+                        name, 
+                        path: JSON.stringify(routePath), 
+                        timestamp: Date.now() 
+                    });
+                    showToast("Route saved successfully!");
+                } catch (e) {
+                    showToast("Database error: " + e.message, true);
+                }
             } else {
-                showToast("Cannot save: No Database Connection", true);
+                showToast("Cannot save: No Authentication", true);
             }
             document.getElementById('modal-cancel').click();
             document.getElementById('cancel-draft-btn').click();
         };
 
-        window.onload = () => { initMap(); startLoadingSequence(); };
+        window.onload = () => { 
+            initMap(); 
+            startLoadingSequence(); 
+        };
     </script>
 </body>
 </html>
