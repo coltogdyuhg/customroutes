@@ -169,7 +169,7 @@
         let userMarker = null;
         let unsubscribeRoutes = null;
 
-        // AUTH INITIALIZATION (MANDATORY RULE 3)
+        // AUTH INITIALIZATION (RULE 3)
         const initAuth = async () => {
             try {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -211,9 +211,14 @@
 
         // MAP LOGIC
         function initMap() {
-            if (map) return; // Prevent double init
+            if (map) return;
             
-            map = L.map('map', { zoomControl: true, attributionControl: false }).setView([40.7128, -74.0060], 13);
+            // Standard Leaflet Initialization
+            map = L.map('map', { 
+                zoomControl: true, 
+                attributionControl: false 
+            }).setView([40.7128, -74.0060], 13);
+
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
             polyline = L.polyline([], { color: '#6366f1', weight: 5, lineCap: 'round', opacity: 0.8 }).addTo(map);
 
@@ -240,6 +245,8 @@
                 navigator.geolocation.getCurrentPosition(p => {
                     updateUserLocation(p.coords.latitude, p.coords.longitude);
                     map.setView([p.coords.latitude, p.coords.longitude], 15);
+                }, () => {
+                    showToast("GPS Access Denied");
                 });
             }
         }
@@ -263,14 +270,13 @@
             currentUser = user;
             const badge = document.getElementById('auth-status-badge');
             
-            // Cleanup existing listeners if any
             if (unsubscribeRoutes) unsubscribeRoutes();
 
             if (user) {
                 badge.innerText = "Sync Active";
                 badge.className = "bg-emerald-500/20 px-3 py-1 rounded-full text-emerald-400 text-[10px] font-bold tracking-widest uppercase border border-emerald-500/20";
                 
-                // Set up listener (RULE 1: Correct path)
+                // Fetch data with simple query (RULE 2)
                 const q = collection(db, 'artifacts', appId, 'users', user.uid, 'routes');
                 unsubscribeRoutes = onSnapshot(q, (snapshot) => {
                     const list = document.getElementById('saved-routes-list');
@@ -282,9 +288,9 @@
                         try { p = JSON.parse(data.path); } catch(e) { console.error("Data parse error", e); }
                         
                         const el = document.createElement('div');
-                        el.className = "p-3 bg-slate-50 rounded-xl border border-slate-100 cursor-pointer hover:border-indigo-300 flex justify-between items-center group";
+                        el.className = "p-3 bg-slate-50 rounded-xl border border-slate-100 cursor-pointer hover:border-indigo-300 flex justify-between items-center group transition-all";
                         el.innerHTML = `
-                            <div class="flex-1">
+                            <div class="flex-1 overflow-hidden">
                                 <p class="font-black text-[10px] uppercase text-slate-800 truncate pr-2">${data.name}</p>
                                 <p class="text-[8px] text-indigo-400 font-bold uppercase">${p.length} Waypoints</p>
                             </div>
@@ -304,7 +310,10 @@
                         };
                         list.appendChild(el);
                     });
-                }, (err) => console.error("Snapshot error:", err));
+                }, (err) => {
+                    console.error("Firestore error:", err);
+                    showToast("Database Sync Error");
+                });
             } else {
                 badge.innerText = "Disconnected";
                 badge.className = "bg-rose-500/20 px-3 py-1 rounded-full text-rose-400 text-[10px] font-bold tracking-widest uppercase border border-rose-500/20";
@@ -412,22 +421,24 @@
         };
 
         // BOOTSTRAP
-        window.onload = async () => {
+        window.addEventListener('load', async () => {
             const bar = document.getElementById('progress-bar-el');
             let p = 0;
-            const timer = setInterval(() => {
+            const timer = setInterval(async () => {
                 p += 5;
                 bar.style.width = p + '%';
                 if (p >= 100) {
                     clearInterval(timer);
                     document.getElementById('loading-screen').style.transform = 'translateY(-100%)';
                     document.getElementById('app-interface').classList.remove('opacity-0');
-                    setTimeout(initMap, 500); // Ensure layout is settled
+                    
+                    // Delay map init slightly to ensure container has dimensions
+                    setTimeout(initMap, 400); 
                 }
             }, 30);
 
             await initAuth();
-        };
+        });
     </script>
 </body>
 </html>
