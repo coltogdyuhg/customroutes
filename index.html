@@ -192,6 +192,30 @@
         let userMarker = null, watchId = null, isAutoTracking = false;
         const fallbackPos = [40.7128, -74.0060]; 
 
+        // Helper to ensure auth is ready
+        async function ensureAuth() {
+            if (currentUser) return currentUser;
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                return new Promise((resolve) => {
+                    const unsub = onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            currentUser = user;
+                            unsub();
+                            resolve(user);
+                        }
+                    });
+                });
+            } catch (e) {
+                console.error("Auth failed:", e);
+                return null;
+            }
+        }
+
         async function initFirebase() {
             try {
                 const configString = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
@@ -202,31 +226,30 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                // Authentication Protocol
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-
+                // Setup listener early
                 onAuthStateChanged(auth, (user) => {
                     currentUser = user;
+                    const badge = document.getElementById('auth-status-badge');
                     if (user) {
-                        document.getElementById('auth-status-badge').innerText = "Cloud Sync Active";
+                        badge.innerText = "Cloud Sync Active";
+                        badge.classList.replace('bg-white/10', 'bg-emerald-500/20');
                         setupFirestoreListener(user);
                     } else {
-                        document.getElementById('auth-status-badge').innerText = "Offline Mode";
+                        badge.innerText = "Connecting...";
                     }
                 });
+
+                // Force initial sign-in
+                await ensureAuth();
             } catch (e) {
                 console.warn("Firebase initialization failed:", e.message);
-                document.getElementById('auth-status-badge').innerText = "Local Only";
+                document.getElementById('auth-status-badge').innerText = "Offline Mode";
             }
         }
 
         function setupFirestoreListener(user) {
             if (!db) return;
-            const q = query(collection(db, 'artifacts', appId, 'users', user.uid, 'routes'));
+            const q = collection(db, 'artifacts', appId, 'users', user.uid, 'routes');
             onSnapshot(q, (snapshot) => {
                 const list = document.getElementById('saved-routes-list');
                 list.innerHTML = snapshot.empty ? `<p class='text-[9px] text-slate-300 font-bold text-center py-4'>No saved routes</p>` : "";
@@ -442,22 +465,26 @@
         
         document.getElementById('modal-confirm').onclick = async () => {
             const name = document.getElementById('modal-route-name').value || "Saved Path";
-            if (db && currentUser) {
+            
+            // Critical check and retry
+            const user = await ensureAuth();
+            
+            if (db && user) {
                 try {
-                    await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'routes'), { 
+                    await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'routes'), { 
                         name, 
                         path: JSON.stringify(routePath), 
                         timestamp: Date.now() 
                     });
                     showToast("Route saved successfully!");
+                    document.getElementById('modal-cancel').click();
+                    document.getElementById('cancel-draft-btn').click();
                 } catch (e) {
                     showToast("Database error: " + e.message, true);
                 }
             } else {
-                showToast("Cannot save: No Authentication", true);
+                showToast("Cannot save: Connection failed", true);
             }
-            document.getElementById('modal-cancel').click();
-            document.getElementById('cancel-draft-btn').click();
         };
 
         window.onload = () => { 
