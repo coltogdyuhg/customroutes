@@ -98,7 +98,7 @@
                 </button>
                 <button onclick="selectMode('mobile')" class="group p-8 bg-white/5 hover:bg-white/10 border border-white/10 rounded-[2.5rem] transition-all flex flex-col items-center gap-4">
                     <div class="p-4 bg-pink-500 rounded-2xl text-white shadow-xl shadow-pink-500/20 group-hover:scale-110 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2-2v14a2 2 0 002 2z" /></svg>
                     </div>
                     <h3 class="text-white font-black uppercase text-sm">Mobile Experience</h3>
                 </button>
@@ -204,7 +204,7 @@
         let isDrawing = false, userMarker = null;
         let savedRoutes = [];
         let lastKnownPos = null;
-        let activeViewLine = null; // Track the currently focused route line
+        let activeViewLine = null;
 
         // Boot loader sequence
         window.onload = () => {
@@ -365,7 +365,6 @@
                 alert("Please add at least 2 points before saving.");
                 return;
             }
-            // Show custom modal
             document.getElementById('name-modal').classList.remove('hidden');
             document.getElementById('route-name-input').focus();
         };
@@ -397,7 +396,6 @@
             document.getElementById('active-controls').classList.add('hidden');
             map.getContainer().style.cursor = '';
             
-            // Clear any active preview line when starting a new draw
             if (activeViewLine) {
                 map.removeLayer(activeViewLine);
                 activeViewLine = null;
@@ -413,7 +411,7 @@
             };
             savedRoutes.unshift(routeObj);
             
-            // Draw a faint persistent line background
+            // Faint persistent background for session context
             L.polyline(routeObj.path, { color: '#6366f1', weight: 2, opacity: 0.2 }).addTo(map);
             
             updateSavedList();
@@ -446,14 +444,13 @@
         window.zoomToRoute = (id) => {
             const route = savedRoutes.find(r => r.id === id);
             if(route) {
-                // Clear existing focused line
                 if (activeViewLine) map.removeLayer(activeViewLine);
 
-                // Create a darker, thicker line for focused viewing
+                // Adjusted to indigo-700 (#4338ca): Strong enough but not "too dark"
                 activeViewLine = L.polyline(route.path, { 
-                    color: '#312e81', // Darker indigo (Tailwind indigo-900)
-                    weight: 6,         // Thicker line
-                    opacity: 1.0,      // Fully opaque
+                    color: '#4338ca', 
+                    weight: 6,         
+                    opacity: 0.9,      
                     lineJoin: 'round',
                     lineCap: 'round'
                 }).addTo(map);
