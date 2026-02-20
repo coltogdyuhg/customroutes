@@ -204,6 +204,7 @@
         let isDrawing = false, userMarker = null;
         let savedRoutes = [];
         let lastKnownPos = null;
+        let activeViewLine = null; // Track the currently focused route line
 
         // Boot loader sequence
         window.onload = () => {
@@ -395,6 +396,12 @@
             document.getElementById('new-route-btn').classList.remove('hidden');
             document.getElementById('active-controls').classList.add('hidden');
             map.getContainer().style.cursor = '';
+            
+            // Clear any active preview line when starting a new draw
+            if (activeViewLine) {
+                map.removeLayer(activeViewLine);
+                activeViewLine = null;
+            }
         }
 
         function saveRoute(name) {
@@ -406,8 +413,8 @@
             };
             savedRoutes.unshift(routeObj);
             
-            // Draw a persistent line on the map for this session
-            L.polyline(routeObj.path, { color: '#6366f1', weight: 3, opacity: 0.4 }).addTo(map);
+            // Draw a faint persistent line background
+            L.polyline(routeObj.path, { color: '#6366f1', weight: 2, opacity: 0.2 }).addTo(map);
             
             updateSavedList();
         }
@@ -428,7 +435,7 @@
                     <div class="flex justify-between items-center mt-2">
                         <span class="text-[9px] text-indigo-500 font-bold tracking-widest uppercase">${route.path.length} Waypoints</span>
                         <div class="flex gap-2">
-                             <button onclick="zoomToRoute(${route.id})" class="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg font-black text-[8px] uppercase">View</button>
+                             <button onclick="zoomToRoute(${route.id})" class="bg-indigo-600 text-white px-3 py-1 rounded-lg font-black text-[8px] uppercase shadow-lg shadow-indigo-100">View</button>
                              <button onclick="deleteRoute(${route.id})" class="bg-rose-50 text-rose-500 px-3 py-1 rounded-lg font-black text-[8px] uppercase">Del</button>
                         </div>
                     </div>
@@ -439,13 +446,29 @@
         window.zoomToRoute = (id) => {
             const route = savedRoutes.find(r => r.id === id);
             if(route) {
+                // Clear existing focused line
+                if (activeViewLine) map.removeLayer(activeViewLine);
+
+                // Create a darker, thicker line for focused viewing
+                activeViewLine = L.polyline(route.path, { 
+                    color: '#312e81', // Darker indigo (Tailwind indigo-900)
+                    weight: 6,         // Thicker line
+                    opacity: 1.0,      // Fully opaque
+                    lineJoin: 'round',
+                    lineCap: 'round'
+                }).addTo(map);
+
                 const bounds = L.latLngBounds(route.path);
-                map.fitBounds(bounds, { padding: [50, 50] });
+                map.fitBounds(bounds, { padding: [50, 50], animate: true });
             }
         };
 
         window.deleteRoute = (id) => {
             savedRoutes = savedRoutes.filter(r => r.id !== id);
+            if (activeViewLine) {
+                map.removeLayer(activeViewLine);
+                activeViewLine = null;
+            }
             updateSavedList();
         };
 
