@@ -260,7 +260,7 @@
 
         document.getElementById('modal-confirm').onclick = () => {
             const name = document.getElementById('modal-route-name').value || "Baldwin Loop";
-            savedRoutes.push({ name, path: [...routePath] });
+            savedRoutes.push({ id: Date.now(), name, path: [...routePath] });
             renderSavedRoutes();
             document.getElementById('save-modal').classList.add('hidden');
             document.getElementById('cancel-draft-btn').onclick();
@@ -273,9 +273,22 @@
             list.innerHTML = savedRoutes.length === 0 ? `<p class='text-center text-[9px] text-slate-300 py-4 font-bold uppercase'>Empty</p>` : "";
             savedRoutes.forEach((route, i) => {
                 const el = document.createElement('div');
-                el.className = "p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-300 flex justify-between";
-                el.innerHTML = `<div class='text-[10px] font-black uppercase text-slate-800'>${route.name}</div><div class='text-[8px] text-indigo-400 font-bold'>${route.path.length} PTS</div>`;
-                el.onclick = () => {
+                el.className = "group relative p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-300 flex justify-between transition-all overflow-hidden";
+                el.innerHTML = `
+                    <div class='flex-grow pr-8'>
+                        <div class='text-[10px] font-black uppercase text-slate-800 truncate'>${route.name}</div>
+                        <div class='text-[8px] text-indigo-400 font-bold'>${route.path.length} PTS</div>
+                    </div>
+                    <button class='delete-btn absolute right-0 top-0 bottom-0 px-3 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all transform translate-x-full group-hover:translate-x-0' data-id="${route.id}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                `;
+                
+                // Clicking the route card
+                el.onclick = (e) => {
+                    if (e.target.closest('.delete-btn')) return;
                     isViewing = true;
                     routePath = [...route.path];
                     polyline.setLatLngs(routePath);
@@ -283,9 +296,28 @@
                     document.getElementById('idle-msg').classList.add('hidden');
                     map.fitBounds(L.latLngBounds(routePath), { padding: [40, 40] });
                 };
+
+                // Delete logic
+                el.querySelector('.delete-btn').onclick = (e) => {
+                    e.stopPropagation();
+                    savedRoutes = savedRoutes.filter(r => r.id !== route.id);
+                    renderSavedRoutes();
+                    if (isViewing) {
+                        polyline.setLatLngs([]);
+                        document.getElementById('clear-view-btn').click();
+                    }
+                };
+
                 list.appendChild(el);
             });
         }
+
+        document.getElementById('clear-view-btn').onclick = () => {
+            isViewing = false;
+            polyline.setLatLngs([]);
+            document.getElementById('view-controls').classList.add('hidden');
+            document.getElementById('idle-msg').classList.remove('hidden');
+        };
 
         document.getElementById('start-navigation-btn').onclick = () => {
             isNavigating = true;
