@@ -1,569 +1,480 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CustomRoutes - Navigator</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Leaflet.js -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CustomRoutes - Navigator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet.js -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <style>
-        :root { --header-h: 64px; }
-        #map { height: calc(100vh - var(--header-h)); width: 100%; background: #0f172a; z-index: 1; }
-        
-        .mode-mobile #sidebar {
-            position: fixed; bottom: 0; left: 0; width: 100% !important;
-            height: auto !important; max-height: 50vh; border-radius: 2rem 2rem 0 0;
-            border-top: 1px solid #e2e8f0; z-index: 50;
-        }
-        .mode-desktop #sidebar { width: 22rem; height: 100%; border-right: 1px solid #e2e8f0; }
+    <style>
+        :root { --header-h: 64px; }
+        #map { height: calc(100vh - var(--header-h)); width: 100%; background: #0f172a; z-index: 1; }
+        
+        .mode-mobile #sidebar {
+            position: fixed; bottom: 0; left: 0; width: 100% !important;
+            height: auto !important; max-height: 50vh; border-radius: 2rem 2rem 0 0;
+            border-top: 1px solid #e2e8f0; z-index: 50;
+        }
+        .mode-desktop #sidebar { width: 22rem; height: 100%; border-right: 1px solid #e2e8f0; }
 
-        .gradient-header { background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%); }
-        .hero-pattern {
-            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-        }
+        .gradient-header { background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%); }
+        .hero-pattern {
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
 
-        .user-location-marker {
-            background: #4f46e5; 
-            border: 3px solid white; 
-            border-radius: 50%;
-            box-shadow: 0 0 10px rgba(0,0,0,0.2);
-        }
-        .pulse-ring {
-            position: absolute;
-            top: 50%; left: 50%;
-            width: 14px; height: 14px;
-            margin-top: -7px; margin-left: -7px;
-            border-radius: 50%;
-            background: rgba(79, 70, 229, 0.4);
-            animation: pulse-animation 2s infinite;
-        }
-        @keyframes pulse-animation {
-            0% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(4); opacity: 0; }
-        }
+        .user-location-marker {
+            background: #4f46e5; 
+            border: 3px solid white; 
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+        .pulse-ring {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 14px; height: 14px;
+            margin-top: -7px; margin-left: -7px;
+            border-radius: 50%;
+            background: rgba(79, 70, 229, 0.4);
+            animation: pulse-animation 2s infinite;
+        }
+        @keyframes pulse-animation {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(4); opacity: 0; }
+        }
 
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-    </style>
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
 </head>
 <body class="bg-slate-950 overflow-hidden font-sans text-slate-900">
 
-    <!-- Route Name Modal -->
-    <div id="name-modal" class="fixed inset-0 z-[1000] hidden flex items-center justify-center p-6 bg-slate-950/60 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl space-y-6">
-            <div class="space-y-2">
-                <h3 class="text-xl font-black italic uppercase tracking-tighter">Name Your Route</h3>
-                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Give this path a label to save it</p>
-            </div>
-            <input id="route-name-input" type="text" placeholder="e.g. Morning Run, Trail B" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:ring-2 ring-indigo-500">
-            <div class="flex gap-3">
-                <button id="confirm-save-btn" class="flex-grow bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest">Save Path</button>
-                <button id="close-modal-btn" class="px-6 bg-slate-100 text-slate-400 py-4 rounded-2xl font-black uppercase text-[10px]">Cancel</button>
-            </div>
-        </div>
-    </div>
+    <!-- Route Name Modal -->
+    <div id="name-modal" class="fixed inset-0 z-[1000] hidden flex items-center justify-center p-6 bg-slate-950/60 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl space-y-6">
+            <div class="space-y-2">
+                <h3 class="text-xl font-black italic uppercase tracking-tighter">Name Your Route</h3>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Give this path a label to save it</p>
+            </div>
+            <input id="route-name-input" type="text" placeholder="e.g. Morning Run, Trail B" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:ring-2 ring-indigo-500">
+            <div class="flex gap-3">
+                <button id="confirm-save-btn" class="flex-grow bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest">Save Path</button>
+                <button id="close-modal-btn" class="px-6 bg-slate-100 text-slate-400 py-4 rounded-2xl font-black uppercase text-[10px]">Cancel</button>
+            </div>
+        </div>
+    </div>
 
-    <!-- Screen 1: Initial Boot Loader -->
-    <div id="boot-screen" class="fixed inset-0 z-[300] flex flex-col items-center justify-center p-6 text-center transition-all duration-700">
-        <div class="absolute inset-0 hero-pattern bg-slate-950"></div>
-        <div class="relative max-w-md w-full space-y-8">
-            <div class="space-y-3">
-                <div class="w-16 h-16 bg-indigo-600 rounded-2xl mx-auto flex items-center justify-center shadow-2xl shadow-indigo-500/20 animate-bounce">
-                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                </div>
-                <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">CustomRoutes</h2>
-                <p class="text-indigo-400 text-[10px] font-black uppercase tracking-[0.4em]" id="boot-label">System Initializing...</p>
-            </div>
-            <div class="relative w-full bg-white/5 h-1.5 rounded-full overflow-hidden border border-white/5">
-                <div id="boot-progress" class="h-full bg-indigo-500 w-0 transition-all duration-200 ease-out"></div>
-            </div>
-        </div>
-    </div>
+    <!-- Screen 1: Initial Boot Loader -->
+    <div id="boot-screen" class="fixed inset-0 z-[300] flex flex-col items-center justify-center p-6 text-center transition-all duration-700">
+        <div class="absolute inset-0 hero-pattern bg-slate-950"></div>
+        <div class="relative max-w-md w-full space-y-8">
+            <div class="space-y-3">
+                <div class="w-16 h-16 bg-indigo-600 rounded-2xl mx-auto flex items-center justify-center shadow-2xl shadow-indigo-500/20 animate-bounce">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                </div>
+                <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">CustomRoutes</h2>
+                <p class="text-indigo-400 text-[10px] font-black uppercase tracking-[0.4em]" id="boot-label">System Initializing...</p>
+            </div>
+            <div class="relative w-full bg-white/5 h-1.5 rounded-full overflow-hidden border border-white/5">
+                <div id="boot-progress" class="h-full bg-indigo-500 w-0 transition-all duration-200 ease-out"></div>
+            </div>
+        </div>
+    </div>
 
-    <!-- Screen 2: Mode Selection -->
-    <div id="selection-screen" class="fixed inset-0 z-[200] hidden flex flex-col items-center justify-center p-6 transition-all duration-500 opacity-0">
-        <div class="absolute inset-0 hero-pattern bg-slate-950"></div>
-        <div class="relative z-10 w-full max-w-xl text-center space-y-8">
-            <h1 class="text-4xl font-black text-white italic uppercase tracking-tighter">Choose Interface</h1>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button onclick="selectMode('desktop')" class="group p-8 bg-white/5 hover:bg-white/10 border border-white/10 rounded-[2.5rem] transition-all flex flex-col items-center gap-4">
-                    <div class="p-4 bg-indigo-500 rounded-2xl text-white shadow-xl shadow-indigo-500/20 group-hover:scale-110 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                    </div>
-                    <h3 class="text-white font-black uppercase text-sm">Desktop Optimization</h3>
-                </button>
-                <button onclick="selectMode('mobile')" class="group p-8 bg-white/5 hover:bg-white/10 border border-white/10 rounded-[2.5rem] transition-all flex flex-col items-center gap-4">
-                    <div class="p-4 bg-pink-500 rounded-2xl text-white shadow-xl shadow-pink-500/20 group-hover:scale-110 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2-2v14a2 2 0 002 2z" /></svg>
-                    </div>
-                    <h3 class="text-white font-black uppercase text-sm">Mobile Experience</h3>
-                </button>
-            </div>
-        </div>
-    </div>
+    <!-- Screen 2: Mode Selection -->
+    <div id="selection-screen" class="fixed inset-0 z-[200] hidden flex flex-col items-center justify-center p-6 transition-all duration-500 opacity-0">
+        <div class="absolute inset-0 hero-pattern bg-slate-950"></div>
+        <div class="relative z-10 w-full max-w-xl text-center space-y-8">
+            <h1 class="text-4xl font-black text-white italic uppercase tracking-tighter">Choose Interface</h1>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button onclick="selectMode('desktop')" class="group p-8 bg-white/5 hover:bg-white/10 border border-white/10 rounded-[2.5rem] transition-all flex flex-col items-center gap-4">
+                    <div class="p-4 bg-indigo-500 rounded-2xl text-white shadow-xl shadow-indigo-500/20 group-hover:scale-110 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                    </div>
+                    <h3 class="text-white font-black uppercase text-sm">Desktop Optimization</h3>
+                </button>
+                <button onclick="selectMode('mobile')" class="group p-8 bg-white/5 hover:bg-white/10 border border-white/10 rounded-[2.5rem] transition-all flex flex-col items-center gap-4">
+                    <div class="p-4 bg-pink-500 rounded-2xl text-white shadow-xl shadow-pink-500/20 group-hover:scale-110 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2-2v14a2 2 0 002 2z" /></svg>
+                    </div>
+                    <h3 class="text-white font-black uppercase text-sm">Mobile Experience</h3>
+                </button>
+            </div>
+        </div>
+    </div>
 
-    <!-- Screen 3: GPS Loader -->
-    <div id="loading-screen" class="fixed inset-0 z-[100] hidden flex flex-col items-center justify-center p-6 text-center transition-all duration-500 opacity-0">
-        <div class="absolute inset-0 hero-pattern bg-slate-950"></div>
-        <div class="relative max-w-md w-full space-y-10">
-            <h2 class="text-2xl font-black text-white italic uppercase tracking-tighter">Syncing Satellites</h2>
-            <p class="text-emerald-400 text-[10px] font-black uppercase tracking-[0.3em]" id="status-label">Acquiring Precision GPS...</p>
-            <div class="relative w-full bg-white/5 h-2 rounded-full overflow-hidden border border-white/5">
-                <div id="progress-bar" class="h-full bg-gradient-to-r from-indigo-500 to-pink-500 w-0 transition-all duration-300 shadow-[0_0_20px_rgba(99,102,241,0.5)]"></div>
-            </div>
-        </div>
-    </div>
+    <!-- Screen 3: GPS Loader -->
+    <div id="loading-screen" class="fixed inset-0 z-[100] hidden flex flex-col items-center justify-center p-6 text-center transition-all duration-500 opacity-0">
+        <div class="absolute inset-0 hero-pattern bg-slate-950"></div>
+        <div class="relative max-w-md w-full space-y-10">
+            <h2 class="text-2xl font-black text-white italic uppercase tracking-tighter">Syncing Satellites</h2>
+            <p class="text-emerald-400 text-[10px] font-black uppercase tracking-[0.3em]" id="status-label">Acquiring Precision GPS...</p>
+            <div class="relative w-full bg-white/5 h-2 rounded-full overflow-hidden border border-white/5">
+                <div id="progress-bar" class="h-full bg-gradient-to-r from-indigo-500 to-pink-500 w-0 transition-all duration-300 shadow-[0_0_20px_rgba(99,102,241,0.5)]"></div>
+            </div>
+        </div>
+    </div>
 
-    <!-- Main App Interface -->
-    <div id="app-interface" class="opacity-0 pointer-events-none transition-opacity duration-1000 flex flex-col h-screen bg-slate-50">
-        <header class="h-16 gradient-header flex items-center justify-between px-6 shadow-lg z-30 shrink-0">
-            <div class="flex items-center gap-4">
-                <h1 class="text-white font-black text-xl tracking-tighter italic uppercase">CustomRoutes</h1>
-            </div>
-            <div class="flex items-center gap-3">
-                <span id="sync-status" class="hidden md:block text-[9px] font-black text-white/50 uppercase tracking-widest">Offline Mode</span>
-                <button onclick="location.reload()" class="bg-white/10 hover:bg-white/20 text-white text-[9px] font-black uppercase px-4 py-2 rounded-full border border-white/10 transition-all">Reset System</button>
-            </div>
-        </header>
+    <!-- Main App Interface -->
+    <div id="app-interface" class="opacity-0 pointer-events-none transition-opacity duration-1000 flex flex-col h-screen bg-slate-50">
+        <header class="h-16 gradient-header flex items-center justify-between px-6 shadow-lg z-30 shrink-0">
+            <div class="flex items-center gap-4">
+                <h1 class="text-white font-black text-xl tracking-tighter italic uppercase">CustomRoutes</h1>
+            </div>
+            <button onclick="location.reload()" class="bg-white/10 hover:bg-white/20 text-white text-[9px] font-black uppercase px-4 py-2 rounded-full border border-white/10 transition-all">Reset System</button>
+        </header>
 
-        <main id="main-container" class="flex flex-grow overflow-hidden relative">
-            <div id="sidebar" class="bg-white shadow-2xl flex flex-col z-20 overflow-y-auto">
-                <div class="p-5 space-y-4 border-b border-slate-100">
-                    <!-- Manual Location Entry if GPS Fails -->
-                    <div id="manual-loc-entry" class="hidden space-y-2">
-                        <label class="text-[9px] font-black text-rose-500 uppercase tracking-widest">GPS Access Blocked</label>
-                        <div class="flex gap-2">
-                            <input id="manual-search" type="text" placeholder="Search City/Address" class="flex-grow p-3 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold outline-none focus:ring-2 ring-indigo-500">
-                            <button id="manual-search-btn" class="px-4 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase">Find</button>
-                        </div>
-                    </div>
+        <main id="main-container" class="flex flex-grow overflow-hidden relative">
+            <div id="sidebar" class="bg-white shadow-2xl flex flex-col z-20 overflow-y-auto">
+                <div class="p-5 space-y-4 border-b border-slate-100">
+                    <!-- Manual Location Entry if GPS Fails -->
+                    <div id="manual-loc-entry" class="hidden space-y-2">
+                        <label class="text-[9px] font-black text-rose-500 uppercase tracking-widest">GPS Access Blocked</label>
+                        <div class="flex gap-2">
+                            <input id="manual-search" type="text" placeholder="Search City/Address" class="flex-grow p-3 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold outline-none focus:ring-2 ring-indigo-500">
+                            <button id="manual-search-btn" class="px-4 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase">Find</button>
+                        </div>
+                    </div>
 
-                    <button id="new-route-btn" class="w-full bg-indigo-600 text-white py-4 rounded-2xl hover:bg-indigo-500 transition-all font-black uppercase tracking-widest text-xs shadow-xl shadow-indigo-100">
-                        + Start Drawing Route
-                    </button>
-                    
-                    <div id="active-controls" class="hidden space-y-2">
-                        <div class="bg-indigo-50 border-2 border-indigo-100 p-4 rounded-2xl flex flex-col gap-3">
-                            <div class="flex justify-between items-center">
-                                <span id="point-count" class="text-[10px] font-black text-indigo-600 uppercase">0 Points Recorded</span>
-                                <span class="text-[9px] text-slate-400 italic">Click map to add</span>
-                            </div>
-                            <div class="grid grid-cols-1 gap-2">
-                                <button id="undo-btn" class="w-full bg-amber-500 text-white py-3 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
-                                    Undo Last Point
-                                </button>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <button id="end-route-btn" class="bg-emerald-500 text-white py-3 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-emerald-500/20">Save Route</button>
-                                    <button id="cancel-draft-btn" class="bg-white text-rose-500 py-3 rounded-xl font-black text-[10px] uppercase border border-rose-100">Cancel</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <button id="new-route-btn" class="w-full bg-indigo-600 text-white py-4 rounded-2xl hover:bg-indigo-500 transition-all font-black uppercase tracking-widest text-xs shadow-xl shadow-indigo-100">
+                        + Start Drawing Route
+                    </button>
+                    
+                    <div id="active-controls" class="hidden space-y-2">
+                        <div class="bg-indigo-50 border-2 border-indigo-100 p-4 rounded-2xl flex flex-col gap-3">
+                            <div class="flex justify-between items-center">
+                                <span id="point-count" class="text-[10px] font-black text-indigo-600 uppercase">0 Points Recorded</span>
+                                <span class="text-[9px] text-slate-400 italic">Click map to add</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button id="end-route-btn" class="bg-emerald-500 text-white py-3 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-emerald-500/20">Save Route</button>
+                                <button id="cancel-draft-btn" class="bg-white text-rose-500 py-3 rounded-xl font-black text-[10px] uppercase border border-rose-100">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
 
-                    <div class="bg-slate-50 border border-slate-100 p-3 rounded-xl flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div id="tracking-status" class="w-2 h-2 rounded-full bg-slate-300"></div>
-                            <span id="gps-label" class="text-[9px] font-black text-slate-400 uppercase">GPS Standby</span>
-                        </div>
-                        <button id="locate-me-btn" class="flex items-center gap-1.5 text-indigo-600 font-black text-[9px] uppercase hover:underline">
-                            Recenter Map
-                        </button>
-                    </div>
-                </div>
+                    <div class="bg-slate-50 border border-slate-100 p-3 rounded-xl flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div id="tracking-status" class="w-2 h-2 rounded-full bg-slate-300"></div>
+                            <span id="gps-label" class="text-[9px] font-black text-slate-400 uppercase">GPS Standby</span>
+                        </div>
+                        <button id="locate-me-btn" class="flex items-center gap-1.5 text-indigo-600 font-black text-[9px] uppercase hover:underline">
+                            Recenter Map
+                        </button>
+                    </div>
+                </div>
 
-                <div class="p-5 flex-grow">
-                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Your Saved Paths</h3>
-                    <div id="saved-routes-list" class="space-y-3">
-                        <div class="text-center py-8 opacity-40">
-                            <p class="text-[10px] font-bold">No saved routes yet.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                <div class="p-5 flex-grow">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Your Saved Paths</h3>
+                    <div id="saved-routes-list" class="space-y-3">
+                        <div class="text-center py-8 opacity-40">
+                            <p class="text-[10px] font-bold">No saved routes yet.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-            <div id="map-area" class="flex-grow relative">
-                <div id="map"></div>
-                
-                <!-- Mobile Floating Center -->
-                <button id="floating-locate" class="absolute bottom-6 right-6 md:hidden z-[1000] bg-white w-14 h-14 rounded-full shadow-2xl border border-slate-200 text-indigo-600 flex items-center justify-center">
-                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
-                </button>
+            <div id="map-area" class="flex-grow relative">
+                <div id="map"></div>
+                
+                <!-- Mobile Floating Center -->
+                <button id="floating-locate" class="absolute bottom-6 right-6 md:hidden z-[1000] bg-white w-14 h-14 rounded-full shadow-2xl border border-slate-200 text-indigo-600 flex items-center justify-center">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
+                </button>
 
-                <!-- Status Toast -->
-                <div id="gps-error-toast" class="hidden absolute top-4 left-1/2 -translate-x-1/2 w-[90%] md:w-80 bg-rose-600 text-white p-4 rounded-2xl shadow-2xl z-[1000] border border-rose-500 flex items-start gap-3">
-                    <div class="shrink-0 p-1.5 bg-white/20 rounded-lg">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                    </div>
-                    <div>
-                        <p class="text-[10px] font-black uppercase">Location Denied</p>
-                        <p class="text-[9px] opacity-90 leading-tight">Please enable GPS or use the search box in the sidebar.</p>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
+                <!-- Status Toast -->
+                <div id="gps-error-toast" class="hidden absolute top-4 left-1/2 -translate-x-1/2 w-[90%] md:w-80 bg-rose-600 text-white p-4 rounded-2xl shadow-2xl z-[1000] border border-rose-500 flex items-start gap-3">
+                    <div class="shrink-0 p-1.5 bg-white/20 rounded-lg">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black uppercase">Location Denied</p>
+                        <p class="text-[9px] opacity-90 leading-tight">Please enable GPS or use the search box in the sidebar.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
 
-    <!-- Firebase Imports -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <script>
+        let map, polyline, markers = [], routePath = [];
+        let isDrawing = false, userMarker = null;
+        let savedRoutes = [];
+        let lastKnownPos = null;
+        let activeViewLine = null;
 
-        // Global Variables
-        let map, polyline, markers = [], routePath = [];
-        let isDrawing = false, userMarker = null;
-        let savedRoutes = [];
-        let lastKnownPos = null;
-        let activeViewLine = null;
-        let db, auth, currentUser, appId;
+        // Boot loader sequence
+        window.onload = () => {
+            let prog = 0;
+            const bar = document.getElementById('boot-progress');
+            const interval = setInterval(() => {
+                prog += Math.random() * 15;
+                if(prog > 100) prog = 100;
+                bar.style.width = prog + '%';
+                if(prog >= 100) {
+                    clearInterval(interval);
+                    showSelection();
+                }
+            }, 100);
+        };
 
-        // Firebase Setup
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
-        auth = getAuth(app);
-        db = getFirestore(app);
-        appId = typeof __app_id !== 'undefined' ? __app_id : 'custom-routes-app';
+        function showSelection() {
+            const boot = document.getElementById('boot-screen');
+            const selection = document.getElementById('selection-screen');
+            boot.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                boot.classList.add('hidden');
+                selection.classList.remove('hidden');
+                setTimeout(() => selection.classList.remove('opacity-0'), 50);
+            }, 700);
+        }
 
-        // Auth Logic
-        const initAuth = async () => {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-                await signInAnonymously(auth);
-            }
-        };
+        function selectMode(mode) {
+            const selection = document.getElementById('selection-screen');
+            const loader = document.getElementById('loading-screen');
+            selection.classList.add('opacity-0', 'pointer-events-none');
+            
+            setTimeout(() => {
+                selection.classList.add('hidden');
+                loader.classList.remove('hidden');
+                document.body.className = `bg-slate-950 overflow-hidden font-sans text-slate-900 mode-${mode}`;
+                setTimeout(() => loader.classList.remove('opacity-0'), 50);
+                startMapLoading(mode);
+            }, 500);
+        }
 
-        initAuth();
+        function startMapLoading(mode) {
+            let prog = 0;
+            const bar = document.getElementById('progress-bar');
+            const interval = setInterval(() => {
+                prog += 5;
+                bar.style.width = prog + '%';
+                if(prog >= 100) {
+                    clearInterval(interval);
+                    finishLoading(mode);
+                }
+            }, 50);
+        }
 
-        onAuthStateChanged(auth, (user) => {
-            currentUser = user;
-            if (user) {
-                document.getElementById('sync-status').innerText = "Cloud Synced";
-                document.getElementById('sync-status').classList.remove('text-white/50');
-                document.getElementById('sync-status').classList.add('text-emerald-300');
-                setupDataSync(user.uid);
-            }
-        });
+        function finishLoading(mode) {
+            const loader = document.getElementById('loading-screen');
+            const app = document.getElementById('app-interface');
+            loader.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                loader.classList.add('hidden');
+                app.classList.remove('opacity-0', 'pointer-events-none');
+                initMap(mode);
+            }, 500);
+        }
 
-        function setupDataSync(uid) {
-            const routesRef = collection(db, 'artifacts', appId, 'users', uid, 'saved_routes');
-            onSnapshot(routesRef, (snapshot) => {
-                savedRoutes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                // Sort by timestamp desc (simple JS sort)
-                savedRoutes.sort((a, b) => b.createdAt - a.createdAt);
-                updateSavedList();
-            }, (err) => console.error("Firestore Error:", err));
-        }
+        function initMap(mode) {
+            const fallback = [40.7128, -74.0060];
+            map = L.map('map', { 
+                zoomControl: mode === 'desktop',
+                attributionControl: false,
+                tap: true
+            }).setView(fallback, 13);
 
-        // Boot loader sequence
-        window.onload = () => {
-            let prog = 0;
-            const bar = document.getElementById('boot-progress');
-            const interval = setInterval(() => {
-                prog += Math.random() * 15;
-                if(prog > 100) prog = 100;
-                bar.style.width = prog + '%';
-                if(prog >= 100) {
-                    clearInterval(interval);
-                    showSelection();
-                }
-            }, 100);
-        };
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+            polyline = L.polyline([], { color: '#6366f1', weight: 4, dashArray: '5, 10' }).addTo(map);
+            
+            const customIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: '<div class="pulse-ring"></div><div class="user-location-marker" style="width: 14px; height: 14px; position: relative; z-index: 10;"></div>',
+                iconSize: [14, 14],
+                iconAnchor: [7, 7]
+            });
 
-        function showSelection() {
-            const boot = document.getElementById('boot-screen');
-            const selection = document.getElementById('selection-screen');
-            boot.classList.add('opacity-0', 'pointer-events-none');
-            setTimeout(() => {
-                boot.classList.add('hidden');
-                selection.classList.remove('hidden');
-                setTimeout(() => selection.classList.remove('opacity-0'), 50);
-            }, 700);
-        }
+            userMarker = L.marker(fallback, { icon: customIcon }).addTo(map);
 
-        window.selectMode = (mode) => {
-            const selection = document.getElementById('selection-screen');
-            const loader = document.getElementById('loading-screen');
-            selection.classList.add('opacity-0', 'pointer-events-none');
-            
-            setTimeout(() => {
-                selection.classList.add('hidden');
-                loader.classList.remove('hidden');
-                document.body.className = `bg-slate-950 overflow-hidden font-sans text-slate-900 mode-${mode}`;
-                setTimeout(() => loader.classList.remove('opacity-0'), 50);
-                startMapLoading(mode);
-            }, 500);
-        }
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        const latlng = [pos.coords.latitude, pos.coords.longitude];
+                        updateLocation(latlng);
+                        map.flyTo(latlng, 15);
+                    },
+                    (err) => handleGPSBlocked(),
+                    { enableHighAccuracy: true, timeout: 5000 }
+                );
 
-        function startMapLoading(mode) {
-            let prog = 0;
-            const bar = document.getElementById('progress-bar');
-            const interval = setInterval(() => {
-                prog += 5;
-                bar.style.width = prog + '%';
-                if(prog >= 100) {
-                    clearInterval(interval);
-                    finishLoading(mode);
-                }
-            }, 50);
-        }
+                navigator.geolocation.watchPosition(
+                    (pos) => updateLocation([pos.coords.latitude, pos.coords.longitude]),
+                    null,
+                    { enableHighAccuracy: true }
+                );
+            } else {
+                handleGPSBlocked();
+            }
 
-        function finishLoading(mode) {
-            const loader = document.getElementById('loading-screen');
-            const appUi = document.getElementById('app-interface');
-            loader.classList.add('opacity-0', 'pointer-events-none');
-            setTimeout(() => {
-                loader.classList.add('hidden');
-                appUi.classList.remove('opacity-0', 'pointer-events-none');
-                initMap(mode);
-            }, 500);
-        }
+            map.on('click', (e) => {
+                if(!isDrawing) return;
+                const pt = [e.latlng.lat, e.latlng.lng];
+                routePath.push(pt);
+                polyline.setLatLngs(routePath);
+                const m = L.circleMarker(pt, { radius: 5, fillColor: '#4f46e5', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(map);
+                markers.push(m);
+                document.getElementById('point-count').innerText = `${routePath.length} Points Recorded`;
+            });
+        }
 
-        function initMap(mode) {
-            const fallback = [40.7128, -74.0060];
-            map = L.map('map', { 
-                zoomControl: mode === 'desktop',
-                attributionControl: false,
-                tap: true
-            }).setView(fallback, 13);
+        function updateLocation(latlng) {
+            lastKnownPos = latlng;
+            if(userMarker) userMarker.setLatLng(latlng);
+            document.getElementById('tracking-status').className = 'w-2 h-2 rounded-full bg-emerald-400';
+            document.getElementById('gps-label').innerText = "GPS Connected";
+            document.getElementById('gps-error-toast').classList.add('hidden');
+            document.getElementById('manual-loc-entry').classList.add('hidden');
+        }
 
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
-            polyline = L.polyline([], { color: '#6366f1', weight: 4, dashArray: '5, 10' }).addTo(map);
-            
-            const customIcon = L.divIcon({
-                className: 'custom-div-icon',
-                html: '<div class="pulse-ring"></div><div class="user-location-marker" style="width: 14px; height: 14px; position: relative; z-index: 10;"></div>',
-                iconSize: [14, 14],
-                iconAnchor: [7, 7]
-            });
+        function handleGPSBlocked() {
+            document.getElementById('tracking-status').className = 'w-2 h-2 rounded-full bg-rose-500';
+            document.getElementById('gps-label').innerText = "GPS Offline";
+            document.getElementById('gps-error-toast').classList.remove('hidden');
+            document.getElementById('manual-loc-entry').classList.remove('hidden');
+        }
 
-            userMarker = L.marker(fallback, { icon: customIcon }).addTo(map);
+        document.getElementById('manual-search-btn').onclick = async () => {
+            const query = document.getElementById('manual-search').value;
+            if(!query) return;
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                if(data.length > 0) {
+                    const latlng = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+                    updateLocation(latlng);
+                    map.flyTo(latlng, 15);
+                }
+            } catch(e) { console.error("Search failed", e); }
+        };
 
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        const latlng = [pos.coords.latitude, pos.coords.longitude];
-                        updateLocation(latlng);
-                        map.flyTo(latlng, 15);
-                    },
-                    (err) => handleGPSBlocked(),
-                    { enableHighAccuracy: true, timeout: 5000 }
-                );
+        // UI Flow for Saving
+        document.getElementById('new-route-btn').onclick = () => {
+            resetCurrentDrawing();
+            isDrawing = true;
+            document.getElementById('new-route-btn').classList.add('hidden');
+            document.getElementById('active-controls').classList.remove('hidden');
+            map.getContainer().style.cursor = 'crosshair';
+        };
 
-                navigator.geolocation.watchPosition(
-                    (pos) => updateLocation([pos.coords.latitude, pos.coords.longitude]),
-                    null,
-                    { enableHighAccuracy: true }
-                );
-            } else {
-                handleGPSBlocked();
-            }
+        document.getElementById('end-route-btn').onclick = () => {
+            if(routePath.length < 2) {
+                alert("Please add at least 2 points before saving.");
+                return;
+            }
+            document.getElementById('name-modal').classList.remove('hidden');
+            document.getElementById('route-name-input').focus();
+        };
 
-            map.on('click', (e) => {
-                if(!isDrawing) return;
-                const pt = [e.latlng.lat, e.latlng.lng];
-                routePath.push(pt);
-                polyline.setLatLngs(routePath);
-                
-                const m = L.circleMarker(pt, { radius: 5, fillColor: '#4f46e5', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(map);
-                markers.push(m);
-                
-                updatePointCount();
-            });
-        }
+        document.getElementById('confirm-save-btn').onclick = () => {
+            const name = document.getElementById('route-name-input').value.trim() || `Path ${new Date().toLocaleTimeString()}`;
+            saveRoute(name);
+            closeModal();
+            resetCurrentDrawing();
+        };
 
-        function updatePointCount() {
-            document.getElementById('point-count').innerText = `${routePath.length} Points Recorded`;
-        }
+        document.getElementById('close-modal-btn').onclick = closeModal;
 
-        function updateLocation(latlng) {
-            lastKnownPos = latlng;
-            if(userMarker) userMarker.setLatLng(latlng);
-            document.getElementById('tracking-status').className = 'w-2 h-2 rounded-full bg-emerald-400';
-            document.getElementById('gps-label').innerText = "GPS Connected";
-            document.getElementById('gps-error-toast').classList.add('hidden');
-            document.getElementById('manual-loc-entry').classList.add('hidden');
-        }
+        function closeModal() {
+            document.getElementById('name-modal').classList.add('hidden');
+            document.getElementById('route-name-input').value = "";
+        }
 
-        function handleGPSBlocked() {
-            document.getElementById('tracking-status').className = 'w-2 h-2 rounded-full bg-rose-500';
-            document.getElementById('gps-label').innerText = "GPS Offline";
-            document.getElementById('gps-error-toast').classList.remove('hidden');
-            document.getElementById('manual-loc-entry').classList.remove('hidden');
-        }
+        document.getElementById('cancel-draft-btn').onclick = resetCurrentDrawing;
 
-        document.getElementById('manual-search-btn').onclick = async () => {
-            const queryVal = document.getElementById('manual-search').value;
-            if(!queryVal) return;
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryVal)}`);
-                const data = await res.json();
-                if(data.length > 0) {
-                    const latlng = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
-                    updateLocation(latlng);
-                    map.flyTo(latlng, 15);
-                }
-            } catch(e) { console.error("Search failed", e); }
-        };
+        function resetCurrentDrawing() {
+            isDrawing = false;
+            routePath = [];
+            polyline.setLatLngs([]);
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+            document.getElementById('point-count').innerText = "0 Points Recorded";
+            document.getElementById('new-route-btn').classList.remove('hidden');
+            document.getElementById('active-controls').classList.add('hidden');
+            map.getContainer().style.cursor = '';
+            
+            if (activeViewLine) {
+                map.removeLayer(activeViewLine);
+                activeViewLine = null;
+            }
+        }
 
-        // --- Drawing Logic ---
-        document.getElementById('new-route-btn').onclick = () => {
-            resetCurrentDrawing();
-            isDrawing = true;
-            document.getElementById('new-route-btn').classList.add('hidden');
-            document.getElementById('active-controls').classList.remove('hidden');
-            map.getContainer().style.cursor = 'crosshair';
-        };
+        function saveRoute(name) {
+            const routeObj = {
+                id: Date.now(),
+                name: name,
+                path: [...routePath],
+                timestamp: new Date().toLocaleTimeString()
+            };
+            savedRoutes.unshift(routeObj);
+            
+            // Faint persistent background for session context
+            L.polyline(routeObj.path, { color: '#6366f1', weight: 2, opacity: 0.2 }).addTo(map);
+            
+            updateSavedList();
+        }
 
-        // --- UNDO FEATURE ---
-        document.getElementById('undo-btn').onclick = () => {
-            if (routePath.length === 0) return;
-            
-            // Remove last coordinate
-            routePath.pop();
-            
-            // Update polyline
-            polyline.setLatLngs(routePath);
-            
-            // Remove last visual marker
-            const lastMarker = markers.pop();
-            if (lastMarker) map.removeLayer(lastMarker);
-            
-            updatePointCount();
-        };
+        function updateSavedList() {
+            const list = document.getElementById('saved-routes-list');
+            if(savedRoutes.length === 0) {
+                list.innerHTML = '<div class="text-center py-8 opacity-40"><p class="text-[10px] font-bold">No saved routes yet.</p></div>';
+                return;
+            }
 
-        document.getElementById('end-route-btn').onclick = () => {
-            if(routePath.length < 2) {
-                return;
-            }
-            document.getElementById('name-modal').classList.remove('hidden');
-            document.getElementById('route-name-input').focus();
-        };
+            list.innerHTML = savedRoutes.map(route => `
+                <div class="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm hover:shadow-md transition-shadow group">
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="text-[10px] font-black text-slate-800 uppercase tracking-tighter truncate w-32">${route.name}</span>
+                        <span class="text-[8px] font-bold text-slate-400">${route.timestamp}</span>
+                    </div>
+                    <div class="flex justify-between items-center mt-2">
+                        <span class="text-[9px] text-indigo-500 font-bold tracking-widest uppercase">${route.path.length} Waypoints</span>
+                        <div class="flex gap-2">
+                             <button onclick="zoomToRoute(${route.id})" class="bg-indigo-600 text-white px-3 py-1 rounded-lg font-black text-[8px] uppercase shadow-lg shadow-indigo-100">View</button>
+                             <button onclick="deleteRoute(${route.id})" class="bg-rose-50 text-rose-500 px-3 py-1 rounded-lg font-black text-[8px] uppercase">Del</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
 
-        document.getElementById('confirm-save-btn').onclick = async () => {
-            const name = document.getElementById('route-name-input').value.trim() || `Path ${new Date().toLocaleTimeString()}`;
-            await saveRoute(name);
-            closeModal();
-            resetCurrentDrawing();
-        };
+        window.zoomToRoute = (id) => {
+            const route = savedRoutes.find(r => r.id === id);
+            if(route) {
+                if (activeViewLine) map.removeLayer(activeViewLine);
 
-        document.getElementById('close-modal-btn').onclick = closeModal;
+                // Adjusted to indigo-700 (#4338ca): Strong enough but not "too dark"
+                activeViewLine = L.polyline(route.path, { 
+                    color: '#4338ca', 
+                    weight: 6,         
+                    opacity: 0.9,      
+                    lineJoin: 'round',
+                    lineCap: 'round'
+                }).addTo(map);
 
-        function closeModal() {
-            document.getElementById('name-modal').classList.add('hidden');
-            document.getElementById('route-name-input').value = "";
-        }
+                const bounds = L.latLngBounds(route.path);
+                map.fitBounds(bounds, { padding: [50, 50], animate: true });
+            }
+        };
 
-        document.getElementById('cancel-draft-btn').onclick = resetCurrentDrawing;
+        window.deleteRoute = (id) => {
+            savedRoutes = savedRoutes.filter(r => r.id !== id);
+            if (activeViewLine) {
+                map.removeLayer(activeViewLine);
+                activeViewLine = null;
+            }
+            updateSavedList();
+        };
 
-        function resetCurrentDrawing() {
-            isDrawing = false;
-            routePath = [];
-            polyline.setLatLngs([]);
-            markers.forEach(m => map.removeLayer(m));
-            markers = [];
-            updatePointCount();
-            document.getElementById('new-route-btn').classList.remove('hidden');
-            document.getElementById('active-controls').classList.add('hidden');
-            map.getContainer().style.cursor = '';
-            
-            if (activeViewLine) {
-                map.removeLayer(activeViewLine);
-                activeViewLine = null;
-            }
-        }
+        const centerHandler = () => {
+            if (lastKnownPos) map.flyTo(lastKnownPos, 16, { duration: 1.5 });
+        };
 
-        async function saveRoute(name) {
-            if (!currentUser) return;
-            
-            const routeObj = {
-                name: name,
-                path: routePath,
-                timestampStr: new Date().toLocaleTimeString(),
-                createdAt: Date.now()
-            };
-            
-            const routesRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'saved_routes');
-            try {
-                await addDoc(routesRef, routeObj);
-                // Also add a light trace to the map for session context
-                L.polyline(routePath, { color: '#6366f1', weight: 2, opacity: 0.2 }).addTo(map);
-            } catch (e) {
-                console.error("Save failed", e);
-            }
-        }
-
-        function updateSavedList() {
-            const list = document.getElementById('saved-routes-list');
-            if(savedRoutes.length === 0) {
-                list.innerHTML = '<div class="text-center py-8 opacity-40"><p class="text-[10px] font-bold">No saved routes yet.</p></div>';
-                return;
-            }
-
-            list.innerHTML = '';
-            savedRoutes.forEach(route => {
-                const card = document.createElement('div');
-                card.className = "bg-white border border-slate-100 p-4 rounded-2xl shadow-sm hover:shadow-md transition-shadow group";
-                card.innerHTML = `
-                    <div class="flex justify-between items-start mb-1">
-                        <span class="text-[10px] font-black text-slate-800 uppercase tracking-tighter truncate w-32">${route.name}</span>
-                        <span class="text-[8px] font-bold text-slate-400">${route.timestampStr}</span>
-                    </div>
-                    <div class="flex justify-between items-center mt-2">
-                        <span class="text-[9px] text-indigo-500 font-bold tracking-widest uppercase">${route.path.length} Waypoints</span>
-                        <div class="flex gap-2">
-                             <button class="view-btn bg-indigo-600 text-white px-3 py-1 rounded-lg font-black text-[8px] uppercase shadow-lg shadow-indigo-100">View</button>
-                             <button class="del-btn bg-rose-50 text-rose-500 px-3 py-1 rounded-lg font-black text-[8px] uppercase">Del</button>
-                        </div>
-                    </div>
-                `;
-                
-                card.querySelector('.view-btn').onclick = () => zoomToRoute(route);
-                card.querySelector('.del-btn').onclick = () => deleteRoute(route.id);
-                list.appendChild(card);
-            });
-        }
-
-        function zoomToRoute(route) {
-            if (activeViewLine) map.removeLayer(activeViewLine);
-
-            activeViewLine = L.polyline(route.path, { 
-                color: '#4338ca', 
-                weight: 6,         
-                opacity: 0.9,      
-                lineJoin: 'round',
-                lineCap: 'round'
-            }).addTo(map);
-
-            const bounds = L.latLngBounds(route.path);
-            map.fitBounds(bounds, { padding: [50, 50], animate: true });
-        }
-
-        async function deleteRoute(docId) {
-            if (!currentUser) return;
-            const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'saved_routes', docId);
-            try {
-                await deleteDoc(docRef);
-                if (activeViewLine) {
-                    map.removeLayer(activeViewLine);
-                    activeViewLine = null;
-                }
-            } catch (e) {
-                console.error("Delete failed", e);
-            }
-        }
-
-        const centerHandler = () => {
-            if (lastKnownPos) map.flyTo(lastKnownPos, 16, { duration: 1.5 });
-        };
-
-        document.getElementById('locate-me-btn').onclick = centerHandler;
-        document.getElementById('floating-locate').onclick = centerHandler;
-    </script>
+        document.getElementById('locate-me-btn').onclick = centerHandler;
+        document.getElementById('floating-locate').onclick = centerHandler;
+    </script>
 </body>
 </html>
