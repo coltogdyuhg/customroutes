@@ -14,7 +14,7 @@
         #map { height: calc(100vh - 64px); width: 100%; background: #f1f5f9; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .modal-overlay { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); }
+        .modal-overlay { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); transition: opacity 0.3s ease; }
         .gradient-header { background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%); }
         
         #loading-screen {
@@ -31,7 +31,6 @@
             transition: width 0.1s linear;
         }
         
-        /* Pulse animation for current location */
         .user-location-marker {
             background: #4f46e5;
             border: 3px solid white;
@@ -112,7 +111,7 @@
 
                     <div id="view-controls" class="hidden space-y-3">
                         <div class="bg-slate-50 border-2 border-indigo-100 p-4 rounded-2xl">
-                            <p class="text-[10px] font-black text-slate-700 uppercase tracking-widest mb-3">Saved Route</p>
+                            <p id="view-title" class="text-[10px] font-black text-slate-700 uppercase tracking-widest mb-3 text-center truncate">Saved Route</p>
                             <div class="space-y-2">
                                 <button id="start-navigation-btn" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-black text-xs uppercase shadow-md transition-all hover:bg-indigo-700">Start Navigation</button>
                                 <button id="clear-view-btn" class="w-full bg-white border border-slate-200 text-slate-500 py-3 rounded-lg font-black text-[10px] uppercase">Close</button>
@@ -153,19 +152,36 @@
         </main>
     </div>
 
-    <!-- Modals -->
+    <!-- Save Modal -->
     <div id="save-modal" class="fixed inset-0 z-[2000] flex items-center justify-center modal-overlay hidden">
         <div class="bg-white rounded-[2rem] shadow-2xl p-8 w-[380px] m-4 border border-slate-100">
             <h3 class="text-xl font-black text-slate-800 mb-4 tracking-tight">Save Route</h3>
             <input id="modal-route-name" type="text" placeholder="Baldwin Loop" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl mb-6 font-bold text-slate-700 outline-none focus:border-indigo-500">
             <div class="flex gap-4">
                 <button id="modal-cancel" class="flex-1 px-4 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-[10px] uppercase">Cancel</button>
-                <button id="modal-confirm" class="flex-[2] px-4 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase">Save</button>
+                <button id="modal-confirm" class="flex-[2] px-4 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase transition-colors hover:bg-indigo-700">Save</button>
             </div>
         </div>
     </div>
 
-    <div id="gps-toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[3000] bg-indigo-900 text-white px-6 py-3 rounded-2xl shadow-2xl text-[10px] font-black uppercase tracking-widest hidden">
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-modal" class="fixed inset-0 z-[2000] flex items-center justify-center modal-overlay hidden">
+        <div class="bg-white rounded-[2rem] shadow-2xl p-8 w-[380px] m-4 border border-slate-100">
+            <div class="text-rose-500 mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+            </div>
+            <h3 class="text-lg font-black text-slate-800 mb-2 tracking-tight text-center">Delete Route?</h3>
+            <p class="text-slate-400 text-xs text-center mb-6 leading-relaxed">This action cannot be undone. Are you sure you want to remove this route from Baldwin Navigator?</p>
+            <div class="flex gap-3">
+                <button id="delete-cancel" class="flex-1 px-4 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-[10px] uppercase">Keep it</button>
+                <button id="delete-confirm" class="flex-1 px-4 py-4 bg-rose-500 text-white rounded-2xl font-black text-[10px] uppercase transition-colors hover:bg-rose-600">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="gps-toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[3000] bg-indigo-900 text-white px-6 py-3 rounded-2xl shadow-2xl text-[10px] font-black uppercase tracking-widest hidden pointer-events-none">
         <span id="toast-message">Simulation Active</span>
     </div>
 
@@ -174,6 +190,7 @@
         let isDrawing = false, isViewing = false, isNavigating = false;
         let userMarker = null;
         let savedRoutes = [];
+        let routeToDeleteIndex = null;
         
         // BALDWIN, PA COORDINATES
         const baldwinPos = [40.3542, -79.9678]; 
@@ -236,108 +253,147 @@
             });
         }
 
-        document.getElementById('new-route-btn').onclick = () => {
-            isDrawing = true;
+        function resetMapState() {
+            isDrawing = false;
+            isViewing = false;
+            isNavigating = false;
             routePath = [];
             markers.forEach(m => map.removeLayer(m));
             markers = [];
             polyline.setLatLngs([]);
+            polyline.setStyle({ color: '#6366f1', dashArray: '1, 10' });
+            map.getContainer().style.cursor = '';
+            
+            // UI visibility
+            document.getElementById('active-controls').classList.add('hidden');
+            document.getElementById('view-controls').classList.add('hidden');
+            document.getElementById('nav-hud').classList.add('hidden');
+            document.getElementById('idle-msg').classList.remove('hidden');
+        }
+
+        document.getElementById('new-route-btn').onclick = () => {
+            resetMapState();
+            isDrawing = true;
             document.getElementById('active-controls').classList.remove('hidden');
             document.getElementById('idle-msg').classList.add('hidden');
             map.getContainer().style.cursor = 'crosshair';
+            showToast("Click map to draw points");
         };
 
-        document.getElementById('cancel-draft-btn').onclick = () => {
-            isDrawing = false;
-            document.getElementById('active-controls').classList.add('hidden');
-            document.getElementById('idle-msg').classList.remove('hidden');
-            map.getContainer().style.cursor = '';
+        document.getElementById('cancel-draft-btn').onclick = resetMapState;
+
+        document.getElementById('undo-point-btn').onclick = () => {
+            if (routePath.length > 0) {
+                routePath.pop();
+                const lastMarker = markers.pop();
+                if (lastMarker) map.removeLayer(lastMarker);
+                polyline.setLatLngs(routePath);
+                document.getElementById('point-count').innerText = `${routePath.length} Points`;
+            }
         };
 
         document.getElementById('end-route-btn').onclick = () => {
-            if (routePath.length > 1) document.getElementById('save-modal').classList.remove('hidden');
+            if (routePath.length > 1) {
+                document.getElementById('save-modal').classList.remove('hidden');
+                document.getElementById('modal-route-name').focus();
+            } else {
+                showToast("Need at least 2 points to save");
+            }
         };
 
         document.getElementById('modal-confirm').onclick = () => {
-            const name = document.getElementById('modal-route-name').value || "Baldwin Loop";
-            savedRoutes.push({ id: Date.now(), name, path: [...routePath] });
+            const name = document.getElementById('modal-route-name').value.trim() || "Baldwin Loop";
+            savedRoutes.push({ name, path: [...routePath] });
             renderSavedRoutes();
+            document.getElementById('modal-route-name').value = "";
             document.getElementById('save-modal').classList.add('hidden');
-            document.getElementById('cancel-draft-btn').onclick();
+            resetMapState();
+            showToast("Route saved successfully");
         };
 
         document.getElementById('modal-cancel').onclick = () => document.getElementById('save-modal').classList.add('hidden');
 
         function renderSavedRoutes() {
             const list = document.getElementById('saved-routes-list');
-            list.innerHTML = savedRoutes.length === 0 ? `<p class='text-center text-[9px] text-slate-300 py-4 font-bold uppercase'>Empty</p>` : "";
+            list.innerHTML = savedRoutes.length === 0 ? `<p class='text-center text-[9px] text-slate-300 py-8 font-black uppercase tracking-widest'>No saved routes</p>` : "";
+            
             savedRoutes.forEach((route, i) => {
                 const el = document.createElement('div');
-                el.className = "group relative p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-300 flex justify-between transition-all overflow-hidden";
+                el.className = "group relative p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-300 transition-all flex flex-col gap-1 pr-12";
+                
                 el.innerHTML = `
-                    <div class='flex-grow pr-8'>
-                        <div class='text-[10px] font-black uppercase text-slate-800 truncate'>${route.name}</div>
-                        <div class='text-[8px] text-indigo-400 font-bold'>${route.path.length} PTS</div>
-                    </div>
-                    <button class='delete-btn absolute right-0 top-0 bottom-0 px-3 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all transform translate-x-full group-hover:translate-x-0' data-id="${route.id}">
+                    <div class='text-[10px] font-black uppercase text-slate-800 truncate'>${route.name}</div>
+                    <div class='text-[8px] text-indigo-400 font-bold'>${route.path.length} WAYPOINTS</div>
+                    <button class="delete-route-btn absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-300 hover:text-rose-500 transition-colors" data-index="${i}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                     </button>
                 `;
                 
-                // Clicking the route card
+                // Click route to view
                 el.onclick = (e) => {
-                    if (e.target.closest('.delete-btn')) return;
+                    if (e.target.closest('.delete-route-btn')) return;
+                    resetMapState();
                     isViewing = true;
                     routePath = [...route.path];
                     polyline.setLatLngs(routePath);
+                    document.getElementById('view-title').innerText = route.name;
                     document.getElementById('view-controls').classList.remove('hidden');
                     document.getElementById('idle-msg').classList.add('hidden');
                     map.fitBounds(L.latLngBounds(routePath), { padding: [40, 40] });
                 };
 
-                // Delete logic
-                el.querySelector('.delete-btn').onclick = (e) => {
+                // Delete button functionality
+                const delBtn = el.querySelector('.delete-route-btn');
+                delBtn.onclick = (e) => {
                     e.stopPropagation();
-                    savedRoutes = savedRoutes.filter(r => r.id !== route.id);
-                    renderSavedRoutes();
-                    if (isViewing) {
-                        polyline.setLatLngs([]);
-                        document.getElementById('clear-view-btn').click();
-                    }
+                    routeToDeleteIndex = i;
+                    document.getElementById('delete-modal').classList.remove('hidden');
                 };
 
                 list.appendChild(el);
             });
         }
 
-        document.getElementById('clear-view-btn').onclick = () => {
-            isViewing = false;
-            polyline.setLatLngs([]);
-            document.getElementById('view-controls').classList.add('hidden');
-            document.getElementById('idle-msg').classList.remove('hidden');
+        // Delete Modal Logic
+        document.getElementById('delete-confirm').onclick = () => {
+            if (routeToDeleteIndex !== null) {
+                savedRoutes.splice(routeToDeleteIndex, 1);
+                renderSavedRoutes();
+                resetMapState();
+                document.getElementById('delete-modal').classList.add('hidden');
+                routeToDeleteIndex = null;
+                showToast("Route deleted");
+            }
+        };
+
+        document.getElementById('delete-cancel').onclick = () => {
+            document.getElementById('delete-modal').classList.add('hidden');
+            routeToDeleteIndex = null;
         };
 
         document.getElementById('start-navigation-btn').onclick = () => {
             isNavigating = true;
             document.getElementById('view-controls').classList.add('hidden');
             document.getElementById('nav-hud').classList.remove('hidden');
-            polyline.setStyle({ dashArray: null });
-            showToast("Click map to simulate movement");
+            polyline.setStyle({ color: '#10b981', dashArray: null }); // Emerald color for navigation
+            showToast("Navigation started");
         };
 
-        document.getElementById('stop-nav-btn').onclick = () => {
-            isNavigating = false;
-            document.getElementById('nav-hud').classList.add('hidden');
-            document.getElementById('idle-msg').classList.remove('hidden');
-            polyline.setLatLngs([]);
-            polyline.setStyle({ dashArray: '1, 10' });
+        document.getElementById('stop-nav-btn').onclick = resetMapState;
+        document.getElementById('clear-view-btn').onclick = resetMapState;
+
+        document.getElementById('locate-me-btn').onclick = () => {
+            map.flyTo(baldwinPos, 15);
+            showToast("Centered on Baldwin");
         };
 
-        document.getElementById('locate-me-btn').onclick = () => map.flyTo(baldwinPos, 15);
-
-        window.onload = () => { initMap(); startLoadingSequence(); renderSavedRoutes(); };
+        window.onload = () => { 
+            initMap(); 
+            startLoadingSequence(); 
+            renderSavedRoutes(); 
+        };
     </script>
 </body>
 </html>
