@@ -255,31 +255,42 @@
             const statusDot = document.getElementById('tracking-status');
             
             if ("geolocation" in navigator) {
+                // Clear existing watch if any
+                if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+
+                // Use High Accuracy settings for exactness
+                const options = {
+                    enableHighAccuracy: true,
+                    maximumAge: 0,           // Force fresh location
+                    timeout: 10000           // Longer timeout for satellite lock
+                };
+
                 watchId = navigator.geolocation.watchPosition(
                     (position) => {
-                        const { latitude, longitude } = position.coords;
+                        const { latitude, longitude, accuracy } = position.coords;
                         const latLng = [latitude, longitude];
                         
                         userMarker.setLatLng(latLng);
-                        if (statusDot) statusDot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+                        if (statusDot) {
+                            statusDot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+                            statusDot.title = `Accuracy: ${Math.round(accuracy)}m`;
+                        }
                         
+                        // If center following is desired or accuracy is low, center once
                         if (isNavigating) {
-                            // Sync logic for navigation if needed
+                            map.panTo(latLng);
                         }
                     },
                     (error) => {
-                        // Error code 1 is PERMISSION_DENIED. In many sandboxed environments, this is the default.
-                        console.warn("GPS Access issue:", error.message || "Denied/Unavailable");
+                        console.warn("GPS Precision issue:", error.message || "Denied/Unavailable");
                         if (statusDot) statusDot.className = 'w-2 h-2 rounded-full bg-rose-500';
                         
-                        // Fallback: Start simulated movement if real GPS fails
-                        startSimulatedMovement();
+                        // Only start simulated movement if it's a hard failure or blocked
+                        if (error.code === 1 || error.code === 3) {
+                           startSimulatedMovement();
+                        }
                     },
-                    {
-                        enableHighAccuracy: true,
-                        maximumAge: 1000,
-                        timeout: 5000
-                    }
+                    options
                 );
             } else {
                 if (statusDot) statusDot.className = 'w-2 h-2 rounded-full bg-slate-400';
@@ -291,12 +302,13 @@
         function startSimulatedMovement() {
             let lat = defaultPos[0];
             let lng = defaultPos[1];
-            setInterval(() => {
-                lat += (Math.random() - 0.5) * 0.0001;
-                lng += (Math.random() - 0.5) * 0.0001;
+            // Static simulation interval
+            const interval = setInterval(() => {
+                lat += (Math.random() - 0.5) * 0.00005;
+                lng += (Math.random() - 0.5) * 0.00005;
                 userMarker.setLatLng([lat, lng]);
             }, 3000);
-            showToast("Environment restriction: Using fallback tracking");
+            showToast("Using approximate location tracking");
         }
 
         function resetMapState() {
@@ -421,7 +433,7 @@
             document.getElementById('nav-hud').classList.remove('hidden');
             polyline.setStyle({ color: '#10b981', dashArray: null });
             showToast("Navigation Active");
-            map.flyTo(userMarker.getLatLng(), 17);
+            map.flyTo(userMarker.getLatLng(), 18); // Zoom in closer for navigation
         };
 
         document.getElementById('stop-nav-btn').onclick = resetMapState;
@@ -429,8 +441,8 @@
 
         document.getElementById('locate-me-btn').onclick = () => {
             const currentPos = userMarker.getLatLng();
-            map.flyTo(currentPos, 16);
-            showToast("Centered on Location");
+            map.flyTo(currentPos, 18);
+            showToast("High Accuracy Centering");
         };
 
         window.onload = () => { 
