@@ -48,12 +48,6 @@
             background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
         }
 
-        /* Waze Style Arrow */
-        .navigation-arrow {
-            transition: transform 0.2s ease-out;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-        }
-
         .user-location-marker {
             background: #4f46e5; 
             border: 3px solid white; 
@@ -91,12 +85,12 @@
     <div id="drive-hud" class="fixed top-20 left-1/2 -translate-x-1/2 w-[90%] max-w-lg z-[2000] hidden transition-all duration-500">
         <div class="bg-indigo-600 text-white rounded-[2rem] p-6 shadow-2xl flex items-center justify-between border-4 border-white/20 backdrop-blur-md">
             <div class="space-y-1">
-                <p class="text-[10px] font-black uppercase tracking-widest opacity-70">Remaining</p>
+                <p class="text-[10px] font-black uppercase tracking-widest opacity-70">Remaining Distance</p>
                 <h2 id="hud-miles" class="text-3xl font-black italic">0.00 Mi</h2>
             </div>
             <div class="h-12 w-px bg-white/20"></div>
             <div class="text-right space-y-1">
-                <p class="text-[10px] font-black uppercase tracking-widest opacity-70">Est. Time</p>
+                <p class="text-[10px] font-black uppercase tracking-widest opacity-70">ETA (Est)</p>
                 <h2 id="hud-time" class="text-3xl font-black italic">--:--</h2>
             </div>
             <button onclick="exitDriveMode()" class="ml-4 bg-white/10 p-3 rounded-full hover:bg-rose-500 transition-colors">
@@ -137,12 +131,12 @@
                 </div>
             </div>
             <div class="pt-10 border-t border-slate-100 dark:border-slate-800 text-center">
-                <p class="text-[9px] text-slate-400 font-bold uppercase">CustomRoutes v2.5.0</p>
+                <p class="text-[9px] text-slate-400 font-bold uppercase">CustomRoutes v2.2.0</p>
             </div>
         </div>
     </div>
 
-    <!-- Boot Screens -->
+    <!-- Loading Screens -->
     <div id="boot-screen" class="fixed inset-0 z-[300] flex flex-col items-center justify-center p-6 text-center transition-all duration-700">
         <div class="absolute inset-0 hero-pattern bg-slate-950"></div>
         <div class="relative max-w-md w-full space-y-8">
@@ -166,7 +160,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button onclick="selectMode('desktop')" class="group p-8 bg-white/5 hover:bg-white/10 border border-white/10 rounded-[2.5rem] transition-all flex flex-col items-center gap-4">
                     <div class="p-4 bg-indigo-500 rounded-2xl text-white shadow-xl shadow-indigo-500/20 group-hover:scale-110 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2-2v10a2 2 0 002 2z" /></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                     </div>
                     <h3 class="text-white font-black uppercase text-sm">Desktop Optimization</h3>
                 </button>
@@ -215,6 +209,14 @@
 
                 <div id="sidebar-scrollable" class="overflow-y-auto flex-grow h-[45vh] md:h-auto">
                     <div class="p-5 space-y-4 border-b border-slate-100 dark:border-slate-800">
+                        <div id="manual-loc-entry" class="hidden space-y-2">
+                            <label class="text-[9px] font-black text-rose-500 uppercase tracking-widest">GPS Access Blocked</label>
+                            <div class="flex gap-2">
+                                <input id="manual-search" type="text" placeholder="Search City" class="flex-grow p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-[10px] font-bold dark:text-white">
+                                <button id="manual-search-btn" class="px-4 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase">Find</button>
+                            </div>
+                        </div>
+
                         <button id="new-route-btn" class="w-full bg-indigo-600 text-white py-4 rounded-2xl hover:bg-indigo-500 font-black uppercase tracking-widest text-xs">
                             + Draw Route
                         </button>
@@ -266,16 +268,15 @@
         let currentDriveRoute = null;
         let currentTheme = localStorage.getItem('theme') || 'light';
         let currentMode = 'desktop';
-        let lastHeading = 0;
+        let initialRecenterDone = false; // Flag to auto-center only on first load
 
-        // --- SVGs for Icons ---
-        const ARROW_SVG = `<svg class="navigation-arrow" width="40" height="40" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M50 10L90 85L50 70L10 85L50 10Z" fill="#4f46e5" stroke="white" stroke-width="5" stroke-linejoin="round"/>
-        </svg>`;
+        function toggleSidebarCollapse() {
+            const sidebar = document.getElementById('sidebar');
+            const chevron = document.getElementById('sidebar-chevron');
+            sidebar.classList.toggle('is-collapsed');
+            chevron.style.transform = sidebar.classList.contains('is-collapsed') ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
 
-        const PULSE_SVG = `<div class="pulse-ring"></div><div class="user-location-marker" style="width: 14px; height: 14px; position: relative; z-index: 10;"></div>`;
-
-        // --- Distance Logic ---
         function calculateDistance(points) {
             let total = 0;
             for (let i = 0; i < points.length - 1; i++) {
@@ -284,95 +285,137 @@
             return (total * 0.000621371).toFixed(2);
         }
 
-        function getRemainingPath(currentPos, routePoints) {
-            if (!currentPos || routePoints.length < 2) return routePoints;
-            
-            let nearestIdx = 0;
-            let minDist = Infinity;
-            
+        function calculateRemaining(currentPos, routePoints) {
+            if (!currentPos || routePoints.length < 2) return 0;
+            let nearestIdx = 0, minDist = Infinity;
             routePoints.forEach((pt, idx) => {
                 const d = L.latLng(currentPos).distanceTo(L.latLng(pt));
-                if (d < minDist) {
-                    minDist = d;
-                    nearestIdx = idx;
-                }
+                if (d < minDist) { minDist = d; nearestIdx = idx; }
             });
-
-            // Return current position + all subsequent waypoints
-            return [currentPos, ...routePoints.slice(nearestIdx + 1)];
+            let remainingMeters = L.latLng(currentPos).distanceTo(L.latLng(routePoints[nearestIdx]));
+            for (let i = nearestIdx; i < routePoints.length - 1; i++) {
+                remainingMeters += L.latLng(routePoints[i]).distanceTo(L.latLng(routePoints[i+1]));
+            }
+            return (remainingMeters * 0.000621371);
         }
 
-        // --- Drive Mode Logic ---
         window.enterDriveMode = (id) => {
             const r = savedRoutes.find(x => x.id === id);
             if (!r) return;
-            
             currentDriveRoute = r;
             isDriving = true;
             document.getElementById('drive-hud').classList.remove('hidden');
-            
-            // Switch to Arrow Icon
-            userMarker.setIcon(L.divIcon({
-                className: 'nav-icon',
-                html: ARROW_SVG,
-                iconSize: [40, 40],
-                iconAnchor: [20, 20]
-            }));
-
-            if (lastKnownPos) {
-                map.flyTo(lastKnownPos, 18, { animate: true, duration: 1 });
-            }
-            
+            window.viewRoute(id);
+            if (lastKnownPos) map.flyTo(lastKnownPos, 18);
             if (currentMode === 'mobile') {
                 const sidebar = document.getElementById('sidebar');
                 if (!sidebar.classList.contains('is-collapsed')) toggleSidebarCollapse();
             }
-
-            updateNavigation();
+            updateHUD();
         };
 
         function exitDriveMode() {
             isDriving = false;
             currentDriveRoute = null;
             document.getElementById('drive-hud').classList.add('hidden');
-            
-            // Switch back to Dot Icon
-            userMarker.setIcon(L.divIcon({
-                className: 'custom-div-icon',
-                html: PULSE_SVG,
-                iconSize: [14, 14],
-                iconAnchor: [7, 7]
-            }));
-
             if (activeViewLine) map.removeLayer(activeViewLine);
             activeViewLine = null;
         }
 
-        function updateNavigation() {
+        function updateHUD() {
             if (!isDriving || !currentDriveRoute || !lastKnownPos) return;
-            
-            const remainingPoints = getRemainingPath(lastKnownPos, currentDriveRoute.path);
-            
-            // Waze Style: Line disappears as you pass it
-            if (activeViewLine) {
-                activeViewLine.setLatLngs(remainingPoints);
-            } else {
-                activeViewLine = L.polyline(remainingPoints, { 
-                    color: '#6366f1', 
-                    weight: 8, 
-                    opacity: 0.8,
-                    lineCap: 'round'
-                }).addTo(map);
-            }
-
-            // Update HUD
-            const miles = parseFloat(calculateDistance(remainingPoints));
+            const miles = calculateRemaining(lastKnownPos, currentDriveRoute.path);
             document.getElementById('hud-miles').innerText = miles.toFixed(2) + " Mi";
-            const mins = Math.max(1, Math.round((miles / 30) * 60));
+            const mins = Math.round((miles / 30) * 60);
             document.getElementById('hud-time').innerText = mins + " Min";
         }
 
-        // --- Core Map Logic ---
+        function setTheme(theme) {
+            currentTheme = theme;
+            localStorage.setItem('theme', theme);
+            const html = document.documentElement;
+            const lightBtn = document.getElementById('theme-light-btn');
+            const darkBtn = document.getElementById('theme-dark-btn');
+            if (theme === 'dark') {
+                html.classList.add('dark');
+                darkBtn.className = "py-3 rounded-xl text-[10px] font-black uppercase transition-all bg-indigo-600 text-white shadow-lg";
+                lightBtn.className = "py-3 rounded-xl text-[10px] font-black uppercase transition-all text-slate-400";
+            } else {
+                html.classList.remove('dark');
+                lightBtn.className = "py-3 rounded-xl text-[10px] font-black uppercase transition-all bg-white text-indigo-600 shadow-sm";
+                darkBtn.className = "py-3 rounded-xl text-[10px] font-black uppercase transition-all text-slate-400 dark:text-slate-500";
+            }
+        }
+        setTheme(currentTheme);
+
+        function toggleSettings() {
+            document.getElementById('settings-panel').classList.toggle('translate-x-full');
+        }
+
+        window.onload = () => {
+            let prog = 0;
+            const bar = document.getElementById('boot-progress');
+            const interval = setInterval(() => {
+                prog += Math.random() * 25;
+                if(prog > 100) prog = 100;
+                bar.style.width = prog + '%';
+                if(prog >= 100) {
+                    clearInterval(interval);
+                    setTimeout(showSelection, 300);
+                }
+            }, 100);
+        };
+
+        function showSelection() {
+            const boot = document.getElementById('boot-screen');
+            const selection = document.getElementById('selection-screen');
+            boot.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                boot.classList.add('hidden');
+                selection.classList.remove('hidden');
+                setTimeout(() => selection.classList.remove('opacity-0'), 50);
+            }, 700);
+        }
+
+        function selectMode(mode) {
+            currentMode = mode;
+            const selection = document.getElementById('selection-screen');
+            const loader = document.getElementById('loading-screen');
+            selection.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                selection.classList.add('hidden');
+                loader.classList.remove('hidden');
+                document.body.className += ` mode-${mode}`;
+                setTimeout(() => loader.classList.remove('opacity-0'), 50);
+                startMapLoading(mode);
+            }, 500);
+        }
+
+        function startMapLoading(mode) {
+            let prog = 0;
+            const bar = document.getElementById('progress-bar');
+            const interval = setInterval(() => {
+                prog += 10;
+                bar.style.width = prog + '%';
+                if(prog >= 100) {
+                    clearInterval(interval);
+                    finishLoading(mode);
+                }
+            }, 50);
+        }
+
+        function finishLoading(mode) {
+            const loader = document.getElementById('loading-screen');
+            const app = document.getElementById('app-interface');
+            loader.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                loader.classList.add('hidden');
+                app.classList.remove('opacity-0', 'pointer-events-none');
+                initMap(mode);
+                updateSavedList();
+            }, 500);
+        }
+
         function initMap(mode) {
             const fallback = [40.7128, -74.0060];
             map = L.map('map', { 
@@ -384,39 +427,41 @@
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
             polyline = L.polyline([], { color: '#6366f1', weight: 4, dashArray: '5, 10' }).addTo(map);
             
-            userMarker = L.marker(fallback, { 
-                icon: L.divIcon({
-                    className: 'custom-div-icon',
-                    html: PULSE_SVG,
-                    iconSize: [14, 14],
-                    iconAnchor: [7, 7]
-                })
-            }).addTo(map);
+            const customIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: '<div class="pulse-ring"></div><div class="user-location-marker" style="width: 14px; height: 14px; position: relative; z-index: 10;"></div>',
+                iconSize: [14, 14],
+                iconAnchor: [7, 7]
+            });
+
+            userMarker = L.marker(fallback, { icon: customIcon }).addTo(map);
 
             if ("geolocation" in navigator) {
+                // Initial request to snap to location immediately
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        const latlng = [pos.coords.latitude, pos.coords.longitude];
+                        updateLocation(latlng);
+                        if (!initialRecenterDone) {
+                            map.flyTo(latlng, 15);
+                            initialRecenterDone = true;
+                        }
+                    },
+                    () => handleGPSBlocked(),
+                    { enableHighAccuracy: true }
+                );
+
+                // Continuous watching
                 navigator.geolocation.watchPosition(
                     (pos) => {
                         const latlng = [pos.coords.latitude, pos.coords.longitude];
-                        const heading = pos.coords.heading || 0;
-                        
-                        lastKnownPos = latlng;
-                        userMarker.setLatLng(latlng);
-                        
-                        // Rotate arrow if driving
+                        updateLocation(latlng);
                         if (isDriving) {
-                            const arrow = document.querySelector('.navigation-arrow');
-                            if (arrow) arrow.style.transform = `rotate(${heading}deg)`;
                             map.panTo(latlng);
-                            updateNavigation();
+                            updateHUD();
                         }
-
-                        document.getElementById('tracking-status').className = 'w-2 h-2 rounded-full bg-emerald-400';
-                        document.getElementById('gps-label').innerText = "Connected";
                     },
-                    () => {
-                        document.getElementById('tracking-status').className = 'w-2 h-2 rounded-full bg-rose-500';
-                        document.getElementById('gps-label').innerText = "Blocked";
-                    },
+                    () => handleGPSBlocked(),
                     { enableHighAccuracy: true }
                 );
             }
@@ -426,41 +471,82 @@
                 const pt = [e.latlng.lat, e.latlng.lng];
                 routePath.push(pt);
                 polyline.setLatLngs(routePath);
-                L.circleMarker(pt, { radius: 5, fillColor: '#4f46e5', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(map);
+                const m = L.circleMarker(pt, { radius: 5, fillColor: '#4f46e5', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(map);
+                markers.push(m);
                 const dist = calculateDistance(routePath);
                 document.getElementById('point-count').innerText = `${dist} Mi Total`;
             });
         }
 
-        // --- UI Interactions ---
-        function updateSavedList() {
-            const list = document.getElementById('saved-routes-list');
-            list.innerHTML = savedRoutes.map(r => `
-                <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm space-y-3">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h4 class="text-xs font-black uppercase dark:text-white">${r.name}</h4>
-                            <p class="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">${r.distance} Miles</p>
-                        </div>
-                        <button onclick="deleteRoute(${r.id})" class="text-slate-300 hover:text-rose-500 transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-                        </button>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="enterDriveMode(${r.id})" class="flex-grow bg-indigo-600 text-white py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-indigo-500 transition-all">Start Drive</button>
-                        <button onclick="previewRoute(${r.id})" class="px-4 bg-slate-50 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-xl text-[9px] font-black uppercase">View</button>
-                    </div>
-                </div>
-            `).join('');
+        function recenter() {
+            if (lastKnownPos) map.flyTo(lastKnownPos, 16);
         }
 
-        window.previewRoute = (id) => {
-            const r = savedRoutes.find(x => x.id === id);
-            if (!r) return;
-            if (activeViewLine) map.removeLayer(activeViewLine);
-            activeViewLine = L.polyline(r.path, { color: '#6366f1', weight: 6, opacity: 0.6 }).addTo(map);
-            map.fitBounds(activeViewLine.getBounds(), { padding: [50, 50] });
+        function updateLocation(latlng) {
+            lastKnownPos = latlng;
+            if(userMarker) userMarker.setLatLng(latlng);
+            document.getElementById('tracking-status').className = 'w-2 h-2 rounded-full bg-emerald-400';
+            document.getElementById('gps-label').innerText = "Connected";
+            document.getElementById('manual-loc-entry').classList.add('hidden');
+        }
+
+        function handleGPSBlocked() {
+            document.getElementById('tracking-status').className = 'w-2 h-2 rounded-full bg-rose-500';
+            document.getElementById('gps-label').innerText = "Blocked";
+            document.getElementById('manual-loc-entry').classList.remove('hidden');
+        }
+
+        document.getElementById('new-route-btn').onclick = () => {
+            resetCurrentDrawing();
+            isDrawing = true;
+            document.getElementById('new-route-btn').classList.add('hidden');
+            document.getElementById('active-controls').classList.remove('hidden');
+            map.getContainer().style.cursor = 'crosshair';
+            if (currentMode === 'mobile') {
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar.classList.contains('is-collapsed')) toggleSidebarCollapse();
+            }
         };
+
+        document.getElementById('end-route-btn').onclick = () => {
+            if(routePath.length < 2) return;
+            const dist = calculateDistance(routePath);
+            document.getElementById('modal-dist').innerText = `Total Distance: ${dist} miles`;
+            document.getElementById('name-modal').classList.remove('hidden');
+            document.getElementById('route-name-input').focus();
+        };
+
+        document.getElementById('confirm-save-btn').onclick = () => {
+            const name = document.getElementById('route-name-input').value.trim() || `Path ${Date.now()}`;
+            saveRoute(name);
+            document.getElementById('name-modal').classList.add('hidden');
+            resetCurrentDrawing();
+        };
+
+        document.getElementById('close-modal-btn').onclick = () => document.getElementById('name-modal').classList.add('hidden');
+        document.getElementById('cancel-draft-btn').onclick = resetCurrentDrawing;
+
+        function resetCurrentDrawing() {
+            isDrawing = false;
+            routePath = [];
+            polyline.setLatLngs([]);
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+            document.getElementById('point-count').innerText = "0.00 Mi Total";
+            document.getElementById('new-route-btn').classList.remove('hidden');
+            document.getElementById('active-controls').classList.add('hidden');
+            map.getContainer().style.cursor = '';
+            if (activeViewLine) map.removeLayer(activeViewLine);
+            activeViewLine = null;
+        }
+
+        function saveRoute(name) {
+            const dist = calculateDistance(routePath);
+            const routeObj = { id: Date.now(), name: name, distance: dist, path: [...routePath] };
+            savedRoutes.unshift(routeObj);
+            localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
+            updateSavedList();
+        }
 
         function deleteRoute(id) {
             savedRoutes = savedRoutes.filter(r => r.id !== id);
@@ -469,92 +555,38 @@
             if (activeViewLine) map.removeLayer(activeViewLine);
         }
 
-        function toggleSidebarCollapse() {
-            const sidebar = document.getElementById('sidebar');
-            const chevron = document.getElementById('sidebar-chevron');
-            sidebar.classList.toggle('is-collapsed');
-            chevron.style.transform = sidebar.classList.contains('is-collapsed') ? 'rotate(180deg)' : 'rotate(0deg)';
+        window.viewRoute = (id) => {
+            const r = savedRoutes.find(x => x.id === id);
+            if (!r) return;
+            if (activeViewLine) map.removeLayer(activeViewLine);
+            activeViewLine = L.polyline(r.path, { color: '#ec4899', weight: 6, opacity: 0.8 }).addTo(map);
+            map.fitBounds(activeViewLine.getBounds(), { padding: [50, 50] });
+        };
+
+        function updateSavedList() {
+            const list = document.getElementById('saved-routes-list');
+            list.innerHTML = savedRoutes.length ? '' : '<p class="text-[10px] text-slate-400 italic">No routes saved yet.</p>';
+            savedRoutes.forEach(r => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 rounded-2xl group transition-all hover:shadow-lg";
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h4 class="text-xs font-black uppercase tracking-tight dark:text-white">${r.name}</h4>
+                            <p class="text-[9px] font-bold text-indigo-500 uppercase">${r.distance} Miles</p>
+                        </div>
+                        <button onclick="deleteRoute(${r.id})" class="text-slate-300 hover:text-rose-500 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="viewRoute(${r.id})" class="flex-grow bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 py-2 rounded-xl text-[9px] font-black uppercase hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors dark:text-white">Preview</button>
+                        <button onclick="enterDriveMode(${r.id})" class="flex-grow bg-indigo-600 text-white py-2 rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 transition-colors">Go</button>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
         }
-
-        function recenter() { if (lastKnownPos) map.flyTo(lastKnownPos, 16); }
-        function toggleSettings() { document.getElementById('settings-panel').classList.toggle('translate-x-full'); }
-        function setTheme(t) {
-            document.documentElement.classList.toggle('dark', t === 'dark');
-            localStorage.setItem('theme', t);
-        }
-
-        // --- Boot flow ---
-        window.onload = () => {
-            let p = 0;
-            const b = document.getElementById('boot-progress');
-            const i = setInterval(() => {
-                p += Math.random() * 20;
-                b.style.width = Math.min(p, 100) + '%';
-                if(p >= 100) {
-                    clearInterval(i);
-                    setTimeout(() => {
-                        document.getElementById('boot-screen').classList.add('hidden');
-                        document.getElementById('selection-screen').classList.remove('hidden', 'opacity-0');
-                    }, 500);
-                }
-            }, 100);
-        };
-
-        function selectMode(m) {
-            currentMode = m;
-            document.getElementById('selection-screen').classList.add('hidden');
-            document.getElementById('loading-screen').classList.remove('hidden', 'opacity-0');
-            document.body.className += ` mode-${m}`;
-            let p = 0;
-            const bar = document.getElementById('progress-bar');
-            const i = setInterval(() => {
-                p += 15;
-                bar.style.width = Math.min(p, 100) + '%';
-                if(p >= 100) {
-                    clearInterval(i);
-                    document.getElementById('loading-screen').classList.add('hidden');
-                    document.getElementById('app-interface').classList.remove('opacity-0', 'pointer-events-none');
-                    initMap(m);
-                    updateSavedList();
-                }
-            }, 50);
-        }
-
-        document.getElementById('new-route-btn').onclick = () => {
-            isDrawing = true;
-            routePath = [];
-            polyline.setLatLngs([]);
-            document.getElementById('new-route-btn').classList.add('hidden');
-            document.getElementById('active-controls').classList.remove('hidden');
-        };
-
-        document.getElementById('end-route-btn').onclick = () => {
-            if(routePath.length < 2) return;
-            document.getElementById('modal-dist').innerText = `Total Distance: ${calculateDistance(routePath)} miles`;
-            document.getElementById('name-modal').classList.remove('hidden');
-        };
-
-        document.getElementById('confirm-save-btn').onclick = () => {
-            const name = document.getElementById('route-name-input').value.trim() || `Route ${savedRoutes.length + 1}`;
-            savedRoutes.unshift({ id: Date.now(), name, distance: calculateDistance(routePath), path: [...routePath] });
-            localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
-            updateSavedList();
-            document.getElementById('name-modal').classList.add('hidden');
-            isDrawing = false;
-            document.getElementById('new-route-btn').classList.remove('hidden');
-            document.getElementById('active-controls').classList.add('hidden');
-        };
-
-        document.getElementById('cancel-draft-btn').onclick = () => {
-            isDrawing = false;
-            routePath = [];
-            polyline.setLatLngs([]);
-            document.getElementById('new-route-btn').classList.remove('hidden');
-            document.getElementById('active-controls').classList.add('hidden');
-        };
-
-        document.getElementById('close-modal-btn').onclick = () => document.getElementById('name-modal').classList.add('hidden');
-
     </script>
 </body>
 </html>
