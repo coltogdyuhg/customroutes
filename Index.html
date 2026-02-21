@@ -81,34 +81,33 @@
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans text-slate-900 transition-colors duration-300">
 
-    <!-- Drive Mode HUD Overlay -->
-    <div id="drive-hud" class="fixed top-20 left-1/2 -translate-x-1/2 w-[90%] max-w-lg z-[2000] hidden transition-all duration-500">
-        <div class="bg-indigo-600 text-white rounded-[2rem] p-6 shadow-2xl flex items-center justify-between border-4 border-white/20 backdrop-blur-md">
-            <div class="space-y-1">
-                <p class="text-[10px] font-black uppercase tracking-widest opacity-70">Remaining Distance</p>
-                <h2 id="hud-miles" class="text-3xl font-black italic">0.00 Mi</h2>
+    <!-- Drive Mode HUD Overlay - Updated to be Smaller & Top Right -->
+    <div id="drive-hud" class="fixed top-20 right-4 z-[2000] hidden transition-all duration-500 scale-90 origin-top-right">
+        <div class="bg-slate-900/90 text-white rounded-3xl p-4 shadow-2xl flex items-center gap-4 border border-white/10 backdrop-blur-md">
+            <div class="flex flex-col border-r border-white/10 pr-4">
+                <span class="text-[8px] font-black uppercase tracking-widest text-indigo-400">Distance</span>
+                <span id="hud-miles" class="text-lg font-black italic tabular-nums">0.00 Mi</span>
             </div>
-            <div class="h-12 w-px bg-white/20"></div>
-            <div class="text-right space-y-1">
-                <p class="text-[10px] font-black uppercase tracking-widest opacity-70">ETA (Est)</p>
-                <h2 id="hud-time" class="text-3xl font-black italic">--:--</h2>
+            <div class="flex flex-col">
+                <span class="text-[8px] font-black uppercase tracking-widest text-indigo-400">Est. Time</span>
+                <span id="hud-time" class="text-lg font-black italic tabular-nums">-- min</span>
             </div>
-            <button onclick="exitDriveMode()" class="ml-4 bg-white/10 p-3 rounded-full hover:bg-rose-500 transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            <button onclick="exitDriveMode()" class="bg-rose-500/20 text-rose-500 p-2 rounded-xl hover:bg-rose-500 hover:text-white transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
     </div>
 
     <!-- Route Name Modal -->
     <div id="name-modal" class="fixed inset-0 z-[1000] hidden flex items-center justify-center p-6 bg-slate-950/60 backdrop-blur-sm">
-        <div class="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl space-y-6">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl space-y-6 border border-slate-200 dark:border-slate-700">
             <div class="space-y-2">
                 <h3 class="text-xl font-black italic uppercase tracking-tighter dark:text-white">Name Your Route</h3>
                 <p id="modal-dist" class="text-[10px] text-indigo-500 font-bold uppercase tracking-widest">Total Distance: 0.00 miles</p>
             </div>
             <input id="route-name-input" type="text" placeholder="e.g. Morning Run" class="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold outline-none focus:ring-2 ring-indigo-500 dark:text-white">
             <div class="flex gap-3">
-                <button id="confirm-save-btn" class="flex-grow bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest">Save Path</button>
+                <button id="confirm-save-btn" class="flex-grow bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-500/20">Save Path</button>
                 <button id="close-modal-btn" class="px-6 bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-300 py-4 rounded-2xl font-black uppercase text-[10px]">Cancel</button>
             </div>
         </div>
@@ -136,7 +135,7 @@
         </div>
     </div>
 
-    <!-- Loading Screens -->
+    <!-- Loading Screen (Initial Boot) -->
     <div id="boot-screen" class="fixed inset-0 z-[300] flex flex-col items-center justify-center p-6 text-center transition-all duration-700">
         <div class="absolute inset-0 hero-pattern bg-slate-950"></div>
         <div class="relative max-w-md w-full space-y-8">
@@ -153,6 +152,7 @@
         </div>
     </div>
 
+    <!-- Interface Selection -->
     <div id="selection-screen" class="fixed inset-0 z-[200] hidden flex flex-col items-center justify-center p-6 transition-all duration-500 opacity-0">
         <div class="absolute inset-0 hero-pattern bg-slate-950"></div>
         <div class="relative z-10 w-full max-w-xl text-center space-y-8">
@@ -174,6 +174,7 @@
         </div>
     </div>
 
+    <!-- Syncing Screen -->
     <div id="loading-screen" class="fixed inset-0 z-[100] hidden flex flex-col items-center justify-center p-6 text-center transition-all duration-500 opacity-0">
         <div class="absolute inset-0 hero-pattern bg-slate-950"></div>
         <div class="relative max-w-md w-full space-y-10">
@@ -217,7 +218,7 @@
                             </div>
                         </div>
 
-                        <button id="new-route-btn" class="w-full bg-indigo-600 text-white py-4 rounded-2xl hover:bg-indigo-500 font-black uppercase tracking-widest text-xs">
+                        <button id="new-route-btn" class="w-full bg-indigo-600 text-white py-4 rounded-2xl hover:bg-indigo-500 font-black uppercase tracking-widest text-xs shadow-lg shadow-indigo-500/20">
                             + Draw Route
                         </button>
                         
@@ -268,7 +269,7 @@
         let currentDriveRoute = null;
         let currentTheme = localStorage.getItem('theme') || 'light';
         let currentMode = 'desktop';
-        let initialRecenterDone = false; // Flag to auto-center only on first load
+        let initialRecenterDone = false;
 
         function toggleSidebarCollapse() {
             const sidebar = document.getElementById('sidebar');
@@ -326,8 +327,8 @@
             if (!isDriving || !currentDriveRoute || !lastKnownPos) return;
             const miles = calculateRemaining(lastKnownPos, currentDriveRoute.path);
             document.getElementById('hud-miles').innerText = miles.toFixed(2) + " Mi";
-            const mins = Math.round((miles / 30) * 60);
-            document.getElementById('hud-time').innerText = mins + " Min";
+            const mins = Math.max(1, Math.round((miles / 30) * 60));
+            document.getElementById('hud-time').innerText = mins + " min";
         }
 
         function setTheme(theme) {
@@ -437,7 +438,6 @@
             userMarker = L.marker(fallback, { icon: customIcon }).addTo(map);
 
             if ("geolocation" in navigator) {
-                // Initial request to snap to location immediately
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
                         const latlng = [pos.coords.latitude, pos.coords.longitude];
@@ -451,7 +451,6 @@
                     { enableHighAccuracy: true }
                 );
 
-                // Continuous watching
                 navigator.geolocation.watchPosition(
                     (pos) => {
                         const latlng = [pos.coords.latitude, pos.coords.longitude];
@@ -491,9 +490,12 @@
         }
 
         function handleGPSBlocked() {
-            document.getElementById('tracking-status').className = 'w-2 h-2 rounded-full bg-rose-500';
-            document.getElementById('gps-label').innerText = "Blocked";
-            document.getElementById('manual-loc-entry').classList.remove('hidden');
+            const status = document.getElementById('tracking-status');
+            if (status) status.className = 'w-2 h-2 rounded-full bg-rose-500';
+            const label = document.getElementById('gps-label');
+            if (label) label.innerText = "Blocked";
+            const entry = document.getElementById('manual-loc-entry');
+            if (entry) entry.classList.remove('hidden');
         }
 
         document.getElementById('new-route-btn').onclick = () => {
@@ -517,9 +519,11 @@
         };
 
         document.getElementById('confirm-save-btn').onclick = () => {
-            const name = document.getElementById('route-name-input').value.trim() || `Path ${Date.now()}`;
+            const nameInput = document.getElementById('route-name-input');
+            const name = nameInput.value.trim() || `Path ${Date.now()}`;
             saveRoute(name);
             document.getElementById('name-modal').classList.add('hidden');
+            nameInput.value = "";
             resetCurrentDrawing();
         };
 
@@ -565,26 +569,30 @@
 
         function updateSavedList() {
             const list = document.getElementById('saved-routes-list');
-            list.innerHTML = savedRoutes.length ? '' : '<p class="text-[10px] text-slate-400 italic">No routes saved yet.</p>';
+            list.innerHTML = '';
+            if (savedRoutes.length === 0) {
+                list.innerHTML = '<p class="text-[9px] text-slate-400 italic">No routes saved yet.</p>';
+                return;
+            }
             savedRoutes.forEach(r => {
-                const card = document.createElement('div');
-                card.className = "bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 rounded-2xl group transition-all hover:shadow-lg";
-                card.innerHTML = `
+                const item = document.createElement('div');
+                item.className = "group bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 p-4 rounded-2xl shadow-sm hover:shadow-md transition-all";
+                item.innerHTML = `
                     <div class="flex justify-between items-start mb-3">
                         <div>
-                            <h4 class="text-xs font-black uppercase tracking-tight dark:text-white">${r.name}</h4>
-                            <p class="text-[9px] font-bold text-indigo-500 uppercase">${r.distance} Miles</p>
+                            <h4 class="text-[11px] font-black uppercase text-slate-800 dark:text-white leading-tight mb-1">${r.name}</h4>
+                            <p class="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">${r.distance} miles</p>
                         </div>
                         <button onclick="deleteRoute(${r.id})" class="text-slate-300 hover:text-rose-500 transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         </button>
                     </div>
-                    <div class="flex gap-2">
-                        <button onclick="viewRoute(${r.id})" class="flex-grow bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 py-2 rounded-xl text-[9px] font-black uppercase hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors dark:text-white">Preview</button>
-                        <button onclick="enterDriveMode(${r.id})" class="flex-grow bg-indigo-600 text-white py-2 rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 transition-colors">Go</button>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="viewRoute(${r.id})" class="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-wider hover:bg-slate-200 dark:hover:bg-slate-600">View</button>
+                        <button onclick="enterDriveMode(${r.id})" class="bg-indigo-600 text-white py-2.5 rounded-xl font-black text-[9px] uppercase tracking-wider shadow-lg shadow-indigo-500/20 hover:bg-indigo-500">Drive</button>
                     </div>
                 `;
-                list.appendChild(card);
+                list.appendChild(item);
             });
         }
     </script>
