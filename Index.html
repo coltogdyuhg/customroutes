@@ -80,14 +80,12 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
         .leaflet-container { background: transparent !important; }
-        /* Filter only for Light Map Tiles, not Satellite */
         .dark .map-tile-light { filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3); }
         .dark .leaflet-container { background: #0f172a !important; }
 
         #mobile-drag-handle { display: none; }
         .mode-mobile #mobile-drag-handle { display: flex; }
 
-        /* Map Controls Fix */
         .leaflet-control-layers { border-radius: 12px !important; border: none !important; box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important; padding: 5px !important; }
     </style>
 </head>
@@ -95,14 +93,24 @@
 
     <!-- Drive Mode HUD Overlay -->
     <div id="drive-hud" class="fixed top-20 right-4 z-[2000] hidden transition-all duration-500 scale-90 origin-top-right">
-        <div class="bg-slate-900/90 text-white rounded-3xl p-4 shadow-2xl flex items-center gap-4 border border-white/10 backdrop-blur-md">
+        <div class="bg-slate-900/90 text-white rounded-3xl p-4 shadow-2xl flex items-center gap-6 border border-white/10 backdrop-blur-md">
             <div class="flex flex-col border-r border-white/10 pr-4">
                 <span class="text-[8px] font-black uppercase tracking-widest text-indigo-400">Distance</span>
                 <span id="hud-miles" class="text-lg font-black italic tabular-nums">0.00 Mi</span>
             </div>
-            <div class="flex flex-col">
-                <span class="text-[8px] font-black uppercase tracking-widest text-indigo-400">Est. Time</span>
-                <span id="hud-time" class="text-lg font-black italic tabular-nums">-- min</span>
+            <div class="flex gap-4">
+                <div class="flex flex-col items-center">
+                    <span class="text-[8px] font-black uppercase tracking-widest text-indigo-400">Drive</span>
+                    <span id="hud-time-car" class="text-sm font-black italic tabular-nums">--m</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <span class="text-[8px] font-black uppercase tracking-widest text-emerald-400">Bike</span>
+                    <span id="hud-time-bike" class="text-sm font-black italic tabular-nums">--m</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <span class="text-[8px] font-black uppercase tracking-widest text-pink-400">Walk</span>
+                    <span id="hud-time-walk" class="text-sm font-black italic tabular-nums">--m</span>
+                </div>
             </div>
             <button onclick="exitDriveMode()" class="bg-rose-500/20 text-rose-500 p-2 rounded-xl hover:bg-rose-500 hover:text-white transition-all">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -389,8 +397,15 @@
             if (!isDriving || !currentDriveRoute || !lastKnownPos) return;
             const miles = calculateRemaining(lastKnownPos, currentDriveRoute.path);
             document.getElementById('hud-miles').innerText = miles.toFixed(2) + " Mi";
-            const mins = Math.max(1, Math.round((miles / 30) * 60));
-            document.getElementById('hud-time').innerText = mins + " min";
+            
+            // Speed assumptions: Car 30mph, Bike 12mph, Walk 3mph
+            const carMins = Math.max(1, Math.round((miles / 30) * 60));
+            const bikeMins = Math.max(1, Math.round((miles / 12) * 60));
+            const walkMins = Math.max(1, Math.round((miles / 3) * 60));
+
+            document.getElementById('hud-time-car').innerText = carMins + "m";
+            document.getElementById('hud-time-bike').innerText = bikeMins + "m";
+            document.getElementById('hud-time-walk').innerText = walkMins + "m";
         }
 
         function setTheme(theme) {
@@ -487,17 +502,14 @@
                 tap: true
             }).setView(fallback, 13);
 
-            // Light Theme Layer
             const lightLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 className: 'map-tile-light'
             });
 
-            // Satellite Layer + Labels Overlay
             const satelliteImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
             const labelsOverlay = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png');
             const satelliteGroup = L.layerGroup([satelliteImagery, labelsOverlay]);
 
-            // Default to light layer
             lightLayer.addTo(map);
 
             const baseMaps = {
@@ -505,7 +517,6 @@
                 "Satellite": satelliteGroup
             };
 
-            // Moved position to top-left as requested
             L.control.layers(baseMaps, null, { position: 'topleft' }).addTo(map);
 
             polyline = L.polyline([], { color: '#6366f1', weight: 4, dashArray: '5, 10' }).addTo(map);
@@ -570,23 +581,19 @@
 
         function updateLocation(latlng) {
             lastKnownPos = latlng;
-            if(userMarker) userMarker.setLatLng(latlng);
-            const status = document.getElementById('tracking-status');
-            const label = document.getElementById('gps-label');
-            status.className = "w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]";
-            label.innerText = "Active GPS";
-            label.className = "text-[9px] font-black text-emerald-500 uppercase";
+            if (userMarker) userMarker.setLatLng(latlng);
+            document.getElementById('tracking-status').className = 'w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50';
+            document.getElementById('gps-label').innerText = 'Live GPS';
         }
 
         function handleGPSBlocked() {
-            const label = document.getElementById('gps-label');
-            label.innerText = "GPS Error";
-            label.className = "text-[9px] font-black text-rose-500 uppercase";
+            document.getElementById('tracking-status').className = 'w-2 h-2 rounded-full bg-rose-500 animate-pulse';
+            document.getElementById('gps-label').innerText = 'GPS Disabled';
         }
 
-        window.recenter = () => {
-            if (lastKnownPos) map.flyTo(lastKnownPos, 15);
-        };
+        function recenter() {
+            if (lastKnownPos) map.flyTo(lastKnownPos, 16);
+        }
 
         document.getElementById('new-route-btn').onclick = () => {
             isDrawing = true;
@@ -594,10 +601,9 @@
             polyline.setLatLngs([]);
             markers.forEach(m => map.removeLayer(m));
             markers = [];
-            document.getElementById('new-route-btn').classList.add('hidden');
             document.getElementById('active-controls').classList.remove('hidden');
+            document.getElementById('new-route-btn').classList.add('hidden');
             document.getElementById('point-count').innerText = "0.00 Mi Total";
-            if (activeViewLine) map.removeLayer(activeViewLine);
         };
 
         document.getElementById('cancel-draft-btn').onclick = () => {
@@ -605,13 +611,14 @@
             polyline.setLatLngs([]);
             markers.forEach(m => map.removeLayer(m));
             markers = [];
-            document.getElementById('new-route-btn').classList.remove('hidden');
             document.getElementById('active-controls').classList.add('hidden');
+            document.getElementById('new-route-btn').classList.remove('hidden');
         };
 
         document.getElementById('end-route-btn').onclick = () => {
             if(routePath.length < 2) return;
-            document.getElementById('modal-dist').innerText = `Total Distance: ${calculateDistance(routePath)} miles`;
+            const dist = calculateDistance(routePath);
+            document.getElementById('modal-dist').innerText = `Total Distance: ${dist} miles`;
             document.getElementById('name-modal').classList.remove('hidden');
         };
 
@@ -620,11 +627,12 @@
         };
 
         document.getElementById('confirm-save-btn').onclick = () => {
-            const name = document.getElementById('route-name-input').value || 'Unnamed Route';
+            const name = document.getElementById('route-name-input').value || 'Untitled Route';
+            const dist = calculateDistance(routePath);
             const route = {
                 id: Date.now(),
                 name: name,
-                distance: calculateDistance(routePath),
+                distance: dist,
                 path: routePath,
                 date: new Date().toLocaleDateString()
             };
@@ -632,69 +640,58 @@
             localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
             updateSavedList();
             
-            // Reset UI
-            isDrawing = false;
-            polyline.setLatLngs([]);
-            markers.forEach(m => map.removeLayer(m));
-            markers = [];
-            document.getElementById('new-route-btn').classList.remove('hidden');
-            document.getElementById('active-controls').classList.add('hidden');
             document.getElementById('name-modal').classList.add('hidden');
-            document.getElementById('route-name-input').value = '';
+            document.getElementById('active-controls').classList.add('hidden');
+            document.getElementById('new-route-btn').classList.remove('hidden');
+            document.getElementById('route-name-input').value = "";
+            isDrawing = false;
+        };
+
+        window.deleteRoute = (id) => {
+            savedRoutes = savedRoutes.filter(r => r.id !== id);
+            localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
+            updateSavedList();
+            if (activeViewLine) map.removeLayer(activeViewLine);
+        };
+
+        window.viewRoute = (id) => {
+            const r = savedRoutes.find(x => x.id === id);
+            if (!r) return;
+            if (activeViewLine) map.removeLayer(activeViewLine);
+            activeViewLine = L.polyline(r.path, { 
+                color: '#db2777', 
+                weight: 6, 
+                opacity: 0.8,
+                lineCap: 'round'
+            }).addTo(map);
+            map.fitBounds(activeViewLine.getBounds(), { padding: [50, 50] });
         };
 
         function updateSavedList() {
             const list = document.getElementById('saved-routes-list');
-            list.innerHTML = savedRoutes.map(r => `
-                <div class="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 p-4 rounded-2xl shadow-sm hover:shadow-md transition-all group">
+            list.innerHTML = savedRoutes.length ? '' : '<p class="text-[10px] text-slate-400 italic">No routes saved yet.</p>';
+            
+            savedRoutes.forEach(r => {
+                const div = document.createElement('div');
+                div.className = "group bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 p-4 rounded-[1.5rem] shadow-sm hover:shadow-md transition-all";
+                div.innerHTML = `
                     <div class="flex justify-between items-start mb-3">
                         <div>
-                            <h4 class="text-xs font-black dark:text-white uppercase truncate max-w-[140px]">${r.name}</h4>
-                            <p class="text-[9px] text-slate-400 font-bold uppercase mt-0.5">${r.date} • ${r.distance} Mi</p>
+                            <h4 class="font-black text-xs uppercase tracking-tight dark:text-white">${r.name}</h4>
+                            <p class="text-[9px] font-bold text-indigo-500 uppercase mt-0.5">${r.distance} Miles • ${r.date}</p>
                         </div>
                         <button onclick="deleteRoute(${r.id})" class="text-slate-300 hover:text-rose-500 transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         </button>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
-                        <button onclick="viewRoute(${r.id})" class="bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 py-2.5 rounded-xl font-black text-[9px] uppercase hover:bg-indigo-600 hover:text-white transition-all">Preview</button>
-                        <button onclick="enterDriveMode(${r.id})" class="bg-slate-900 dark:bg-slate-700 text-white py-2.5 rounded-xl font-black text-[9px] uppercase hover:bg-indigo-600 transition-all flex items-center justify-center gap-1">
-                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
-                            Drive
-                        </button>
+                        <button onclick="viewRoute(${r.id})" class="bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-wider hover:bg-slate-100 dark:hover:bg-slate-600 transition-all">View</button>
+                        <button onclick="enterDriveMode(${r.id})" class="bg-indigo-600 text-white py-2.5 rounded-xl font-black text-[9px] uppercase tracking-wider hover:bg-indigo-500 shadow-md shadow-indigo-500/20 transition-all">Drive</button>
                     </div>
-                </div>
-            `).join('');
-            if(savedRoutes.length === 0) {
-                list.innerHTML = `<div class="py-10 text-center space-y-2">
-                    <div class="text-slate-200 dark:text-slate-800 flex justify-center">
-                        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
-                    </div>
-                    <p class="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-widest">No routes yet</p>
-                </div>`;
-            }
+                `;
+                list.appendChild(div);
+            });
         }
-
-        window.viewRoute = (id) => {
-            const r = savedRoutes.find(x => x.id === id);
-            if (!r) return;
-            if (activeViewLine) map.removeLayer(activeViewLine);
-            activeViewLine = L.polyline(r.path, { color: '#db2777', weight: 5, lineCap: 'round' }).addTo(map);
-            map.flyToBounds(activeViewLine.getBounds(), { padding: [50, 50] });
-            
-            if (currentMode === 'mobile' && !isDriving) {
-                const sidebar = document.getElementById('sidebar');
-                if (!sidebar.classList.contains('is-collapsed')) toggleSidebarCollapse();
-            }
-        };
-
-        window.deleteRoute = (id) => {
-            savedRoutes = savedRoutes.filter(x => x.id !== id);
-            localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
-            if (activeViewLine) map.removeLayer(activeViewLine);
-            updateSavedList();
-        };
-
     </script>
 </body>
 </html>
