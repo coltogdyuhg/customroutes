@@ -115,17 +115,6 @@
         }
         input:checked + .slider { background-color: #4f46e5; }
         input:checked + .slider:before { transform: translateX(20px); }
-
-        /* Weather indicator styling */
-        #weather-indicator {
-            min-width: 60px;
-            justify-content: center;
-        }
-        #weather-icon svg {
-            width: 100%;
-            height: 100%;
-            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
-        }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans text-slate-900 transition-colors duration-300">
@@ -271,16 +260,15 @@
                 <svg class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             </div>
 
-            <div class="flex items-center gap-4">
-                <!-- Weather indicator -->
-                <div id="weather-indicator" class="hidden flex items-center gap-1.5 opacity-90 hover:opacity-100 transition-opacity">
-                    <div id="weather-icon" class="w-7 h-7 text-white"></div>
-                    <span id="weather-temp" class="text-xs font-bold text-white/90 tabular-nums"></span>
-                </div>
-
+            <div class="flex items-center gap-2">
                 <button onclick="toggleSettings()" class="bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-full border border-white/10 flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                 </button>
+
+                <!-- Small weather icon (only shows when location available) -->
+                <div id="weather-indicator" class="hidden w-7 h-7 flex items-center justify-center rounded-full bg-white/10 border border-white/20">
+                    <img id="weather-icon" src="" alt="Weather" class="w-5 h-5 opacity-90">
+                </div>
             </div>
         </header>
 
@@ -502,50 +490,6 @@
             document.getElementById('settings-panel').classList.toggle('translate-x-full');
         }
 
-        // ───────────────────────────────────────────────
-        //   Simple weather indicator (no API key)
-        // ───────────────────────────────────────────────
-
-        const weatherIcons = {
-            'clear':        '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/><path d="M12 2v2m0 16v2m8-10h2M2 12h2m13.657-5.657 1.414 1.414M6.343 17.657l-1.414 1.414m12.728 0-1.414-1.414M6.343 6.343l-1.414-1.414"/></svg>',
-            'clouds':       '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 18.5a5 5 0 0 0-10 0H3a3 3 0 0 1 0-6h.5a6 6 0 0 1 11.64-2.2 4.5 4.5 0 0 1 6.36 6.2z"/></svg>',
-            'rain':         '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4a8 8 0 0 0-8 8h16a8 8 0 0 0-8-8zm-2 16v-2m4 2v-2m-7-1v2m10-2v2"/></svg>',
-            'snow':         '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4a8 8 0 0 0-8 8h16a8 8 0 0 0-8-8zM9 20l1-2m4 2l-1-2m-6 0l2 1m6-2l-2 1"/></svg>',
-            'thunder':      '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2l-6 9h6l-2 9 8-11h-6l4-7z"/></svg>',
-            'default':      '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" opacity="0.3"/></svg>'
-        };
-
-        async function fetchSimpleWeather() {
-            if (!lastKnownPos) return;
-
-            const [lat, lon] = lastKnownPos;
-
-            try {
-                const res = await fetch(`https://wttr.in/${lat},${lon}?format=j1`);
-                const data = await res.json();
-
-                const current = data.current_condition?.[0];
-                if (!current) return;
-
-                const tempC = Math.round(parseFloat(current.temp_C));
-                const condition = current.weatherDesc?.[0]?.value?.toLowerCase() || '';
-
-                let iconKey = 'default';
-                if (condition.includes('clear') || condition.includes('sun')) iconKey = 'clear';
-                else if (condition.includes('cloud')) iconKey = 'clouds';
-                else if (condition.includes('rain') || condition.includes('shower') || condition.includes('drizzle')) iconKey = 'rain';
-                else if (condition.includes('snow')) iconKey = 'snow';
-                else if (condition.includes('thunder') || condition.includes('storm')) iconKey = 'thunder';
-
-                document.getElementById('weather-icon').innerHTML = weatherIcons[iconKey];
-                document.getElementById('weather-temp').textContent = `${tempC}°`;
-                document.getElementById('weather-indicator').classList.remove('hidden');
-
-            } catch (err) {
-                console.log("Weather fetch failed (silent)", err);
-            }
-        }
-
         window.onload = () => {
             let prog = 0;
             const bar = document.getElementById('boot-progress');
@@ -677,8 +621,10 @@
             map.on('click', (e) => {
                 if (!isDrawing) return;
                 
+                // If "Start at Location" is on and this is the VERY first point
                 if (startAtLocation && routePath.length === 0 && lastKnownPos) {
                     routePath.push(lastKnownPos);
+                    // Add a tiny marker to the starting position too
                     const startMarker = L.circleMarker(lastKnownPos, { 
                         radius: 4, color: '#6366f1', fillOpacity: 1 
                     }).addTo(map);
@@ -704,9 +650,9 @@
             document.getElementById('gps-label').innerText = "Live GPS";
             document.getElementById('gps-label').className = "text-[9px] font-black text-emerald-500 uppercase";
 
-            // Try to load weather when we get a good location fix
-            if (!document.getElementById('weather-temp').textContent) {
-                fetchSimpleWeather();
+            // Try to load weather icon once we have a good position
+            if (!document.getElementById('weather-icon').src) {
+                loadWeatherIcon();
             }
         }
 
@@ -763,6 +709,7 @@
             localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
             updateSavedList();
             
+            // Reset
             isDrawing = false;
             markers.forEach(m => map.removeLayer(m));
             markers = [];
@@ -813,10 +760,41 @@
             });
         }
 
-        // Refresh weather every 15 minutes if we have location
-        setInterval(() => {
-            if (lastKnownPos) fetchSimpleWeather();
-        }, 15 * 60 * 1000);
+        // ────────────────────────────────────────────────
+        //   Small weather icon (OpenWeatherMap style)
+        // ────────────────────────────────────────────────
+        async function loadWeatherIcon() {
+            if (!lastKnownPos) return;
+
+            try {
+                const [lat, lon] = lastKnownPos;
+                const apiKey = 'YOUR_OPENWEATHERMAP_API_KEY_HERE'; // ← Replace with real key
+                const weatherRes = await fetch(
+                    `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}`
+                );
+                if (!weatherRes.ok) return;
+
+                const data = await weatherRes.json();
+                const iconCode = data.weather?.[0]?.icon;
+
+                if (iconCode) {
+                    const iconUrl = `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
+                    document.getElementById('weather-icon').src = iconUrl;
+                    document.getElementById('weather-indicator').classList.remove('hidden');
+                }
+            } catch (err) {
+                // Silent fail → icon stays hidden
+                console.log("Weather icon fetch failed (silent)", err);
+            }
+        }
+
+        // Try again after a short delay in case position loads late
+        setTimeout(() => {
+            if (lastKnownPos && !document.getElementById('weather-icon').src) {
+                loadWeatherIcon();
+            }
+        }, 4000);
+
     </script>
 </body>
 </html>
