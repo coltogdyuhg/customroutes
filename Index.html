@@ -41,7 +41,7 @@
         .gradient-header { background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%); }
         .hero-pattern { background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); }
         .user-location-marker { background: #4f46e5; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.2); }
-        .user-direction-arrow { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid #4f46e5; filter: drop-shadow(0 -2px 2px rgba(0,0,0,0.2)); }
+        .user-direction-arrow { position: absolute; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid #4f46e5; filter: drop-shadow(0 -2px 2px rgba(0,0,0,0.2)); }
         .pulse-ring { position: absolute; top: 50%; left: 50%; width: 14px; height: 14px; margin-top: -7px; margin-left: -7px; border-radius: 50%; background: rgba(79, 70, 229, 0.4); animation: pulse-animation 2s infinite; }
         @keyframes pulse-animation { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(4); opacity: 0; } }
         .search-pin-drop { animation: pin-drop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
@@ -332,44 +332,10 @@
         let currentMode = 'desktop';
         let initialRecenterDone = false;
         let startAtLocation = false;
-        let userHeading = 0; // Integrated Heading
+        let userHeading = 0;
         let selectedVehicle = 'car';
 
         const GOOGLE_MAPS_API_KEY = "AIzaSyAs9YXzxXzM2MHY848KtFXaoKRIGVf1AzI";
-
-        // --- COMPASS INTEGRATION ---
-        async function requestCompassPermission() {
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                try {
-                    const permission = await DeviceOrientationEvent.requestPermission();
-                    if (permission === 'granted') {
-                        window.addEventListener('deviceorientationabsolute', updateHeading, true);
-                    }
-                } catch (error) {
-                    console.error('Compass permission denied', error);
-                }
-            } else {
-                window.addEventListener('deviceorientationabsolute', updateHeading, true);
-                window.addEventListener('deviceorientation', updateHeading, true);
-            }
-        }
-
-        function updateHeading(e) {
-            let heading;
-            if (e.webkitCompassHeading) {
-                heading = e.webkitCompassHeading;
-            } else if (e.absolute === true || e.alpha !== null) {
-                heading = 360 - e.alpha; 
-            }
-
-            if (heading !== undefined) {
-                userHeading = heading;
-                const arrowEl = document.getElementById('marker-orient');
-                if (arrowEl) {
-                    arrowEl.style.transform = `rotate(${userHeading}deg)`;
-                }
-            }
-        }
 
         function syncToggles(el) {
             startAtLocation = el.checked;
@@ -563,23 +529,51 @@
             L.control.layers(baseMaps, null, { position: 'topleft' }).addTo(map);
             polyline = L.polyline([], { color: '#6366f1', weight: 4, dashArray: '5, 10' }).addTo(map);
             
-            // Integrated Icon Logic
+            // --- UPDATED CUSTOM ICON ---
             const customIcon = L.divIcon({
                 className: 'custom-div-icon',
-                html: `<div id="marker-orient" style="transform: rotate(0deg); transition: transform 0.1s linear;">
-                        <div class="user-direction-arrow"></div>
+                html: `
+                    <div id="marker-orient" style="transform-origin: center; transition: transform 0.1s linear;">
+                        <div class="user-direction-arrow" style="top: -18px;"></div>
                         <div class="pulse-ring"></div>
                         <div class="user-location-marker" style="width: 14px; height: 14px; position: relative; z-index: 10;"></div>
-                       </div>`,
+                    </div>`,
                 iconSize: [14, 14], iconAnchor: [7, 7]
             });
 
             userMarker = L.marker(fallback, { icon: customIcon }).addTo(map);
 
-            // User Gesture for Compass
-            map.once('click', () => {
-                requestCompassPermission();
-            });
+            // --- UPDATED ROBUST ORIENTATION LISTENER ---
+            if (window.DeviceOrientationEvent) {
+                const handleOrientation = (e) => {
+                    let heading;
+                    if (e.webkitCompassHeading !== undefined) {
+                        heading = e.webkitCompassHeading;
+                    } else if (e.alpha !== null) {
+                        heading = 360 - e.alpha;
+                    }
+
+                    if (heading !== undefined) {
+                        userHeading = heading;
+                        const el = document.getElementById('marker-orient');
+                        if (el) el.style.transform = `rotate(${userHeading}deg)`;
+                    }
+                };
+
+                if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    document.getElementById('locate-me-btn').addEventListener('click', () => {
+                        DeviceOrientationEvent.requestPermission()
+                            .then(response => {
+                                if (response === 'granted') {
+                                    window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+                                }
+                            });
+                    });
+                } else {
+                    window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+                    window.addEventListener('deviceorientation', handleOrientation, true);
+                }
+            }
 
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
@@ -625,6 +619,7 @@
         function handleGPSBlocked() { document.getElementById('tracking-status').className = "w-2 h-2 rounded-full bg-rose-500"; document.getElementById('gps-label').innerText = "GPS Blocked"; }
         function recenter() { if (lastKnownPos) map.flyTo(lastKnownPos, 15); }
 
+        // DRAW ROUTE HANDLERS
         document.getElementById('new-route-btn').onclick = () => {
             isDrawing = true; routePath = []; markers.forEach(m => map.removeLayer(m)); markers = []; polyline.setLatLngs([]);
             document.getElementById('new-route-btn').classList.add('hidden');
@@ -712,6 +707,7 @@
             } catch (err) {}
         }
 
+        // QUICK NAV LOGIC
         function openNavModal() { document.getElementById('nav-modal').classList.remove('hidden'); }
         function closeNavModal() { document.getElementById('nav-modal').classList.add('hidden'); }
 
@@ -785,15 +781,9 @@
 
         async function calculateOSRMFallback(startCoords, destCoords, destQuery) {
             const preferTrails = document.getElementById('prefer-trails').checked;
-            console.log("Using OSRM Fallback...");
-            
             let profile = 'car';
-            if (selectedVehicle === 'bike' || selectedVehicle === 'escooter' || preferTrails) {
-                profile = 'bicycle'; 
-            }
-            if (preferTrails && selectedVehicle !== 'car') {
-                profile = 'foot'; 
-            }
+            if (selectedVehicle === 'bike' || selectedVehicle === 'escooter' || preferTrails) profile = 'bicycle'; 
+            if (preferTrails && selectedVehicle !== 'car') profile = 'foot'; 
 
             try {
                 if(!destCoords) {
