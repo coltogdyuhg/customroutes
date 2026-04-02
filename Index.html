@@ -332,11 +332,44 @@
         let currentMode = 'desktop';
         let initialRecenterDone = false;
         let startAtLocation = false;
-        let userHeading = 0;
+        let userHeading = 0; // Integrated Heading
         let selectedVehicle = 'car';
 
-        // --- GOOGLE ROUTES CONFIG ---
         const GOOGLE_MAPS_API_KEY = "AIzaSyAs9YXzxXzM2MHY848KtFXaoKRIGVf1AzI";
+
+        // --- COMPASS INTEGRATION ---
+        async function requestCompassPermission() {
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                try {
+                    const permission = await DeviceOrientationEvent.requestPermission();
+                    if (permission === 'granted') {
+                        window.addEventListener('deviceorientationabsolute', updateHeading, true);
+                    }
+                } catch (error) {
+                    console.error('Compass permission denied', error);
+                }
+            } else {
+                window.addEventListener('deviceorientationabsolute', updateHeading, true);
+                window.addEventListener('deviceorientation', updateHeading, true);
+            }
+        }
+
+        function updateHeading(e) {
+            let heading;
+            if (e.webkitCompassHeading) {
+                heading = e.webkitCompassHeading;
+            } else if (e.absolute === true || e.alpha !== null) {
+                heading = 360 - e.alpha; 
+            }
+
+            if (heading !== undefined) {
+                userHeading = heading;
+                const arrowEl = document.getElementById('marker-orient');
+                if (arrowEl) {
+                    arrowEl.style.transform = `rotate(${userHeading}deg)`;
+                }
+            }
+        }
 
         function syncToggles(el) {
             startAtLocation = el.checked;
@@ -530,24 +563,23 @@
             L.control.layers(baseMaps, null, { position: 'topleft' }).addTo(map);
             polyline = L.polyline([], { color: '#6366f1', weight: 4, dashArray: '5, 10' }).addTo(map);
             
+            // Integrated Icon Logic
             const customIcon = L.divIcon({
                 className: 'custom-div-icon',
-                html: `<div id="marker-orient" style="transform: rotate(0deg); transition: transform 0.2s;"><div class="user-direction-arrow"></div><div class="pulse-ring"></div><div class="user-location-marker" style="width: 14px; height: 14px; position: relative; z-index: 10;"></div></div>`,
+                html: `<div id="marker-orient" style="transform: rotate(0deg); transition: transform 0.1s linear;">
+                        <div class="user-direction-arrow"></div>
+                        <div class="pulse-ring"></div>
+                        <div class="user-location-marker" style="width: 14px; height: 14px; position: relative; z-index: 10;"></div>
+                       </div>`,
                 iconSize: [14, 14], iconAnchor: [7, 7]
             });
 
             userMarker = L.marker(fallback, { icon: customIcon }).addTo(map);
 
-            if (window.DeviceOrientationEvent) {
-                window.addEventListener('deviceorientationabsolute', (e) => {
-                    let heading = e.alpha || e.webkitCompassHeading;
-                    if (heading !== undefined) {
-                        userHeading = 360 - heading;
-                        const el = document.getElementById('marker-orient');
-                        if (el) el.style.transform = `rotate(${userHeading}deg)`;
-                    }
-                }, true);
-            }
+            // User Gesture for Compass
+            map.once('click', () => {
+                requestCompassPermission();
+            });
 
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
@@ -680,7 +712,6 @@
             } catch (err) {}
         }
 
-        // --- QUICK NAV LOGIC ---
         function openNavModal() { document.getElementById('nav-modal').classList.remove('hidden'); }
         function closeNavModal() { document.getElementById('nav-modal').classList.add('hidden'); }
 
@@ -705,7 +736,6 @@
                 const destCoords = [parseFloat(destData[0].lon), parseFloat(destData[0].lat)];
                 const startCoords = [lastKnownPos[1], lastKnownPos[0]];
 
-                // If trail preference is on, skip Google (which is bad at trails) and go straight to OSRM
                 if (preferTrails) {
                     return calculateOSRMFallback(startCoords, destCoords, destQuery);
                 }
@@ -761,14 +791,11 @@
             if (selectedVehicle === 'bike' || selectedVehicle === 'escooter' || preferTrails) {
                 profile = 'bicycle'; 
             }
-            
-            // For dirt paths, 'foot' profile in OSRM includes trails bikes can often use
             if (preferTrails && selectedVehicle !== 'car') {
                 profile = 'foot'; 
             }
 
             try {
-                // If destCoords is missing, we need to fetch it (case for direct trail call)
                 if(!destCoords) {
                     const destRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destQuery)}`);
                     const destData = await destRes.json();
