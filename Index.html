@@ -1133,92 +1133,39 @@
             }
         }
 
-        // ── Smart geocoder: finds nearest chain/business using Overpass, falls back to Nominatim ──
+        // ── Geocoder: Google Places Nearby Search → finds closest matching business ──
         async function resolveStopToCoords(stopName, userLat, userLng) {
-            // Detect if user specified a city/location (e.g. "Crunch Fitness in Miami")
-            const cityMatch = stopName.match(/\bin\s+([A-Z][a-zA-Z\s]+)$/i);
-            const placeName = cityMatch ? stopName.replace(cityMatch[0], '').trim() : stopName;
-            const cityHint  = cityMatch ? cityMatch[1].trim() : null;
+            const key = GOOGLE_MAPS_API_KEY;
 
-            // If they said "in [city]", geocode that city to bias the search there
-            let searchLat = userLat, searchLng = userLng;
-            if (cityHint) {
+            // If we have user location, use Places Nearby Search (finds closest chain/business)
+            if (userLat !== null && userLng !== null) {
                 try {
-                    const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cityHint)}&limit=1`);
-                    const d = await r.json();
-                    if (d && d.length) { searchLat = parseFloat(d[0].lat); searchLng = parseFloat(d[0].lon); }
-                } catch(e) {}
-            }
-
-            // 1) Try Overpass (great for named businesses/chains like McDonald's, Crunch Fitness)
-            //    Search within ~15 km radius around the user (or specified city)
-            if (searchLat !== null && searchLng !== null) {
-                try {
-                    const radius = cityHint ? 20000 : 15000; // 20 km if city specified, 15 km nearby
-                    const escaped = placeName.replace(/"/g, '\\"');
-                    const query = `[out:json][timeout:8];(
-                        node["name"~"${escaped}",i](around:${radius},${searchLat},${searchLng});
-                        way["name"~"${escaped}",i](around:${radius},${searchLat},${searchLng});
-                    );out center 20;`;
-                    const r = await fetch('https://overpass-api.de/api/interpreter', {
-                        method: 'POST',
-                        body: query
-                    });
-                    const d = await r.json();
-                    if (d && d.elements && d.elements.length > 0) {
-                        // Pick the closest one to the reference point
-                        let best = null, bestDist = Infinity;
-                        d.elements.forEach(el => {
-                            const lat = el.lat ?? el.center?.lat;
-                            const lon = el.lon ?? el.center?.lon;
-                            if (!lat || !lon) return;
-                            const dlat = lat - searchLat, dlng = lon - searchLng;
-                            const dist = Math.sqrt(dlat*dlat + dlng*dlng);
-                            if (dist < bestDist) { bestDist = dist; best = [lon, lat]; }
-                        });
-                        if (best) return best;
+                    // Text Search biased to user location — works for "Crunch Fitness", "McDonald's", etc.
+                    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(stopName)}&location=${userLat},${userLng}&radius=20000&key=${key}`;
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    if (data.status === 'OK' && data.results && data.results.length > 0) {
+                        // Results are already sorted by relevance+proximity; pick first
+                        const place = data.results[0];
+                        const loc = place.geometry.location;
+                        return [loc.lng, loc.lat];
                     }
                 } catch(e) { /* fall through */ }
             }
 
-            // 2) Try Nominatim with location bias (handles addresses and known landmarks well)
-            const nominatimAttempts = [];
-            if (searchLat !== null && searchLng !== null) {
-                // biased search: wider viewbox, not bounded so it can still find things slightly outside
-                nominatimAttempts.push(
-                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(placeName)}&limit=10&viewbox=${searchLng-0.5},${searchLat+0.5},${searchLng+0.5},${searchLat-0.5}&bounded=0`
-                );
-                // also try appending city hint if available
-                if (cityHint) {
-                    nominatimAttempts.push(
-                        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(placeName + ', ' + cityHint)}&limit=5`
-                    );
+            // Fallback: Geocoding API (handles addresses and landmark names)
+            try {
+                const locBias = (userLat !== null && userLng !== null)
+                    ? `&location=${userLat},${userLng}&radius=20000`
+                    : '';
+                const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(stopName)}${locBias}&key=${key}`;
+                const res  = await fetch(url);
+                const data = await res.json();
+                if (data.status === 'OK' && data.results && data.results.length > 0) {
+                    const loc = data.results[0].geometry.location;
+                    return [loc.lng, loc.lat];
                 }
-            }
-            nominatimAttempts.push(
-                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(stopName)}&limit=5`
-            );
-
-            for (const url of nominatimAttempts) {
-                try {
-                    const r = await fetch(url);
-                    const d = await r.json();
-                    if (d && d.length) {
-                        // Pick closest to reference point
-                        let best = d[0];
-                        if (searchLat !== null && d.length > 1) {
-                            let minDist = Infinity;
-                            d.forEach(place => {
-                                const dlat = parseFloat(place.lat) - searchLat;
-                                const dlng = parseFloat(place.lon) - searchLng;
-                                const dist = Math.sqrt(dlat*dlat + dlng*dlng);
-                                if (dist < minDist) { minDist = dist; best = place; }
-                            });
-                        }
-                        return [parseFloat(best.lon), parseFloat(best.lat)];
-                    }
-                } catch(e) { /* try next */ }
-            }
+            } catch(e) {}
 
             return null; // couldn't resolve
         }
@@ -1352,9 +1299,10 @@
             if (selectedVehicle === 'car') profile = 'car';
             try {
                 if (!destCoords) {
-                    const res  = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destQuery)}`);
+                    const res  = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(destQuery)}&key=${GOOGLE_MAPS_API_KEY}`);
                     const data = await res.json();
-                    destCoords = [parseFloat(data[0].lon), parseFloat(data[0].lat)];
+                    if (data.status !== 'OK') throw new Error('geocode failed');
+                    destCoords = [data.results[0].geometry.location.lng, data.results[0].geometry.location.lat];
                 }
                 const routeRes  = await fetch(`https://router.project-osrm.org/route/v1/${profile}/${startCoords.join(',')};${destCoords.join(',')}?overview=full&geometries=geojson`);
                 const routeData = await routeRes.json();
@@ -1468,14 +1416,16 @@
         async function performSearch(query) {
             if (!query) return;
             try {
-                const res  = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+                const locBias = lastKnownPos ? `&location=${lastKnownPos.lat},${lastKnownPos.lng}&radius=50000` : '';
+                const res  = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}${locBias}&key=${GOOGLE_MAPS_API_KEY}`);
                 const data = await res.json();
-                if (data && data.length > 0) {
-                    const result = data[0];
-                    const latlng = [parseFloat(result.lat), parseFloat(result.lon)];
+                if (data.status === 'OK' && data.results && data.results.length > 0) {
+                    const loc    = data.results[0].geometry.location;
+                    const latlng = [loc.lat, loc.lng];
+                    const name   = data.results[0].formatted_address.split(',')[0];
                     if (searchMarker) map.removeLayer(searchMarker);
                     searchMarker = L.marker(latlng, { icon: searchPinIcon }).addTo(map);
-                    searchMarker.bindPopup(`<div class="p-2"><h4 class="font-bold text-slate-800 text-xs">${result.display_name.split(',')[0]}</h4><p class="text-[10px] text-slate-500 mt-1">Location Found</p></div>`, { closeButton: false }).openPopup();
+                    searchMarker.bindPopup(`<div class="p-2"><h4 class="font-bold text-slate-800 text-xs">${name}</h4><p class="text-[10px] text-slate-500 mt-1">Location Found</p></div>`, { closeButton: false }).openPopup();
                     map.flyTo(latlng, 14);
                     if (currentMode === 'mobile') {
                         const sidebar = document.getElementById('sidebar');
