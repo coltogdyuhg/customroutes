@@ -1138,64 +1138,182 @@
             }
         }
 
-        // ── Geocoder: Photon (OSM-based, CORS-safe, no key, finds businesses by name) ──
-        // Haversine distance in miles between two lat/lng points
+        // ═══════════════════════════════════════════════════════════════
+        // GEOCODER — Three-tier system, all free, no API key needed
+        //  1. Overpass API  → finds nearest named business / amenity type
+        //  2. Nominatim     → structured address / place name search, biased to user location
+        //  3. Photon        → broad fallback
+        // ═══════════════════════════════════════════════════════════════
+
         function haversineMiles(lat1, lng1, lat2, lng2) {
             const R = 3958.8;
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLng = (lng2 - lng1) * Math.PI / 180;
-            const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+            const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
-        async function resolveStopToCoords(stopName, userLat, userLng) {
-            const encoded = encodeURIComponent(stopName);
-            // Max search radius: 30 miles for car, 15 miles for everything else
+        // Maps plain-English stop names to OSM amenity/shop/leisure tags
+        // so Overpass can find the nearest one precisely
+        const OSM_TAG_MAP = {
+            // Fitness
+            'gym':            ['leisure=fitness_centre','amenity=gym','leisure=sports_centre'],
+            'fitness':        ['leisure=fitness_centre','amenity=gym'],
+            'crunch fitness': ['name=Crunch Fitness','leisure=fitness_centre'],
+            'crunch':         ['name=Crunch','leisure=fitness_centre'],
+            'planet fitness': ['name=Planet Fitness','leisure=fitness_centre'],
+            'anytime fitness':['name=Anytime Fitness','leisure=fitness_centre'],
+            'ymca':           ['name=YMCA','leisure=sports_centre'],
+            // Food & drink
+            'coffee shop':    ['amenity=cafe'],
+            'cafe':           ['amenity=cafe'],
+            'coffee':         ['amenity=cafe'],
+            'starbucks':      ['name=Starbucks','amenity=cafe'],
+            'dunkin':         ['name=Dunkin','amenity=cafe','amenity=fast_food'],
+            'mcdonalds':      ['name=McDonald\'s','amenity=fast_food'],
+            "mcdonald's":     ['name=McDonald\'s','amenity=fast_food'],
+            'subway':         ['name=Subway','amenity=fast_food'],
+            'pizza':          ['amenity=fast_food','cuisine=pizza'],
+            'restaurant':     ['amenity=restaurant'],
+            'fast food':      ['amenity=fast_food'],
+            // Retail
+            'grocery store':  ['shop=supermarket','shop=grocery'],
+            'grocery':        ['shop=supermarket','shop=grocery'],
+            'supermarket':    ['shop=supermarket'],
+            'walmart':        ['name=Walmart','shop=supermarket','shop=department_store'],
+            'target':         ['name=Target','shop=department_store'],
+            'five below':     ['name=Five Below','shop=variety_store'],
+            'dollar tree':    ['name=Dollar Tree','shop=variety_store'],
+            'cvs':            ['name=CVS','amenity=pharmacy'],
+            'walgreens':      ['name=Walgreens','amenity=pharmacy'],
+            'pharmacy':       ['amenity=pharmacy'],
+            'gas station':    ['amenity=fuel'],
+            'gas':            ['amenity=fuel'],
+            // Outdoors
+            'park':           ['leisure=park'],
+            'local park':     ['leisure=park'],
+            'trail':          ['route=foot','highway=path'],
+            'library':        ['amenity=library'],
+            'school':         ['amenity=school'],
+            'hospital':       ['amenity=hospital'],
+            'bank':           ['amenity=bank'],
+            'atm':            ['amenity=atm'],
+            'post office':    ['amenity=post_office'],
+        };
+
+        // Build an Overpass QL query to find the nearest match within radiusMeters
+        function buildOverpassQuery(tags, lat, lng, radiusMeters) {
+            const parts = tags.map(tag => {
+                const [k, v] = tag.split('=');
+                const types = ['node','way','relation'];
+                return types.map(t => `  ${t}["${k}"="${v}"](around:${radiusMeters},${lat},${lng});`).join('\n');
+            });
+            return `[out:json][timeout:10];\n(\n${parts.join('\n')}\n);\nout center 20;`;
+        }
+
+        // Try Overpass for known business/amenity types
+        async function resolveViaOverpass(stopName, userLat, userLng) {
+            const key = stopName.toLowerCase().trim();
+            // Find the best matching tag list (exact match first, then partial)
+            let tags = OSM_TAG_MAP[key];
+            if (!tags) {
+                const partialKey = Object.keys(OSM_TAG_MAP).find(k => key.includes(k) || k.includes(key));
+                if (partialKey) tags = OSM_TAG_MAP[partialKey];
+            }
+            if (!tags || !userLat) return null;
+
+            const radiusMeters = (twVehicle === 'car') ? 48000 : 24000; // 30mi / 15mi
+            const query = buildOverpassQuery(tags, userLat, userLng, radiusMeters);
+            try {
+                const res = await fetch('https://overpass-api.de/api/interpreter', {
+                    method: 'POST',
+                    body: 'data=' + encodeURIComponent(query)
+                });
+                const data = await res.json();
+                if (!data.elements || data.elements.length === 0) return null;
+
+                // Pick the closest element
+                let best = null, bestDist = Infinity;
+                data.elements.forEach(el => {
+                    const lat = el.lat ?? el.center?.lat;
+                    const lng = el.lon ?? el.center?.lon;
+                    if (!lat || !lng) return;
+                    const d = haversineMiles(userLat, userLng, lat, lng);
+                    if (d < bestDist) { bestDist = d; best = { lat, lng }; }
+                });
+                if (best) { console.log(`Overpass found "${stopName}" at ${bestDist.toFixed(2)} mi`); }
+                return best ? [best.lng, best.lat] : null;
+            } catch(e) {
+                console.warn('Overpass error:', e);
+                return null;
+            }
+        }
+
+        // Try Nominatim for named places / addresses
+        async function resolveViaNominatim(stopName, userLat, userLng) {
             const maxMiles = (twVehicle === 'car') ? 30 : 15;
+            try {
+                const viewbox = userLat
+                    ? `&viewbox=${userLng-0.5},${userLat+0.5},${userLng+0.5},${userLat-0.5}&bounded=0`
+                    : '';
+                const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(stopName)}&format=json&limit=10&addressdetails=1${viewbox}`;
+                const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+                const data = await res.json();
+                if (!data || data.length === 0) return null;
 
-            // Build query list: location-biased first, then unbiased fallback
-            const urls = [];
-            if (userLat !== null && userLng !== null) {
-                // Photon supports lat/lon bias. Use high limit to get enough nearby candidates.
-                urls.push(`https://photon.komoot.io/api/?q=${encoded}&lat=${userLat}&lon=${userLng}&limit=15`);
-            }
-            // Unbiased fallback (last resort — only used if GPS unavailable)
-            urls.push(`https://photon.komoot.io/api/?q=${encoded}&limit=10`);
-
-            for (const url of urls) {
-                try {
-                    const res  = await fetch(url);
-                    const data = await res.json();
-                    if (data && data.features && data.features.length > 0) {
-                        let candidates = data.features;
-
-                        // Filter to results within maxMiles of the user (if we have GPS)
-                        if (userLat !== null && userLng !== null) {
-                            const nearby = candidates.filter(f => {
-                                const [lng, lat] = f.geometry.coordinates;
-                                return haversineMiles(userLat, userLng, lat, lng) <= maxMiles;
-                            });
-                            // Only use nearby results; if none found in this URL, try next URL
-                            if (nearby.length === 0) continue;
-                            candidates = nearby;
-                        }
-
-                        // Among valid candidates, pick the closest one to the user
-                        let best = candidates[0];
-                        if (userLat !== null && candidates.length > 1) {
-                            let minD = Infinity;
-                            candidates.forEach(f => {
-                                const [lng, lat] = f.geometry.coordinates;
-                                const d = haversineMiles(userLat, userLng, lat, lng);
-                                if (d < minD) { minD = d; best = f; }
-                            });
-                        }
-                        const [lng, lat] = best.geometry.coordinates;
-                        return [lng, lat];
+                let best = null, bestDist = Infinity;
+                data.forEach(item => {
+                    const lat = parseFloat(item.lat), lng = parseFloat(item.lon);
+                    if (userLat) {
+                        const d = haversineMiles(userLat, userLng, lat, lng);
+                        if (d <= maxMiles && d < bestDist) { bestDist = d; best = [lng, lat]; }
+                    } else if (!best) {
+                        best = [lng, lat];
                     }
-                } catch(e) { /* try next URL */ }
+                });
+                if (best) console.log(`Nominatim found "${stopName}" at ${bestDist.toFixed(2)} mi`);
+                return best;
+            } catch(e) {
+                console.warn('Nominatim error:', e);
+                return null;
             }
-            return null;
+        }
+
+        // Try Photon as final fallback
+        async function resolveViaPhoton(stopName, userLat, userLng) {
+            const maxMiles = (twVehicle === 'car') ? 30 : 15;
+            try {
+                const bias = userLat ? `&lat=${userLat}&lon=${userLng}` : '';
+                const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(stopName)}${bias}&limit=15`);
+                const data = await res.json();
+                if (!data?.features?.length) return null;
+
+                let best = null, bestDist = Infinity;
+                data.features.forEach(f => {
+                    const [lng, lat] = f.geometry.coordinates;
+                    if (userLat) {
+                        const d = haversineMiles(userLat, userLng, lat, lng);
+                        if (d <= maxMiles && d < bestDist) { bestDist = d; best = [lng, lat]; }
+                    } else if (!best) {
+                        best = [lng, lat];
+                    }
+                });
+                return best;
+            } catch(e) { return null; }
+        }
+
+        // Master resolver — tries all three in order
+        async function resolveStopToCoords(stopName, userLat, userLng) {
+            // 1. Overpass (best for generic business types like "gym", "coffee shop")
+            const overpassResult = await resolveViaOverpass(stopName, userLat, userLng);
+            if (overpassResult) return overpassResult;
+
+            // 2. Nominatim (best for specific named places, addresses)
+            const nominatimResult = await resolveViaNominatim(stopName, userLat, userLng);
+            if (nominatimResult) return nominatimResult;
+
+            // 3. Photon (broad fallback)
+            return await resolveViaPhoton(stopName, userLat, userLng);
         }
 
         // Wait up to 6 seconds for GPS to come in before launching route
@@ -1254,14 +1372,19 @@
                         continue;
                     }
 
+                    showToast(`🔍 Finding: ${stop}…`);
                     const found = await resolveStopToCoords(stop, userLat, userLng);
+                    // Small delay so Nominatim rate limit (1 req/sec) is respected
+                    await new Promise(r => setTimeout(r, 300));
 
                     if (found) {
                         coords.push(found);
                         resolvedNames.push(stop);
+                        showToast(`✅ Found: ${stop}`);
+                        await new Promise(r => setTimeout(r, 600));
                     } else {
-                        showToast(`⚠️ Couldn't find "${stop}" nearby — skipping`, true);
-                        await new Promise(r => setTimeout(r, 1500));
+                        showToast(`⚠️ Couldn't find "${stop}" nearby. Try adding a city name, e.g. "${stop}, Pittsburgh"`, true);
+                        await new Promise(r => setTimeout(r, 3000));
                     }
                 }
 
