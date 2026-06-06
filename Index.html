@@ -10,20 +10,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAs9YXzxXzM2MHY848KtFXaoKRIGVf1AzI&libraries=places,geocoding&loading=async&callback=initGoogleMaps" async defer></script>
-    <script>
-        let googleMapsReady = false;
-        let googleMapsReadyCallbacks = [];
-        function initGoogleMaps() {
-            googleMapsReady = true;
-            googleMapsReadyCallbacks.forEach(fn => fn());
-            googleMapsReadyCallbacks = [];
-        }
-        function onGoogleMapsReady(fn) {
-            if (googleMapsReady) fn();
-            else googleMapsReadyCallbacks.push(fn);
-        }
-    </script>
+
 
     <script>
         tailwind.config = {
@@ -1147,69 +1134,41 @@
             }
         }
 
-        // ── Geocoder: new google.maps.places.Place.searchByText (2025 API) ──
+        // ── Geocoder: Photon (OSM-based, CORS-safe, no key, finds businesses by name) ──
         async function resolveStopToCoords(stopName, userLat, userLng) {
-            return new Promise((resolve) => {
-                onGoogleMapsReady(async () => {
-                    try {
-                        const request = {
-                            textQuery: stopName,
-                            fields: ['location', 'displayName'],
-                            maxResultCount: 5,
-                        };
-                        if (userLat !== null && userLng !== null) {
-                            request.locationBias = new google.maps.Circle({
-                                center: { lat: userLat, lng: userLng },
-                                radius: 20000
+            // Photon: open geocoder by Komoot, powered by OpenStreetMap, CORS-enabled
+            // Biases results toward user location when available
+            const encoded = encodeURIComponent(stopName);
+            const urls = [];
+
+            if (userLat !== null && userLng !== null) {
+                // Location-biased search (returns closest results first)
+                urls.push(`https://photon.komoot.io/api/?q=${encoded}&lat=${userLat}&lon=${userLng}&limit=5`);
+            }
+            // Unbiased fallback
+            urls.push(`https://photon.komoot.io/api/?q=${encoded}&limit=5`);
+
+            for (const url of urls) {
+                try {
+                    const res  = await fetch(url);
+                    const data = await res.json();
+                    if (data && data.features && data.features.length > 0) {
+                        // Pick closest feature to user if we have GPS
+                        let best = data.features[0];
+                        if (userLat !== null && data.features.length > 1) {
+                            let minD = Infinity;
+                            data.features.forEach(f => {
+                                const [lng, lat] = f.geometry.coordinates;
+                                const d = (lat - userLat)**2 + (lng - userLng)**2;
+                                if (d < minD) { minD = d; best = f; }
                             });
                         }
-                        const { places } = await google.maps.places.Place.searchByText(request);
-                        if (places && places.length > 0) {
-                            // Pick closest to user if we have location
-                            let best = places[0];
-                            if (userLat !== null && places.length > 1) {
-                                let minD = Infinity;
-                                places.forEach(p => {
-                                    if (!p.location) return;
-                                    const dlat = p.location.lat() - userLat;
-                                    const dlng = p.location.lng() - userLng;
-                                    const d = dlat*dlat + dlng*dlng;
-                                    if (d < minD) { minD = d; best = p; }
-                                });
-                            }
-                            if (best.location) {
-                                resolve([best.location.lng(), best.location.lat()]);
-                                return;
-                            }
-                        }
-                    } catch(e) {
-                        console.warn('searchByText failed, trying Geocoder:', e.message);
+                        const [lng, lat] = best.geometry.coordinates;
+                        return [lng, lat];
                     }
-
-                    // Fallback: Geocoder (handles addresses)
-                    try {
-                        const geocoder = new google.maps.Geocoder();
-                        const opts = { address: stopName };
-                        if (userLat !== null && userLng !== null) {
-                            opts.bounds = new google.maps.LatLngBounds(
-                                new google.maps.LatLng(userLat - 0.3, userLng - 0.3),
-                                new google.maps.LatLng(userLat + 0.3, userLng + 0.3)
-                            );
-                        }
-                        geocoder.geocode(opts, (results, status) => {
-                            if (status === 'OK' && results && results.length > 0) {
-                                const loc = results[0].geometry.location;
-                                resolve([loc.lng(), loc.lat()]);
-                            } else {
-                                resolve(null);
-                            }
-                        });
-                    } catch(e) {
-                        console.error('Geocoder fallback failed:', e);
-                        resolve(null);
-                    }
-                });
-            });
+                } catch(e) { /* try next */ }
+            }
+            return null;
         }
 
         async function twLaunchRoute() {
@@ -1341,17 +1300,10 @@
             if (selectedVehicle === 'car') profile = 'car';
             try {
                 if (!destCoords) {
-                    destCoords = await new Promise((resolve) => {
-                        onGoogleMapsReady(() => {
-                            new google.maps.Geocoder().geocode({ address: destQuery }, (results, status) => {
-                                if (status === 'OK' && results.length > 0) {
-                                    const loc = results[0].geometry.location;
-                                    resolve([loc.lng(), loc.lat()]);
-                                } else resolve(null);
-                            });
-                        });
-                    });
-                    if (!destCoords) throw new Error('geocode failed');
+                    const _gr = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(destQuery)}&limit=1`);
+                    const _gd = await _gr.json();
+                    if (!_gd.features || !_gd.features.length) throw new Error('geocode failed');
+                    destCoords = [_gd.features[0].geometry.coordinates[0], _gd.features[0].geometry.coordinates[1]];
                 }
                 const routeRes  = await fetch(`https://router.project-osrm.org/route/v1/${profile}/${startCoords.join(',')};${destCoords.join(',')}?overview=full&geometries=geojson`);
                 const routeData = await routeRes.json();
@@ -1464,31 +1416,25 @@
 
         async function performSearch(query) {
             if (!query) return;
-            onGoogleMapsReady(() => {
-                const geocoder = new google.maps.Geocoder();
-                const opts = { address: query };
-                if (lastKnownPos) {
-                    opts.bounds = new google.maps.LatLngBounds(
-                        new google.maps.LatLng(lastKnownPos.lat - 0.5, lastKnownPos.lng - 0.5),
-                        new google.maps.LatLng(lastKnownPos.lat + 0.5, lastKnownPos.lng + 0.5)
-                    );
-                }
-                geocoder.geocode(opts, (results, status) => {
-                    if (status === 'OK' && results && results.length > 0) {
-                        const loc    = results[0].geometry.location;
-                        const latlng = [loc.lat(), loc.lng()];
-                        const name   = results[0].formatted_address.split(',')[0];
-                        if (searchMarker) map.removeLayer(searchMarker);
-                        searchMarker = L.marker(latlng, { icon: searchPinIcon }).addTo(map);
-                        searchMarker.bindPopup(`<div class="p-2"><h4 class="font-bold text-slate-800 text-xs">${name}</h4><p class="text-[10px] text-slate-500 mt-1">Location Found</p></div>`, { closeButton: false }).openPopup();
-                        map.flyTo(latlng, 14);
-                        if (currentMode === 'mobile') {
-                            const sidebar = document.getElementById('sidebar');
-                            if (!sidebar.classList.contains('is-collapsed')) toggleSidebarCollapse();
-                        }
+            try {
+                const encoded = encodeURIComponent(query);
+                const bias = lastKnownPos ? `&lat=${lastKnownPos.lat}&lon=${lastKnownPos.lng}` : '';
+                const res  = await fetch(`https://photon.komoot.io/api/?q=${encoded}${bias}&limit=1`);
+                const data = await res.json();
+                if (data && data.features && data.features.length > 0) {
+                    const [lng, lat] = data.features[0].geometry.coordinates;
+                    const name = data.features[0].properties.name || data.features[0].properties.street || query;
+                    const latlng = [lat, lng];
+                    if (searchMarker) map.removeLayer(searchMarker);
+                    searchMarker = L.marker(latlng, { icon: searchPinIcon }).addTo(map);
+                    searchMarker.bindPopup(`<div class="p-2"><h4 class="font-bold text-slate-800 text-xs">${name}</h4><p class="text-[10px] text-slate-500 mt-1">Location Found</p></div>`, { closeButton: false }).openPopup();
+                    map.flyTo(latlng, 14);
+                    if (currentMode === 'mobile') {
+                        const sidebar = document.getElementById('sidebar');
+                        if (!sidebar.classList.contains('is-collapsed')) toggleSidebarCollapse();
                     }
-                });
-            });
+                }
+            } catch(err) { console.error("Search failed:", err); }
         }
 
         document.getElementById('global-search').onkeydown = (e) => { if (e.key === 'Enter') performSearch(e.target.value); };
