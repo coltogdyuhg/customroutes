@@ -1156,15 +1156,109 @@
             }
         }
 
+        // ── Smart geocoder: finds nearest chain/business using Overpass, falls back to Nominatim ──
+        async function resolveStopToCoords(stopName, userLat, userLng) {
+            // Detect if user specified a city/location (e.g. "Crunch Fitness in Miami")
+            const cityMatch = stopName.match(/\bin\s+([A-Z][a-zA-Z\s]+)$/i);
+            const placeName = cityMatch ? stopName.replace(cityMatch[0], '').trim() : stopName;
+            const cityHint  = cityMatch ? cityMatch[1].trim() : null;
+
+            // If they said "in [city]", geocode that city to bias the search there
+            let searchLat = userLat, searchLng = userLng;
+            if (cityHint) {
+                try {
+                    const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cityHint)}&limit=1`);
+                    const d = await r.json();
+                    if (d && d.length) { searchLat = parseFloat(d[0].lat); searchLng = parseFloat(d[0].lon); }
+                } catch(e) {}
+            }
+
+            // 1) Try Overpass (great for named businesses/chains like McDonald's, Crunch Fitness)
+            //    Search within ~15 km radius around the user (or specified city)
+            if (searchLat !== null && searchLng !== null) {
+                try {
+                    const radius = cityHint ? 20000 : 15000; // 20 km if city specified, 15 km nearby
+                    const escaped = placeName.replace(/"/g, '\\"');
+                    const query = `[out:json][timeout:8];(
+                        node["name"~"${escaped}",i](around:${radius},${searchLat},${searchLng});
+                        way["name"~"${escaped}",i](around:${radius},${searchLat},${searchLng});
+                    );out center 20;`;
+                    const r = await fetch('https://overpass-api.de/api/interpreter', {
+                        method: 'POST',
+                        body: query
+                    });
+                    const d = await r.json();
+                    if (d && d.elements && d.elements.length > 0) {
+                        // Pick the closest one to the reference point
+                        let best = null, bestDist = Infinity;
+                        d.elements.forEach(el => {
+                            const lat = el.lat ?? el.center?.lat;
+                            const lon = el.lon ?? el.center?.lon;
+                            if (!lat || !lon) return;
+                            const dlat = lat - searchLat, dlng = lon - searchLng;
+                            const dist = Math.sqrt(dlat*dlat + dlng*dlng);
+                            if (dist < bestDist) { bestDist = dist; best = [lon, lat]; }
+                        });
+                        if (best) return best;
+                    }
+                } catch(e) { /* fall through */ }
+            }
+
+            // 2) Try Nominatim with location bias (handles addresses and known landmarks well)
+            const nominatimAttempts = [];
+            if (searchLat !== null && searchLng !== null) {
+                // biased search: wider viewbox, not bounded so it can still find things slightly outside
+                nominatimAttempts.push(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(placeName)}&limit=10&viewbox=${searchLng-0.5},${searchLat+0.5},${searchLng+0.5},${searchLat-0.5}&bounded=0`
+                );
+                // also try appending city hint if available
+                if (cityHint) {
+                    nominatimAttempts.push(
+                        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(placeName + ', ' + cityHint)}&limit=5`
+                    );
+                }
+            }
+            nominatimAttempts.push(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(stopName)}&limit=5`
+            );
+
+            for (const url of nominatimAttempts) {
+                try {
+                    const r = await fetch(url);
+                    const d = await r.json();
+                    if (d && d.length) {
+                        // Pick closest to reference point
+                        let best = d[0];
+                        if (searchLat !== null && d.length > 1) {
+                            let minDist = Infinity;
+                            d.forEach(place => {
+                                const dlat = parseFloat(place.lat) - searchLat;
+                                const dlng = parseFloat(place.lon) - searchLng;
+                                const dist = Math.sqrt(dlat*dlat + dlng*dlng);
+                                if (dist < minDist) { minDist = dist; best = place; }
+                            });
+                        }
+                        return [parseFloat(best.lon), parseFloat(best.lat)];
+                    }
+                } catch(e) { /* try next */ }
+            }
+
+            return null; // couldn't resolve
+        }
+
         async function twLaunchRoute() {
             if (!twBuiltRoute || !twBuiltRoute.feasible) return;
             closeNavModal();
 
             const plan = twBuiltRoute;
             const profile = plan.osrmProfile || 'foot';
+            const userLat = lastKnownPos ? lastKnownPos.lat : null;
+            const userLng = lastKnownPos ? lastKnownPos.lng : null;
 
             let coords = [];
-            let resolvedCount = 0;
+            let resolvedNames = [];
+
+            showToast("🔍 Finding your stops…");
 
             try {
                 for (let i = 0; i < plan.stops.length; i++) {
@@ -1174,61 +1268,33 @@
                     if (isHome) {
                         if (lastKnownPos) {
                             coords.push([lastKnownPos.lng, lastKnownPos.lat]);
-                            resolvedCount++;
+                            resolvedNames.push('My Location');
                         }
                         continue;
                     }
 
-                    // Try with location bias first, then fall back to global search
-                    let found = null;
-                    const queries = lastKnownPos
-                        ? [
-                            // biased local search
-                            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(stop)}&limit=5&viewbox=${lastKnownPos.lng-0.3},${lastKnownPos.lat+0.3},${lastKnownPos.lng+0.3},${lastKnownPos.lat-0.3}&bounded=0`,
-                            // global fallback
-                            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(stop)}&limit=3`
-                          ]
-                        : [`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(stop)}&limit=3`];
-
-                    for (const url of queries) {
-                        if (found) break;
-                        try {
-                            const r   = await fetch(url);
-                            const d   = await r.json();
-                            if (d && d.length) {
-                                // Pick the result closest to user if GPS is available
-                                let best = d[0];
-                                if (lastKnownPos && d.length > 1) {
-                                    let minDist = Infinity;
-                                    d.forEach(place => {
-                                        const dlat = parseFloat(place.lat) - lastKnownPos.lat;
-                                        const dlng = parseFloat(place.lon) - lastKnownPos.lng;
-                                        const dist = Math.sqrt(dlat * dlat + dlng * dlng);
-                                        if (dist < minDist) { minDist = dist; best = place; }
-                                    });
-                                }
-                                found = [parseFloat(best.lon), parseFloat(best.lat)];
-                            }
-                        } catch(e) { /* try next query */ }
-                    }
+                    const found = await resolveStopToCoords(stop, userLat, userLng);
 
                     if (found) {
                         coords.push(found);
-                        resolvedCount++;
+                        resolvedNames.push(stop);
+                    } else {
+                        showToast(`⚠️ Couldn't find "${stop}" nearby — skipping`, true);
+                        await new Promise(r => setTimeout(r, 1500));
                     }
-                    // silently skip unresolved stops — no error toast for individual misses
                 }
 
                 // Ensure start at user location
-                if (lastKnownPos && plan.startAtUserLocation && (coords.length === 0 || !(coords[0][0] === lastKnownPos.lng && coords[0][1] === lastKnownPos.lat))) {
-                    coords.unshift([lastKnownPos.lng, lastKnownPos.lat]);
+                if (lastKnownPos && plan.startAtUserLocation && coords.length > 0) {
+                    const firstIsUser = coords[0][0] === lastKnownPos.lng && coords[0][1] === lastKnownPos.lat;
+                    if (!firstIsUser) coords.unshift([lastKnownPos.lng, lastKnownPos.lat]);
                 }
 
                 // Remove consecutive duplicates
                 coords = coords.filter((c, i) => i === 0 || !(c[0] === coords[i-1][0] && c[1] === coords[i-1][1]));
 
                 if (coords.length < 2) {
-                    showToast("⚠️ Couldn't find your stops — try using full place names or add a city", true);
+                    showToast("⚠️ Couldn't find enough stops — try adding a city name, like \"Crunch Fitness, Pittsburgh\"", true);
                     return;
                 }
 
@@ -1241,7 +1307,7 @@
                 if (routeData.code === 'Ok') {
                     const path    = routeData.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
                     const distMi  = (routeData.routes[0].distance * 0.000621371).toFixed(2);
-                    const named   = plan.stops.filter(s => !/^my location$|my\s+(house|home|place)/i.test(s));
+                    const named   = resolvedNames.filter(s => !/^my location$/i.test(s));
                     const routeName = named.length > 0
                         ? `${twVehicle} → ${named[0]}${named.length > 1 ? ` +${named.length - 1}` : ''}`
                         : `Trail Weaver ${twVehicle}`;
@@ -1266,7 +1332,7 @@
                     removeToast();
                     enterDriveMode(saved.id);
                 } else {
-                    showToast("⚠️ Route couldn't be built — try simpler stop names", true);
+                    showToast("⚠️ Route couldn't be built — check your connection and try again", true);
                 }
             } catch(e) {
                 console.error("Route build error:", e);
