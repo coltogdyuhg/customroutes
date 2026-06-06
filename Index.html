@@ -466,16 +466,6 @@
                     <label class="switch"><input type="checkbox" id="settings-start-at-loc" onchange="syncToggles(this)"><span class="slider"></span></label>
                 </div>
             </div>
-            <!-- Claude API Key -->
-            <div class="space-y-3">
-                <label class="text-[10px] font-bold text-sage uppercase tracking-widest">🤖 Trail Weaver AI</label>
-                <p class="text-[9px] text-stone leading-relaxed">Paste your Claude API key to enable smart landmark search — say "Thomas Jefferson Stadium" or "nearest Five Below" and it figures out exactly where to go.</p>
-                <input id="claude-api-key-input" type="password" placeholder="sk-ant-api03-…"
-                    class="w-full p-3 bg-white/5 border border-sage/25 rounded-xl text-xs font-bold text-mist outline-none focus:ring-2 ring-fern/50 placeholder-stone/40"
-                    oninput="saveClaudeKey(this.value)">
-                <div id="claude-key-status" class="text-[9px] font-bold uppercase"></div>
-                <p class="text-[8px] text-stone/60 leading-relaxed">Key stored locally in your browser only — never sent anywhere except Anthropic's API.</p>
-            </div>
         </div>
     </div>
 
@@ -639,31 +629,6 @@
         let currentDestinationQuery = "";
         const OFF_ROUTE_THRESHOLD = 50;
         const GOOGLE_MAPS_API_KEY = "AIzaSyAs9YXzxXzM2MHY848KtFXaoKRIGVf1AzI";
-
-        // ── Claude API key (stored in localStorage) ──
-        let CLAUDE_API_KEY = localStorage.getItem('claude_api_key') || '';
-        function saveClaudeKey(val) {
-            CLAUDE_API_KEY = val.trim();
-            localStorage.setItem('claude_api_key', CLAUDE_API_KEY);
-            const status = document.getElementById('claude-key-status');
-            if (CLAUDE_API_KEY.startsWith('sk-ant-')) {
-                status.innerText = '✅ Key saved — AI search active';
-                status.className = 'text-[9px] font-bold uppercase text-emerald-400';
-            } else if (CLAUDE_API_KEY.length > 0) {
-                status.innerText = '⚠️ Doesn't look like a valid key';
-                status.className = 'text-[9px] font-bold uppercase text-amber-400';
-            } else {
-                status.innerText = '';
-            }
-        }
-        // Load saved key into input on boot
-        window.addEventListener('DOMContentLoaded', () => {
-            const inp = document.getElementById('claude-api-key-input');
-            if (inp && CLAUDE_API_KEY) {
-                inp.value = CLAUDE_API_KEY;
-                saveClaudeKey(CLAUDE_API_KEY);
-            }
-        });
 
         // ── Particle system ──
         function spawnParticles() {
@@ -1357,133 +1322,17 @@
             } catch(e) { return null; }
         }
 
-        // ── Claude AI stop interpreter ──
-        // Uses Claude to turn natural language into a precise search query,
-        // then resolves it with our geocoding stack.
-        async function resolveWithClaude(stopName, userLat, userLng) {
-            if (!CLAUDE_API_KEY || !CLAUDE_API_KEY.startsWith('sk-ant-')) return null; // no key = skip
-            const cityHint = userLat ? `The user is located near Pleasant Hills, Pennsylvania (lat ${userLat.toFixed(4)}, lng ${userLng.toFixed(4)}).` : '';
-            const prompt = `You are a geocoding assistant. ${cityHint}
-The user wants to navigate to: "${stopName}"
-
-Your job: return ONLY a JSON object (no markdown, no explanation) with these fields:
-{
-  "search_query": "the best search string to find this place on OpenStreetMap/Nominatim — be specific, include city/state if it helps",
-  "osm_name": "the likely exact business or place name (e.g. 'Crunch Fitness', 'Thomas Jefferson High School Stadium')",
-  "osm_type": "one of: amenity, leisure, shop, highway, tourism, building, natural",
-  "osm_value": "the OSM tag value (e.g. 'fitness_centre', 'stadium', 'supermarket', 'park')",
-  "is_generic": true or false (true = generic type like 'gym' or 'coffee shop', false = specific named place),
-  "address_hint": "street address if the user mentioned one, otherwise null"
-}
-
-Examples:
-- "Crunch Fitness" → {"search_query":"Crunch Fitness Pleasant Hills PA","osm_name":"Crunch Fitness","osm_type":"leisure","osm_value":"fitness_centre","is_generic":false,"address_hint":null}
-- "nearest gym" → {"search_query":"gym","osm_name":null,"osm_type":"leisure","osm_value":"fitness_centre","is_generic":true,"address_hint":null}
-- "Thomas Jefferson Stadium" → {"search_query":"Thomas Jefferson High School Stadium Pleasant Hills PA","osm_name":"Thomas Jefferson High School","osm_type":"leisure","osm_value":"stadium","is_generic":false,"address_hint":null}
-- "Five Below" → {"search_query":"Five Below near Pleasant Hills PA","osm_name":"Five Below","osm_type":"shop","osm_value":"variety_store","is_generic":false,"address_hint":null}
-- "1241 Beams Run Road" → {"search_query":"1241 Beams Run Road","osm_name":null,"osm_type":null,"osm_value":null,"is_generic":false,"address_hint":"1241 Beams Run Road"}`;
-
-            try {
-                const response = await fetch('https://api.anthropic.com/v1/messages', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'x-api-key': CLAUDE_API_KEY, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-                    body: JSON.stringify({
-                        model: 'claude-sonnet-4-20250514',
-                        max_tokens: 300,
-                        messages: [{ role: 'user', content: prompt }]
-                    })
-                });
-                const data = await response.json();
-                const raw = data.content?.[0]?.text || '';
-                const cleaned = raw.replace(/```json|```/g, '').trim();
-                const parsed = JSON.parse(cleaned);
-                return parsed;
-            } catch(e) {
-                console.warn('Claude interpret error:', e);
-                return null;
-            }
-        }
-
-        // Master resolver — Claude interprets intent, then geocoding stack resolves it
+        // Master resolver — tries all three in order
         async function resolveStopToCoords(stopName, userLat, userLng) {
-
-            // Ask Claude to interpret what this stop actually means
-            const interpretation = await resolveWithClaude(stopName, userLat, userLng);
-            console.log('Claude interpretation:', interpretation);
-
-            if (interpretation) {
-                // If it's a known address, go straight to Nominatim
-                if (interpretation.address_hint) {
-                    const result = await resolveViaNominatim(interpretation.address_hint, userLat, userLng);
-                    if (result) return result;
-                }
-
-                // If it's a generic type (gym, coffee shop) — use Overpass with Claude's OSM tags
-                if (interpretation.is_generic && interpretation.osm_value && userLat) {
-                    const tags = [`${interpretation.osm_type}=${interpretation.osm_value}`];
-                    const radii = [8000, 16000, 24000];
-                    for (const r of radii) {
-                        const query = buildOverpassQuery(tags, userLat, userLng, r);
-                        try {
-                            const res = await fetch('https://overpass-api.de/api/interpreter', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                                body: 'data=' + encodeURIComponent(query)
-                            });
-                            const od = await res.json();
-                            if (od.elements?.length) {
-                                const candidates = od.elements.map(el => {
-                                    const lat = el.lat ?? el.center?.lat;
-                                    const lng = el.lon ?? el.center?.lon;
-                                    if (!lat || !lng) return null;
-                                    return { lat, lng, d: haversineMiles(userLat, userLng, lat, lng), name: el.tags?.name };
-                                }).filter(Boolean).sort((a,b) => a.d - b.d);
-                                if (candidates.length) {
-                                    console.log(`✅ Closest ${interpretation.osm_value}: "${candidates[0].name}" at ${candidates[0].d.toFixed(2)} mi`);
-                                    return [candidates[0].lng, candidates[0].lat];
-                                }
-                            }
-                        } catch(e) { break; }
-                    }
-                }
-
-                // Named specific place — search Nominatim with Claude's enhanced query
-                if (interpretation.search_query) {
-                    // Try with name + OSM type search on Overpass first (most precise)
-                    if (interpretation.osm_name && interpretation.osm_value && userLat) {
-                        const nameTag = `name=${interpretation.osm_name}`;
-                        const typeTag = `${interpretation.osm_type}=${interpretation.osm_value}`;
-                        const query = buildOverpassQuery([nameTag, typeTag], userLat, userLng, 48000);
-                        try {
-                            const res = await fetch('https://overpass-api.de/api/interpreter', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                                body: 'data=' + encodeURIComponent(query)
-                            });
-                            const od = await res.json();
-                            if (od.elements?.length) {
-                                const candidates = od.elements.map(el => {
-                                    const lat = el.lat ?? el.center?.lat;
-                                    const lng = el.lon ?? el.center?.lon;
-                                    if (!lat || !lng) return null;
-                                    return { lat, lng, d: haversineMiles(userLat, userLng, lat, lng) };
-                                }).filter(Boolean).sort((a,b) => a.d - b.d);
-                                if (candidates.length) return [candidates[0].lng, candidates[0].lat];
-                            }
-                        } catch(e) {}
-                    }
-
-                    // Fall back to Nominatim with Claude's refined search query
-                    const nResult = await resolveViaNominatim(interpretation.search_query, userLat, userLng);
-                    if (nResult) return nResult;
-                }
-            }
-
-            // Last resort: original stack without Claude
+            // 1. Overpass (best for generic business types like "gym", "coffee shop")
             const overpassResult = await resolveViaOverpass(stopName, userLat, userLng);
             if (overpassResult) return overpassResult;
+
+            // 2. Nominatim (best for specific named places, addresses)
             const nominatimResult = await resolveViaNominatim(stopName, userLat, userLng);
             if (nominatimResult) return nominatimResult;
+
+            // 3. Photon (broad fallback)
             return await resolveViaPhoton(stopName, userLat, userLng);
         }
 
