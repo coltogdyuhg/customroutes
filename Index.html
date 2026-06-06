@@ -493,32 +493,7 @@
         </div>
     </div>
 
-    <!-- ══════════════════ SELECTION SCREEN ══════════════════ -->
-    <div id="selection-screen" class="fixed inset-0 z-[200] hidden flex flex-col items-center justify-center p-6 transition-all duration-500 opacity-0 nature-bg">
-        <svg class="leaf-svg animate-leaf-sway" style="width:400px;bottom:0;right:-60px" viewBox="0 0 100 200"><path d="M50 0 Q85 60 50 120 Q15 60 50 0Z"/><line x1="50" y1="0" x2="50" y2="120" stroke="currentColor" stroke-width="0.8"/></svg>
-        <div class="relative z-10 w-full max-w-xl text-center space-y-10">
-            <div>
-                <p class="text-[10px] font-bold uppercase tracking-[0.5em] text-sage mb-3">Navigator Pro</p>
-                <h1 class="text-5xl font-black italic uppercase tracking-tighter text-mist font-display">Choose Interface</h1>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button onclick="selectMode('desktop')" class="group p-8 rounded-[2.5rem] border border-sage/20 bg-white/4 hover:bg-white/8 transition-all flex flex-col items-center gap-4">
-                    <div class="p-4 rounded-2xl shadow-xl group-hover:scale-110 transition-transform" style="background:linear-gradient(135deg,var(--moss),var(--fern))">
-                        <svg class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                    </div>
-                    <h3 class="text-mist font-black uppercase text-sm">Desktop</h3>
-                    <p class="text-sage text-[9px] font-bold uppercase tracking-widest">Full sidebar layout</p>
-                </button>
-                <button onclick="selectMode('mobile')" class="group p-8 rounded-[2.5rem] border border-amber/20 bg-white/4 hover:bg-white/8 transition-all flex flex-col items-center gap-4">
-                    <div class="p-4 rounded-2xl shadow-xl group-hover:scale-110 transition-transform" style="background:linear-gradient(135deg,var(--bark),var(--clay))">
-                        <svg class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                    </div>
-                    <h3 class="text-mist font-black uppercase text-sm">Mobile</h3>
-                    <p class="text-sage text-[9px] font-bold uppercase tracking-widest">Slide-up panel</p>
-                </button>
-            </div>
-        </div>
-    </div>
+    <!-- selection screen removed: auto-detected -->
 
     <!-- ══════════════════ LOADING SCREEN ══════════════════ -->
     <div id="loading-screen" class="fixed inset-0 z-[100] hidden flex flex-col items-center justify-center p-6 text-center transition-all duration-500 opacity-0 nature-bg">
@@ -717,8 +692,13 @@
 
         function toggleSettings() { document.getElementById('settings-panel').classList.toggle('translate-x-full'); }
 
-        // ── Boot sequence ──
+        // ── Boot sequence — auto-detect device, skip selection ──
         window.onload = () => {
+            // Detect mobile vs desktop automatically
+            const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+            currentMode = isMobile ? 'mobile' : 'desktop';
+            document.body.classList.add(`mode-${currentMode}`);
+
             let prog = 0;
             const bar = document.getElementById('boot-progress');
             const labels = ['System Initializing…','Loading Map Engine…','Calibrating GPS…','Almost Ready…'];
@@ -730,44 +710,26 @@
                 if (prog > li * 25 && li < labels.length) {
                     document.getElementById('boot-label').innerText = labels[li++];
                 }
-                if (prog >= 100) { clearInterval(interval); setTimeout(showSelection, 400); }
+                if (prog >= 100) { clearInterval(interval); setTimeout(() => startLoad(currentMode), 400); }
             }, 120);
         };
 
-        function showSelection() {
-            const boot = document.getElementById('boot-screen');
-            const sel  = document.getElementById('selection-screen');
+        function startLoad(mode) {
+            const boot   = document.getElementById('boot-screen');
+            const loader = document.getElementById('loading-screen');
             boot.style.opacity = '0';
             boot.style.pointerEvents = 'none';
             setTimeout(() => {
                 boot.classList.add('hidden');
-                sel.classList.remove('hidden');
-                setTimeout(() => sel.classList.remove('opacity-0'), 50);
-            }, 700);
-        }
-
-        function selectMode(mode) {
-            currentMode = mode;
-            const sel    = document.getElementById('selection-screen');
-            const loader = document.getElementById('loading-screen');
-            sel.classList.add('opacity-0','pointer-events-none');
-            setTimeout(() => {
-                sel.classList.add('hidden');
                 loader.classList.remove('hidden');
-                document.body.className += ` mode-${mode}`;
-                setTimeout(() => loader.classList.remove('opacity-0'), 50);
-                startMapLoading(mode);
-            }, 500);
-        }
-
-        function startMapLoading(mode) {
-            let prog = 0;
-            const bar = document.getElementById('progress-bar');
-            const interval = setInterval(() => {
-                prog += 10;
-                bar.style.width = prog + '%';
-                if (prog >= 100) { clearInterval(interval); finishLoading(mode); }
-            }, 55);
+                setTimeout(() => loader.classList.remove('opacity-0'), 40);
+                let prog = 0;
+                const bar = document.getElementById('progress-bar');
+                const iv = setInterval(() => {
+                    prog += 10; bar.style.width = prog + '%';
+                    if (prog >= 100) { clearInterval(iv); finishLoading(mode); }
+                }, 55);
+            }, 600);
         }
 
         function finishLoading(mode) {
@@ -786,8 +748,14 @@
 
         // ── Map init ──
         function initMap(mode) {
+            const isMobile = mode === 'mobile';
             const fallback = [40.7128, -74.0060];
-            map = L.map('map', { zoomControl: mode === 'desktop', attributionControl: false, tap: true }).setView(fallback, 13);
+            map = L.map('map', {
+                zoomControl: !isMobile,
+                attributionControl: false,
+                tap: true,
+                tapTolerance: 20
+            }).setView(fallback, 13);
 
             // Voyager = closest free tile to Apple Maps aesthetic (warm, clean, detailed)
             const voyagerLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -1017,69 +985,171 @@
             }
         }
 
-        // AI planning
-        async function twRunAI(journeyText) {
+        // ══════════════════════════════════════════════
+        // TRAIL WEAVER — FREE LOCAL SMART PARSER
+        // No API key, no cost, runs entirely on-device
+        // ══════════════════════════════════════════════
+        function twRunAI(journeyText) {
             document.getElementById('tw-thinking').classList.remove('hidden');
             document.getElementById('tw-result').classList.add('hidden');
             document.getElementById('tw-error-block').classList.add('hidden');
 
-            const thinkingLabels = ["Interpreting your journey…","Mapping the stops…","Checking road safety…","Calculating distances…","Weaving your trail…"];
+            const thinkingLabels = ["Reading your journey…","Finding your stops…","Checking road safety…","Calculating distance…","Weaving your trail…"];
             let li = 0;
             const labelInterval = setInterval(() => {
-                document.getElementById('tw-thinking-label').innerText = thinkingLabels[li % thinkingLabels.length]; li++;
-            }, 1800);
+                const el = document.getElementById('tw-thinking-label');
+                if (el) el.innerText = thinkingLabels[li % thinkingLabels.length];
+                li++;
+            }, 900);
 
-            const vehicleDesc = {
-                walking: 'walking on foot (sidewalks, paths, crosswalks only)',
-                running: 'running on foot (sidewalks, paths, parks — avoid roads)',
-                bike: 'cycling on a regular bicycle (bike lanes, paths, quiet roads — avoid highways)',
-                car: 'driving a car (all roads OK, highways OK)',
-                escooter: `riding an electric scooter with a top speed of ${twSpeedMPH} MPH (NO highways, NO roads with yellow center lines unless there is a sidewalk/bike path alongside, prefer bike lanes and quiet streets)`,
-                ebike: `riding an electric bike with a top speed of ${twSpeedMPH} MPH (NO highways, prefer bike lanes and quiet roads, avoid high-speed arterials unless bike infrastructure exists)`
-            }[twVehicle];
-
-            const userLoc = lastKnownPos ? `The user's current GPS location is lat ${lastKnownPos.lat.toFixed(5)}, lng ${lastKnownPos.lng.toFixed(5)}.` : "The user's GPS location is unknown — treat 'my location' or 'my house' as the starting point but note it can't be resolved.";
-
-            const systemPrompt = `You are Trail Weaver, an expert route planning AI. The user is ${vehicleDesc}. ${userLoc}
-
-Your job:
-1. Parse their natural language journey request and extract: named stops in order, any distance constraint (e.g. "about 5 miles"), whether it's a loop back home, and any special constraints.
-2. Assess feasibility: if a specific distance target (e.g. "exactly 5 miles") is geometrically impossible given the stops, output an error.
-3. Respond ONLY with a JSON object — no markdown, no preamble — with these fields:
-{
-  "feasible": true or false,
-  "error": "short reason if not feasible, else null",
-  "stops": ["stop 1 name", "stop 2 name", ...],  // real place names or "My Location" for start/home
-  "startAtUserLocation": true or false,
-  "returnHome": true or false,
-  "targetMiles": number or null,
-  "estimatedMiles": number,
-  "estimatedMinutes": number,
-  "safetyNotes": "brief note on road safety for this vehicle type",
-  "routeSummary": "1-2 sentence human-friendly description of the planned route"
-}`;
-
-            try {
-                const response = await fetch("https://api.anthropic.com/v1/messages", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        model: "claude-sonnet-4-20250514",
-                        max_tokens: 1000,
-                        system: systemPrompt,
-                        messages: [{ role: "user", content: journeyText }]
-                    })
-                });
-                const data = await response.json();
+            // Small delay so the spinner shows
+            setTimeout(() => {
                 clearInterval(labelInterval);
-                const raw = data.content?.map(b => b.text || '').join('').replace(/```json|```/g,'').trim();
-                const parsed = JSON.parse(raw);
-                twShowResult(parsed);
-            } catch(err) {
-                clearInterval(labelInterval);
-                console.error("Trail Weaver AI error:", err);
-                twShowResult({ feasible: false, error: "AI service unavailable — try again." });
+                const result = twParse(journeyText);
+                twShowResult(result);
+            }, 2200);
+        }
+
+        function twParse(text) {
+            const t = text.toLowerCase().trim();
+
+            // ── Safety rules based on vehicle & speed ──
+            const isSlowEVehicle = (twVehicle === 'escooter' || twVehicle === 'ebike') && twSpeedMPH && twSpeedMPH <= 20;
+            const isAnyEVehicle  = twVehicle === 'escooter' || twVehicle === 'ebike';
+            const isFoot         = twVehicle === 'walking' || twVehicle === 'running';
+            const isCar          = twVehicle === 'car';
+
+            // Safety note per vehicle
+            const safetyMap = {
+                walking:  "Routed along sidewalks, crosswalks, and pedestrian paths only.",
+                running:  "Routed along paths, parks, and sidewalks — avoiding heavy traffic roads.",
+                bike:     "Routed along bike lanes, paths, and quiet residential streets — highways avoided.",
+                car:      "Full road access including highways and arterials.",
+                escooter: isSlowEVehicle
+                    ? `At ${twSpeedMPH} MPH, routed on bike paths, sidewalks, and streets under 25 MPH only — no yellow-line roads, no highways.`
+                    : `At ${twSpeedMPH} MPH, routed on bike lanes and quieter roads — no highways.`,
+                ebike: isSlowEVehicle
+                    ? `At ${twSpeedMPH} MPH, treated like a bicycle — bike paths and quiet streets only, no yellow-line arterials.`
+                    : `At ${twSpeedMPH} MPH, routed on bike lanes and roads under 40 MPH — highways avoided.`
+            };
+            const safetyNotes = safetyMap[twVehicle] || "Standard routing applied.";
+
+            // OSRM profile to use when building the route
+            const osrmProfile = isCar ? 'car' : isFoot ? 'foot' : 'bicycle';
+
+            // ── Parse distance target ──
+            // e.g. "5 miles", "about 3 miles", "3.5 mi", "10k", "10 km"
+            let targetMiles = null;
+            const miMatch = t.match(/(?:about|around|roughly|~)?\s*([\d.]+)\s*(?:miles?|mi)\b/);
+            const kmMatch = t.match(/(?:about|around|roughly|~)?\s*([\d.]+)\s*(?:km|kilometers?|kilometres?|k)\b/);
+            if (miMatch) targetMiles = parseFloat(miMatch[1]);
+            else if (kmMatch) targetMiles = parseFloat(kmMatch[1]) * 0.621371;
+
+            // ── Detect return home ──
+            const returnKeywords = ['back home','back to my house','back to my place','return home','return to my','loop back','and back','head back','come back home','end at home','end at my house'];
+            const returnHome = returnKeywords.some(k => t.includes(k));
+
+            // ── Detect start at user location ──
+            const startKeywords = ['from my location','from my house','from my home','from my place','starting from my','start at my','from where i am','from here'];
+            const startAtUserLocation = startKeywords.some(k => t.includes(k)) || t.startsWith('i want to') || t.startsWith('i would like') || !t.includes(' from ');
+
+            // ── Extract named stops ──
+            // Strategy: strip common filler, split on connectors, filter short/generic words
+            const connectors = /\b(?:then|and then|after that|next|followed by|stop at|go to|head to|swing by|visit|to|,)\b/gi;
+            const stripPhrases = [
+                /starting from (?:my (?:house|home|location|place)|here)/gi,
+                /from (?:my (?:house|home|location|place)|here)/gi,
+                /i (?:want to|would like to|need to|plan to|am going to)\s+(?:go|run|walk|bike|ride|drive|head)/gi,
+                /(?:get|go|come|head|loop)\s+back(?:\s+(?:home|to my (?:house|place|home)))?/gi,
+                /(?:back\s+)?(?:home|to my (?:house|place|home))/gi,
+                /about\s+[\d.]+\s*(?:miles?|mi|km|k)\b/gi,
+                /(?:around|roughly|~)\s*[\d.]+\s*(?:miles?|mi|km|k)\b/gi,
+                /[\d.]+\s*(?:miles?|mi|km|k)\b/gi,
+                /(?:total|in total|altogether)/gi,
+                /(?:or so|exactly|approximately|roughly)/gi,
+                /(?:please|maybe|just|also|first|last|finally|possible)/gi,
+                /i\s*(?:'d\s*like|would\s*like|want)/gi,
+                /\b(?:a|the|some|my|me)\b/gi,
+            ];
+
+            let cleaned = text;
+            stripPhrases.forEach(rx => { cleaned = cleaned.replace(rx, ' '); });
+            cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
+
+            // Split on connectors
+            let rawStops = cleaned.split(connectors).map(s => s.trim()).filter(s => s.length > 2);
+
+            // Clean up each stop
+            rawStops = rawStops.map(s =>
+                s.replace(/^(?:to|at|the|a|visit|go|head|swing by|stop at)\s+/i, '')
+                 .replace(/[,;.!?]+$/, '')
+                 .trim()
+            ).filter(s => s.length > 2 && !/^(?:and|or|but|so|then|i|to|the|a|an|my|me|from|at|in|on|of)$/i.test(s));
+
+            // Deduplicate
+            const stops = [];
+            const seen = new Set();
+            rawStops.forEach(s => {
+                const key = s.toLowerCase();
+                if (!seen.has(key)) { seen.add(key); stops.push(s); }
+            });
+
+            // Build the full stop list with My Location markers
+            const fullStops = [];
+            if (startAtUserLocation) fullStops.push('My Location');
+            fullStops.push(...stops);
+            if (returnHome) fullStops.push('My Location');
+
+            // Need at least a destination
+            if (stops.length === 0 && !returnHome) {
+                return {
+                    feasible: false,
+                    error: "Couldn't find any destinations in your request. Try something like: 'Run from my house to Crunch Fitness and back, about 3 miles.'"
+                };
             }
+
+            // ── Distance feasibility check ──
+            // If user says "exactly X miles" and we have just one near stop, flag if wildly off
+            if (targetMiles !== null && targetMiles > 50 && !isCar) {
+                return {
+                    feasible: false,
+                    error: `⚠️ ${targetMiles} miles is too far for a ${twVehicle} route. Please enter a realistic distance.`
+                };
+            }
+            if (targetMiles !== null && targetMiles < 0.1) {
+                return {
+                    feasible: false,
+                    error: `⚠️ ${targetMiles} miles is too short to build a meaningful route — try at least 0.2 miles.`
+                };
+            }
+
+            // ── Estimate distance & time ──
+            // Rough estimate: 0.5 miles between stops as a baseline
+            const stopCount = Math.max(stops.length, 1);
+            const baseMiles = targetMiles || (stopCount * 0.8 + (returnHome ? 0.8 : 0));
+            const speedMap = { walking: 3, running: 6, bike: 12, car: 30, escooter: Math.min(twSpeedMPH || 15, 15), ebike: Math.min(twSpeedMPH || 15, 20) };
+            const mph = speedMap[twVehicle] || 3;
+            const estimatedMinutes = Math.round((baseMiles / mph) * 60);
+
+            // ── Build summary ──
+            const vehicleLabel = { walking:'walk', running:'run', bike:'bike ride', car:'drive', escooter:'scooter ride', ebike:'e-bike ride' }[twVehicle] || 'trip';
+            const stopList = stops.length > 0 ? stops.join(' → ') : 'your destination';
+            const loopText = returnHome ? ', then back home' : '';
+            const distText = targetMiles ? `aiming for ~${targetMiles} miles` : `roughly ${baseMiles.toFixed(1)} miles`;
+            const routeSummary = `${startAtUserLocation ? 'Starting from your location' : 'Starting at your first stop'}, ${vehicleLabel} to ${stopList}${loopText} — ${distText}.`;
+
+            return {
+                feasible: true,
+                error: null,
+                stops: fullStops,
+                startAtUserLocation,
+                returnHome,
+                estimatedMiles: parseFloat(baseMiles.toFixed(1)),
+                estimatedMinutes,
+                safetyNotes,
+                routeSummary,
+                osrmProfile   // passed through to twLaunchRoute
+            };
         }
 
         function twShowResult(plan) {
@@ -1109,52 +1179,104 @@ Your job:
             closeNavModal();
 
             const plan = twBuiltRoute;
-            let profile = 'foot';
-            if (twVehicle === 'car') profile = 'car';
-            else if (twVehicle === 'bike') profile = 'bicycle';
-            else if (twVehicle === 'ebike') profile = twSpeedMPH > 25 ? 'car' : 'bicycle';
-            else if (twVehicle === 'escooter') profile = 'bicycle';
+            // Use the profile decided by the parser (respects safety rules)
+            const profile = plan.osrmProfile || (twVehicle === 'car' ? 'car' : (twVehicle === 'walking' || twVehicle === 'running') ? 'foot' : 'bicycle');
 
-            // Build coordinate list
+            // Show a loading toast on the map
+            const toast = document.createElement('div');
+            toast.id = 'route-toast';
+            toast.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 z-[3000] px-6 py-3 rounded-full text-xs font-black uppercase text-white shadow-2xl';
+            toast.style.background = 'rgba(61,92,58,0.95)';
+            toast.innerText = '🌿 Finding your stops…';
+            document.body.appendChild(toast);
+
             let coords = [];
             try {
                 for (let i = 0; i < plan.stops.length; i++) {
                     const stop = plan.stops[i];
-                    if (stop === 'My Location' || stop.toLowerCase().includes('my location') || stop.toLowerCase().includes('my house') || stop.toLowerCase().includes('home')) {
+                    const isHome = /^my location$/i.test(stop) || /my (?:house|home|place)/i.test(stop);
+                    if (isHome) {
                         if (lastKnownPos) coords.push([lastKnownPos.lng, lastKnownPos.lat]);
                     } else {
-                        const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(stop)}&limit=1`);
+                        // Bias search toward user's location for better local results
+                        const bias = lastKnownPos ? `&viewbox=${lastKnownPos.lng-0.15},${lastKnownPos.lat+0.15},${lastKnownPos.lng+0.15},${lastKnownPos.lat-0.15}&bounded=0` : '';
+                        const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(stop)}&limit=3${bias}`);
                         const d = await r.json();
-                        if (d.length) coords.push([parseFloat(d[0].lon), parseFloat(d[0].lat)]);
+                        if (d.length) {
+                            // Pick closest result to user if we have GPS
+                            let best = d[0];
+                            if (lastKnownPos && d.length > 1) {
+                                let minDist = Infinity;
+                                d.forEach(place => {
+                                    const dlat = parseFloat(place.lat) - lastKnownPos.lat;
+                                    const dlng = parseFloat(place.lon) - lastKnownPos.lng;
+                                    const dist = Math.sqrt(dlat*dlat + dlng*dlng);
+                                    if (dist < minDist) { minDist = dist; best = place; }
+                                });
+                            }
+                            coords.push([parseFloat(best.lon), parseFloat(best.lat)]);
+                            toast.innerText = `🌿 Found ${stop}…`;
+                        } else {
+                            toast.innerText = `⚠️ Couldn't find "${stop}" — skipping`;
+                            await new Promise(r => setTimeout(r, 1200));
+                        }
                     }
                 }
-                if (plan.startAtUserLocation && lastKnownPos && (coords.length === 0 || coords[0].join() !== [lastKnownPos.lng, lastKnownPos.lat].join())) {
+
+                // Always start at user location if GPS available and no start coord
+                if (coords.length > 0 && lastKnownPos && plan.startAtUserLocation && !plan.stops[0].match(/my location|my house|my home/i)) {
                     coords.unshift([lastKnownPos.lng, lastKnownPos.lat]);
                 }
-                if (plan.returnHome && lastKnownPos) {
-                    coords.push([lastKnownPos.lng, lastKnownPos.lat]);
-                }
-                if (coords.length < 2) { alert("Couldn't resolve enough stops to build a route."); return; }
+                // Deduplicate consecutive identical coords
+                coords = coords.filter((c, i) => i === 0 || !(c[0] === coords[i-1][0] && c[1] === coords[i-1][1]));
 
-                // OSRM multi-stop routing
+                if (coords.length < 2) {
+                    toast.innerText = '⚠️ Not enough stops found — try being more specific';
+                    setTimeout(() => toast.remove(), 3000);
+                    return;
+                }
+
+                toast.innerText = '🌿 Building your route…';
+
                 const coordStr = coords.map(c => c.join(',')).join(';');
                 const routeRes = await fetch(`https://router.project-osrm.org/route/v1/${profile}/${coordStr}?overview=full&geometries=geojson`);
                 const routeData = await routeRes.json();
+
                 if (routeData.code === 'Ok') {
                     const path = routeData.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
                     const distMi = (routeData.routes[0].distance * 0.000621371).toFixed(2);
-                    const stopNames = plan.stops.filter(s => !s.toLowerCase().includes('my location') && !s.toLowerCase().includes('home') && !s.toLowerCase().includes('my house'));
-                    const routeName = stopNames.length > 0 ? `${twVehicle} → ${stopNames[0]}${stopNames.length > 1 ? ` +${stopNames.length-1} more` : ''}` : `Trail Weaver ${twVehicle} route`;
+                    const namedStops = plan.stops.filter(s => !/my location|my house|my home|my place/i.test(s));
+                    const routeName = namedStops.length > 0
+                        ? `${twVehicle} → ${namedStops[0]}${namedStops.length > 1 ? ` +${namedStops.length-1}` : ''}`
+                        : `Trail Weaver ${twVehicle}`;
+
                     if (activeViewLine) map.removeLayer(activeViewLine);
                     activeViewLine = L.polyline(path, { color: '#5a7d56', weight: 6, opacity: 0.9 }).addTo(map);
-                    map.fitBounds(activeViewLine.getBounds(), { padding: [50,50] });
+                    map.fitBounds(activeViewLine.getBounds(), { padding: [50, 50] });
+
+                    // Drop pin markers on each non-home stop
+                    coords.forEach((c, i) => {
+                        if (i === 0 && plan.startAtUserLocation) return;
+                        L.circleMarker([c[1], c[0]], {
+                            radius: 7, color: '#c07b3c', fillColor: 'white', fillOpacity: 1, weight: 3
+                        }).addTo(map).bindPopup(`<b>${plan.stops[i] || 'Stop'}</b>`);
+                    });
+
                     const saved = { id: Date.now(), name: routeName, distance: distMi, path, date: new Date().toLocaleDateString() };
                     savedRoutes.push(saved);
                     localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
                     updateSavedList();
+                    toast.remove();
                     enterDriveMode(saved.id);
-                } else { alert("Route couldn't be built — try simplifying your stops."); }
-            } catch(e) { console.error("Route build error:", e); alert("Something went wrong building the route."); }
+                } else {
+                    toast.innerText = "⚠️ Couldn't build route — try simplifying your stops";
+                    setTimeout(() => toast.remove(), 3000);
+                }
+            } catch(e) {
+                console.error("Route build error:", e);
+                toast.innerText = '⚠️ Network error building route';
+                setTimeout(() => toast.remove(), 3000);
+            }
         }
 
         // ── Routing (kept for reroute) ──
