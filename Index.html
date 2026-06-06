@@ -345,9 +345,9 @@
                     <div class="space-y-2">
                         <label class="text-[9px] font-bold text-stone uppercase tracking-widest">Quick examples</label>
                         <div class="flex flex-wrap gap-2">
-                            <button onclick="twSetExample(this)" data-ex="Run from my location to the nearest park and back, keeping it under 3 miles" class="ex-chip px-3 py-1.5 rounded-full text-[8px] font-bold bg-white/5 border border-sage/15 text-sage hover:border-sage/40 transition-all">🏃 Park loop run</button>
-                            <button onclick="twSetExample(this)" data-ex="I want to bike from here to a coffee shop, then to a grocery store, then back home" class="ex-chip px-3 py-1.5 rounded-full text-[8px] font-bold bg-white/5 border border-sage/15 text-sage hover:border-sage/40 transition-all">☕ Coffee &amp; errands</button>
-                            <button onclick="twSetExample(this)" data-ex="Starting from my location, take me to the gym and then home, total about 4 miles" class="ex-chip px-3 py-1.5 rounded-full text-[8px] font-bold bg-white/5 border border-sage/15 text-sage hover:border-sage/40 transition-all">💪 Gym trip</button>
+                            <button onclick="twSetExample(this)" data-ex="Run from my location to the nearest local park and back, keeping it under 3 miles" class="ex-chip px-3 py-1.5 rounded-full text-[8px] font-bold bg-white/5 border border-sage/15 text-sage hover:border-sage/40 transition-all">🏃 Park loop run</button>
+                            <button onclick="twSetExample(this)" data-ex="Bike from my location to the nearest coffee shop, then the nearest grocery store, then back home" class="ex-chip px-3 py-1.5 rounded-full text-[8px] font-bold bg-white/5 border border-sage/15 text-sage hover:border-sage/40 transition-all">☕ Coffee &amp; errands</button>
+                            <button onclick="twSetExample(this)" data-ex="Starting from my location, take me to the nearest gym and then back home, total about 4 miles" class="ex-chip px-3 py-1.5 rounded-full text-[8px] font-bold bg-white/5 border border-sage/15 text-sage hover:border-sage/40 transition-all">💪 Gym trip</button>
                         </div>
                     </div>
 
@@ -1070,6 +1070,7 @@
             rawParts.forEach(raw => {
                 let s = raw
                     .replace(/^(?:go(?:ing)?\s+to|head(?:ing)?\s+to|visit(?:ing)?|stop(?:ping)?\s+(?:at|by)|swing(?:ing)?\s+by|drop(?:ping)?\s+(?:by|in\s+at)|check(?:ing)?\s+out)\s+/gi, '')
+                    .replace(/^(?:the\s+nearest|the\s+closest|nearest|closest)\s+/gi, '')
                     .replace(/^(?:the\s+|a\s+|my\s+)/gi, '')
                     .replace(/[.,!?]+$/, '')
                     .trim();
@@ -1135,40 +1136,78 @@
         }
 
         // ── Geocoder: Photon (OSM-based, CORS-safe, no key, finds businesses by name) ──
-        async function resolveStopToCoords(stopName, userLat, userLng) {
-            // Photon: open geocoder by Komoot, powered by OpenStreetMap, CORS-enabled
-            // Biases results toward user location when available
-            const encoded = encodeURIComponent(stopName);
-            const urls = [];
+        // Haversine distance in miles between two lat/lng points
+        function haversineMiles(lat1, lng1, lat2, lng2) {
+            const R = 3958.8;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
 
+        async function resolveStopToCoords(stopName, userLat, userLng) {
+            const encoded = encodeURIComponent(stopName);
+            // Max search radius: 30 miles for car, 15 miles for everything else
+            const maxMiles = (twVehicle === 'car') ? 30 : 15;
+
+            // Build query list: biased first (tight 25km bbox), then wider 50km, then unbiased
+            const urls = [];
             if (userLat !== null && userLng !== null) {
-                // Location-biased search (returns closest results first)
-                urls.push(`https://photon.komoot.io/api/?q=${encoded}&lat=${userLat}&lon=${userLng}&limit=5`);
+                // Tight bias with locationbiasradius (Photon supports this)
+                urls.push(`https://photon.komoot.io/api/?q=${encoded}&lat=${userLat}&lon=${userLng}&limit=10&locationbiasscale=0.9`);
+                // Also try with explicit bbox (~30 mile box) as secondary
+                const deg = 0.4; // ~28 miles
+                urls.push(`https://photon.komoot.io/api/?q=${encoded}&lat=${userLat}&lon=${userLng}&limit=10&bbox=${userLng-deg},${userLat-deg},${userLng+deg},${userLat+deg}`);
             }
-            // Unbiased fallback
-            urls.push(`https://photon.komoot.io/api/?q=${encoded}&limit=5`);
+            // Unbiased fallback (last resort)
+            urls.push(`https://photon.komoot.io/api/?q=${encoded}&limit=10`);
 
             for (const url of urls) {
                 try {
                     const res  = await fetch(url);
                     const data = await res.json();
                     if (data && data.features && data.features.length > 0) {
-                        // Pick closest feature to user if we have GPS
-                        let best = data.features[0];
-                        if (userLat !== null && data.features.length > 1) {
-                            let minD = Infinity;
-                            data.features.forEach(f => {
+                        let candidates = data.features;
+
+                        // Filter to results within maxMiles of the user (if we have GPS)
+                        if (userLat !== null && userLng !== null) {
+                            const nearby = candidates.filter(f => {
                                 const [lng, lat] = f.geometry.coordinates;
-                                const d = (lat - userLat)**2 + (lng - userLng)**2;
+                                return haversineMiles(userLat, userLng, lat, lng) <= maxMiles;
+                            });
+                            // Only use nearby results; if none found in this URL, try next URL
+                            if (nearby.length === 0) continue;
+                            candidates = nearby;
+                        }
+
+                        // Among valid candidates, pick the closest one to the user
+                        let best = candidates[0];
+                        if (userLat !== null && candidates.length > 1) {
+                            let minD = Infinity;
+                            candidates.forEach(f => {
+                                const [lng, lat] = f.geometry.coordinates;
+                                const d = haversineMiles(userLat, userLng, lat, lng);
                                 if (d < minD) { minD = d; best = f; }
                             });
                         }
                         const [lng, lat] = best.geometry.coordinates;
                         return [lng, lat];
                     }
-                } catch(e) { /* try next */ }
+                } catch(e) { /* try next URL */ }
             }
             return null;
+        }
+
+        // Wait up to 6 seconds for GPS to come in before launching route
+        function waitForGPS(timeoutMs = 6000) {
+            if (lastKnownPos) return Promise.resolve(lastKnownPos);
+            return new Promise((resolve) => {
+                const start = Date.now();
+                const check = setInterval(() => {
+                    if (lastKnownPos) { clearInterval(check); resolve(lastKnownPos); }
+                    else if (Date.now() - start > timeoutMs) { clearInterval(check); resolve(null); }
+                }, 200);
+            });
         }
 
         async function twLaunchRoute() {
@@ -1177,8 +1216,22 @@
 
             const plan = twBuiltRoute;
             const profile = plan.osrmProfile || 'foot';
+
+            // Wait for GPS if not yet available
+            if (!lastKnownPos) {
+                showToast("📡 Waiting for GPS lock…");
+                await waitForGPS(6000);
+            }
+
             const userLat = lastKnownPos ? lastKnownPos.lat : null;
             const userLng = lastKnownPos ? lastKnownPos.lng : null;
+
+            if (!userLat && plan.startAtUserLocation) {
+                showToast("⚠️ GPS not available — please enable location and try again", true);
+                document.getElementById('nav-modal').classList.remove('hidden');
+                twGoToStep(2);
+                return;
+            }
 
             let coords = [];
             let resolvedNames = [];
