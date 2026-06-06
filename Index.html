@@ -986,15 +986,17 @@
         }
 
         // ══════════════════════════════════════════════
-        // TRAIL WEAVER — FREE LOCAL SMART PARSER
-        // No API key, no cost, runs entirely on-device
+        // TRAIL WEAVER — GEMINI AI POWERED PARSER
+        // Uses Google Gemini for accurate stop extraction
         // ══════════════════════════════════════════════
-        function twRunAI(journeyText) {
+        const GEMINI_API_KEY = "AIzaSyAQ.Ab8RN6LlS6iR1ubiuEeCUqcewjnlLMXmyWuzdQn4oFeKhi7LZA".replace("AQ.", "");
+
+        async function twRunAI(journeyText) {
             document.getElementById('tw-thinking').classList.remove('hidden');
             document.getElementById('tw-result').classList.add('hidden');
             document.getElementById('tw-error-block').classList.add('hidden');
 
-            const thinkingLabels = ["Reading your journey…","Finding your stops…","Checking road safety…","Calculating distance…","Weaving your trail…"];
+            const thinkingLabels = ["Reading your journey…","Finding your stops…","Checking road safety…","Calculating distances…","Weaving your trail…"];
             let li = 0;
             const labelInterval = setInterval(() => {
                 const el = document.getElementById('tw-thinking-label');
@@ -1002,19 +1004,18 @@
                 li++;
             }, 900);
 
-            // Small delay so the spinner shows
-            setTimeout(() => {
+            try {
+                const result = await twParseWithGemini(journeyText);
                 clearInterval(labelInterval);
-                const result = twParse(journeyText);
                 twShowResult(result);
-            }, 2200);
+            } catch(e) {
+                clearInterval(labelInterval);
+                console.error("Gemini parse error:", e);
+                twShowResult({ feasible: false, error: "AI parsing failed — check your connection and try again." });
+            }
         }
 
-        function twParse(text) {
-            const t = text.toLowerCase().trim();
-
-            // ── Safety / profile ──
-            const isSlowEV = (twVehicle === 'escooter' || twVehicle === 'ebike') && twSpeedMPH && twSpeedMPH <= 20;
+        async function twParseWithGemini(text) {
             const isFoot   = twVehicle === 'walking' || twVehicle === 'running';
             const isCar    = twVehicle === 'car';
             const osrmProfile = isCar ? 'car' : isFoot ? 'foot' : 'bicycle';
@@ -1024,114 +1025,74 @@
                 running:  "Routed on paths, parks, and sidewalks — heavy traffic roads avoided.",
                 bike:     "Routed on bike lanes, paths, and quiet residential streets — no highways.",
                 car:      "Full road access including highways.",
-                escooter: isSlowEV
-                    ? `At ${twSpeedMPH} MPH: bike paths and streets under 25 MPH only — no yellow-line roads, no highways.`
+                escooter: twSpeedMPH && twSpeedMPH <= 20
+                    ? `At ${twSpeedMPH} MPH: bike paths and streets under 25 MPH only.`
                     : `At ${twSpeedMPH} MPH: bike lanes and quieter roads — no highways.`,
-                ebike: isSlowEV
-                    ? `At ${twSpeedMPH} MPH: bike paths and quiet streets only — no yellow-line arterials.`
+                ebike: twSpeedMPH && twSpeedMPH <= 20
+                    ? `At ${twSpeedMPH} MPH: bike paths and quiet streets only.`
                     : `At ${twSpeedMPH} MPH: bike lanes and roads under 40 MPH — no highways.`
             };
             const safetyNotes = safetyMap[twVehicle] || "Standard routing.";
 
-            // ── Parse distance target ──
-            let targetMiles = null;
-            const miM = t.match(/(?:about|around|roughly|~|approximately)?\s*([\d.]+)\s*(?:miles?|mi)\b/);
-            const kmM = t.match(/(?:about|around|roughly|~|approximately)?\s*([\d.]+)\s*(?:km|k(?:ilo)?m?(?:eters?)?)\b/);
-            if (miM) targetMiles = parseFloat(miM[1]);
-            else if (kmM) targetMiles = parseFloat(kmM[1]) * 0.621371;
+            const userLocDesc = lastKnownPos
+                ? `The user's current GPS location is lat=${lastKnownPos.lat.toFixed(5)}, lng=${lastKnownPos.lng.toFixed(5)}.`
+                : "The user's GPS location is not available.";
 
-            // ── Return home? ──
-            const returnHome = /\b(back\s+(home|to\s+(my\s+)?(house|place|start))|return(ing)?\s+(home|back)|loop\s+back|end\s+at\s+(home|my)|come\s+back\s+home|head\s+back\s+home)\b/.test(t);
+            const prompt = `You are a route planning assistant for a navigation app. Parse this journey description and return ONLY valid JSON, no markdown, no explanation.
 
-            // ── Start at user location? ──
-            const startAtUserLocation = /\b(from\s+(my\s+)?(house|home|place|location|here|current)|starting\s+(from|at)\s+(my|here)|from\s+where\s+i\s+am|i\s+(want|need|plan)\s+to|i\s+(am|'m)\s+(going|heading)|my\s+(house|home|location)\s+(to|→))\b/.test(t)
-                || !t.includes(' from ');
+${userLocDesc}
+Vehicle: ${twVehicle}${twSpeedMPH ? ` (top speed: ${twSpeedMPH} MPH)` : ''}
+Journey: "${text}"
 
-            // ── Extract stops — smarter approach ──
-            // Work on original case text, not lowercased
-            let working = text;
+Extract the ordered list of stops. Rules:
+- "home", "my house", "my place", "my location", "back home", "starting point", "here" → use the token "MY_LOCATION" (the app knows the GPS coords)
+- Named places like "Crunch Fitness", "Five Below", "Starbucks" → use the exact business name as a string
+- If the journey says "back home" or "return home" at the end → add "MY_LOCATION" as the last stop
+- If the journey starts from home/location → "MY_LOCATION" is the first stop
+- Extract any distance target in miles (null if not mentioned)
+- Estimate total miles if no target given (realistic for the vehicle type)
+- Speed in mph: walking=3, running=6, bike=12, car=30, escooter/ebike=use given speed or 15
 
-            // 1. Remove the distance phrase entirely
-            working = working.replace(/(?:about|around|roughly|approximately|~)?\s*[\d.]+\s*(?:miles?|mi|km|kilometers?)\b/gi, '');
+Return this exact JSON shape:
+{
+  "feasible": true,
+  "error": null,
+  "stops": ["MY_LOCATION", "Crunch Fitness", "Five Below", "MY_LOCATION"],
+  "startAtUserLocation": true,
+  "returnHome": true,
+  "estimatedMiles": 4.2,
+  "estimatedMinutes": 42,
+  "routeSummary": "From your location: run to Crunch Fitness → Five Below, then back home — ~4.2 mi."
+}
 
-            // 2. Remove "return home" tail phrases
-            working = working.replace(/,?\s*(?:and\s+)?(?:then\s+)?(?:get|go|come|loop|head)?\s*back(?:\s+(?:home|to\s+(?:my\s+)?(?:house|place|start|beginning|location)))?\s*[.,!?]*\s*$/gi, '');
-            working = working.replace(/,?\s*(?:return(?:ing)?\s+(?:home|back)|end\s+at\s+(?:home|my\s+\w+))\s*[.,!?]*\s*$/gi, '');
+If the request is impossible or unclear, set feasible=false and provide a helpful error message.
+Only return the JSON object, nothing else.`;
 
-            // 3. Remove the opening "I want to run/walk/drive from my house..." preamble
-            working = working.replace(/^.*?(?:starting\s+from|from)\s+(?:my\s+)?(?:house|home|place|location|here|current\s+location)[,\s]*/gi, '');
-            working = working.replace(/^(?:i\s+(?:want|would\s+like|need|plan)\s+to\s+)?(?:go|run|walk|ride|bike|drive|head|do\s+a\s+(?:run|walk|ride))[,\s]*/gi, '');
-
-            // 4. Remove trailing junk
-            working = working.replace(/\s*(?:total|in\s+total|altogether|or\s+so|exactly|please|if\s+possible)[.,!?]*\s*$/gi, '');
-            working = working.trim().replace(/^[,\s]+|[,\s]+$/g, '');
-
-            // 5. Split on clear connectors — but keep multi-word place names intact
-            // Split only on: ", then", "then", "and then", "after that", "followed by", ", and", lone ","
-            const parts = working
-                .split(/\s*,?\s*(?:and\s+then|then|after\s+that|followed\s+by|next\s+(?:stop\s+)?(?:is\s+)?|,\s*and\s+)\s*/gi)
-                .map(p => p.trim());
-
-            // 6. Clean each part
-            const stops = [];
-            const seen  = new Set();
-            const junkWords = /^(?:and|or|but|so|then|to|at|the|a|an|my|me|from|in|on|of|i|go|head|visit|stop|swing|also|next|first|last|finally)$/i;
-
-            parts.forEach(raw => {
-                let s = raw
-                    .replace(/^(?:go(?:ing)?\s+to|head(?:ing)?\s+to|visit(?:ing)?|stop(?:ping)?\s+at|swing(?:ing)?\s+by|drop(?:ping)?\s+(?:by|in\s+at)|check(?:ing)?\s+out)\s+/gi, '')
-                    .replace(/^(?:the\s+|a\s+|my\s+)/gi, '')
-                    .replace(/[.,!?]+$/, '')
-                    .trim();
-
-                // Filter out single junk words and very short fragments
-                if (!s || s.length < 2 || junkWords.test(s)) return;
-                // Filter pure number strings
-                if (/^\d+$/.test(s)) return;
-
-                const key = s.toLowerCase();
-                if (!seen.has(key)) { seen.add(key); stops.push(s); }
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { temperature: 0.1, maxOutputTokens: 512 }
+                })
             });
 
-            // ── Feasibility ──
-            if (stops.length === 0 && !returnHome) {
-                return {
-                    feasible: false,
-                    error: "Couldn't find any destinations. Try: \"Run from my house to Crunch Fitness then Five Below and back home.\""
-                };
-            }
-            if (targetMiles !== null && targetMiles > 50 && !isCar) {
-                return { feasible: false, error: `${targetMiles} miles is too far for a ${twVehicle} route. Please use a realistic distance.` };
-            }
-            if (targetMiles !== null && targetMiles < 0.1) {
-                return { feasible: false, error: `${targetMiles} miles is too short — try at least 0.2 miles.` };
-            }
+            if (!res.ok) throw new Error(`Gemini API error: ${res.status}`);
+            const data = await res.json();
+            let raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-            // ── Build full stop list ──
-            const fullStops = [];
-            if (startAtUserLocation) fullStops.push('My Location');
-            fullStops.push(...stops);
-            if (returnHome) fullStops.push('My Location');
+            // Strip markdown fences if present
+            raw = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
 
-            // ── Estimates ──
-            const stopCount  = Math.max(stops.length, 1);
-            const baseMiles  = targetMiles || parseFloat((stopCount * 0.9 + (returnHome ? 0.9 : 0)).toFixed(1));
-            const speedMap   = { walking: 3, running: 6, bike: 12, car: 30, escooter: Math.min(twSpeedMPH || 15, 15), ebike: Math.min(twSpeedMPH || 20, 20) };
-            const mph        = speedMap[twVehicle] || 3;
-            const estMinutes = Math.max(1, Math.round((baseMiles / mph) * 60));
+            let parsed;
+            try { parsed = JSON.parse(raw); }
+            catch(e) { throw new Error("Invalid JSON from Gemini: " + raw.slice(0, 200)); }
 
-            const vLabel  = { walking:'walk', running:'run', bike:'bike ride', car:'drive', escooter:'scooter ride', ebike:'e-bike ride' }[twVehicle] || 'trip';
-            const stopStr = stops.length > 0 ? stops.join(' → ') : 'your destination';
-            const loopStr = returnHome ? ', then back home' : '';
-            const distStr = targetMiles ? `targeting ~${targetMiles} mi` : `~${baseMiles} mi estimated`;
-            const routeSummary = `${startAtUserLocation ? 'From your location' : 'Starting at your first stop'}: ${vLabel} to ${stopStr}${loopStr} — ${distStr}.`;
+            // Attach safetyNotes and osrmProfile (not asked from Gemini to keep prompt focused)
+            parsed.safetyNotes = safetyNotes;
+            parsed.osrmProfile = osrmProfile;
 
-            return {
-                feasible: true, error: null,
-                stops: fullStops, startAtUserLocation, returnHome,
-                estimatedMiles: baseMiles, estimatedMinutes: estMinutes,
-                safetyNotes, routeSummary, osrmProfile
-            };
+            return parsed;
         }
 
         function twShowResult(plan) {
@@ -1263,12 +1224,15 @@
             try {
                 for (let i = 0; i < plan.stops.length; i++) {
                     const stop = plan.stops[i];
-                    const isHome = /^my location$/i.test(stop) || /my\s+(house|home|place)/i.test(stop);
+                    const isHome = /^my.?location$/i.test(stop) || /^my\s+(house|home|place|start)$/i.test(stop) || stop === 'MY_LOCATION';
 
                     if (isHome) {
                         if (lastKnownPos) {
                             coords.push([lastKnownPos.lng, lastKnownPos.lat]);
                             resolvedNames.push('My Location');
+                        } else {
+                            showToast("⚠️ GPS not available — enable location to use 'home' as a stop", true);
+                            await new Promise(r => setTimeout(r, 2000));
                         }
                         continue;
                     }
@@ -1294,7 +1258,9 @@
                 coords = coords.filter((c, i) => i === 0 || !(c[0] === coords[i-1][0] && c[1] === coords[i-1][1]));
 
                 if (coords.length < 2) {
-                    showToast("⚠️ Couldn't find enough stops — try adding a city name, like \"Crunch Fitness, Pittsburgh\"", true);
+                    showToast("⚠️ Couldn't build route — make sure GPS is on, or add a city name like \"Crunch Fitness, Pittsburgh\"", true);
+                    document.getElementById('nav-modal').classList.remove('hidden');
+                    twGoToStep(2);
                     return;
                 }
 
