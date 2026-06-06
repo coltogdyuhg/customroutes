@@ -10,7 +10,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAs9YXzxXzM2MHY848KtFXaoKRIGVf1AzI&libraries=places&callback=initGoogleMaps" async defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAs9YXzxXzM2MHY848KtFXaoKRIGVf1AzI&libraries=places,geocoding&loading=async&callback=initGoogleMaps" async defer></script>
     <script>
         let googleMapsReady = false;
         let googleMapsReadyCallbacks = [];
@@ -1147,70 +1147,65 @@
             }
         }
 
-        // ── Geocoder: Google Places JS SDK (browser-safe, no CORS issues) ──
-        function resolveStopToCoords(stopName, userLat, userLng) {
+        // ── Geocoder: new google.maps.places.Place.searchByText (2025 API) ──
+        async function resolveStopToCoords(stopName, userLat, userLng) {
             return new Promise((resolve) => {
-                onGoogleMapsReady(() => {
+                onGoogleMapsReady(async () => {
                     try {
-                        const service = new google.maps.places.PlacesService(document.createElement('div'));
                         const request = {
-                            query: stopName,
-                            fields: ['geometry', 'name'],
+                            textQuery: stopName,
+                            fields: ['location', 'displayName'],
+                            maxResultCount: 5,
                         };
                         if (userLat !== null && userLng !== null) {
-                            request.location = new google.maps.LatLng(userLat, userLng);
-                            request.radius = 20000;
+                            request.locationBias = new google.maps.Circle({
+                                center: { lat: userLat, lng: userLng },
+                                radius: 20000
+                            });
                         }
-                        service.findPlaceFromQuery(request, (results, status) => {
-                            if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
+                        const { places } = await google.maps.places.Place.searchByText(request);
+                        if (places && places.length > 0) {
+                            // Pick closest to user if we have location
+                            let best = places[0];
+                            if (userLat !== null && places.length > 1) {
+                                let minD = Infinity;
+                                places.forEach(p => {
+                                    if (!p.location) return;
+                                    const dlat = p.location.lat() - userLat;
+                                    const dlng = p.location.lng() - userLng;
+                                    const d = dlat*dlat + dlng*dlng;
+                                    if (d < minD) { minD = d; best = p; }
+                                });
+                            }
+                            if (best.location) {
+                                resolve([best.location.lng(), best.location.lat()]);
+                                return;
+                            }
+                        }
+                    } catch(e) {
+                        console.warn('searchByText failed, trying Geocoder:', e.message);
+                    }
+
+                    // Fallback: Geocoder (handles addresses)
+                    try {
+                        const geocoder = new google.maps.Geocoder();
+                        const opts = { address: stopName };
+                        if (userLat !== null && userLng !== null) {
+                            opts.bounds = new google.maps.LatLngBounds(
+                                new google.maps.LatLng(userLat - 0.3, userLng - 0.3),
+                                new google.maps.LatLng(userLat + 0.3, userLng + 0.3)
+                            );
+                        }
+                        geocoder.geocode(opts, (results, status) => {
+                            if (status === 'OK' && results && results.length > 0) {
                                 const loc = results[0].geometry.location;
                                 resolve([loc.lng(), loc.lat()]);
                             } else {
-                                // Fallback: TextSearch (broader)
-                                const req2 = { query: stopName };
-                                if (userLat !== null && userLng !== null) {
-                                    req2.location = new google.maps.LatLng(userLat, userLng);
-                                    req2.radius = 20000;
-                                }
-                                service.textSearch(req2, (res2, st2) => {
-                                    if (st2 === google.maps.places.PlacesServiceStatus.OK && res2 && res2.length > 0) {
-                                        // Pick closest result to user
-                                        let best = res2[0];
-                                        if (userLat !== null && res2.length > 1) {
-                                            let minD = Infinity;
-                                            res2.forEach(p => {
-                                                const dlat = p.geometry.location.lat() - userLat;
-                                                const dlng = p.geometry.location.lng() - userLng;
-                                                const d = dlat*dlat + dlng*dlng;
-                                                if (d < minD) { minD = d; best = p; }
-                                            });
-                                        }
-                                        const loc = best.geometry.location;
-                                        resolve([loc.lng(), loc.lat()]);
-                                    } else {
-                                        // Last resort: Geocoder
-                                        const geocoder = new google.maps.Geocoder();
-                                        const opts = { address: stopName };
-                                        if (userLat !== null && userLng !== null) {
-                                            opts.bounds = new google.maps.LatLngBounds(
-                                                new google.maps.LatLng(userLat - 0.2, userLng - 0.2),
-                                                new google.maps.LatLng(userLat + 0.2, userLng + 0.2)
-                                            );
-                                        }
-                                        geocoder.geocode(opts, (gres, gst) => {
-                                            if (gst === 'OK' && gres && gres.length > 0) {
-                                                const loc = gres[0].geometry.location;
-                                                resolve([loc.lng(), loc.lat()]);
-                                            } else {
-                                                resolve(null);
-                                            }
-                                        });
-                                    }
-                                });
+                                resolve(null);
                             }
                         });
                     } catch(e) {
-                        console.error('Places error:', e);
+                        console.error('Geocoder fallback failed:', e);
                         resolve(null);
                     }
                 });
