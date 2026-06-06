@@ -10,6 +10,20 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAs9YXzxXzM2MHY848KtFXaoKRIGVf1AzI&libraries=places&callback=initGoogleMaps" async defer></script>
+    <script>
+        let googleMapsReady = false;
+        let googleMapsReadyCallbacks = [];
+        function initGoogleMaps() {
+            googleMapsReady = true;
+            googleMapsReadyCallbacks.forEach(fn => fn());
+            googleMapsReadyCallbacks = [];
+        }
+        function onGoogleMapsReady(fn) {
+            if (googleMapsReady) fn();
+            else googleMapsReadyCallbacks.push(fn);
+        }
+    </script>
 
     <script>
         tailwind.config = {
@@ -1133,41 +1147,74 @@
             }
         }
 
-        // ── Geocoder: Google Places Nearby Search → finds closest matching business ──
-        async function resolveStopToCoords(stopName, userLat, userLng) {
-            const key = GOOGLE_MAPS_API_KEY;
-
-            // If we have user location, use Places Nearby Search (finds closest chain/business)
-            if (userLat !== null && userLng !== null) {
-                try {
-                    // Text Search biased to user location — works for "Crunch Fitness", "McDonald's", etc.
-                    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(stopName)}&location=${userLat},${userLng}&radius=20000&key=${key}`;
-                    const res = await fetch(url);
-                    const data = await res.json();
-                    if (data.status === 'OK' && data.results && data.results.length > 0) {
-                        // Results are already sorted by relevance+proximity; pick first
-                        const place = data.results[0];
-                        const loc = place.geometry.location;
-                        return [loc.lng, loc.lat];
+        // ── Geocoder: Google Places JS SDK (browser-safe, no CORS issues) ──
+        function resolveStopToCoords(stopName, userLat, userLng) {
+            return new Promise((resolve) => {
+                onGoogleMapsReady(() => {
+                    try {
+                        const service = new google.maps.places.PlacesService(document.createElement('div'));
+                        const request = {
+                            query: stopName,
+                            fields: ['geometry', 'name'],
+                        };
+                        if (userLat !== null && userLng !== null) {
+                            request.location = new google.maps.LatLng(userLat, userLng);
+                            request.radius = 20000;
+                        }
+                        service.findPlaceFromQuery(request, (results, status) => {
+                            if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
+                                const loc = results[0].geometry.location;
+                                resolve([loc.lng(), loc.lat()]);
+                            } else {
+                                // Fallback: TextSearch (broader)
+                                const req2 = { query: stopName };
+                                if (userLat !== null && userLng !== null) {
+                                    req2.location = new google.maps.LatLng(userLat, userLng);
+                                    req2.radius = 20000;
+                                }
+                                service.textSearch(req2, (res2, st2) => {
+                                    if (st2 === google.maps.places.PlacesServiceStatus.OK && res2 && res2.length > 0) {
+                                        // Pick closest result to user
+                                        let best = res2[0];
+                                        if (userLat !== null && res2.length > 1) {
+                                            let minD = Infinity;
+                                            res2.forEach(p => {
+                                                const dlat = p.geometry.location.lat() - userLat;
+                                                const dlng = p.geometry.location.lng() - userLng;
+                                                const d = dlat*dlat + dlng*dlng;
+                                                if (d < minD) { minD = d; best = p; }
+                                            });
+                                        }
+                                        const loc = best.geometry.location;
+                                        resolve([loc.lng(), loc.lat()]);
+                                    } else {
+                                        // Last resort: Geocoder
+                                        const geocoder = new google.maps.Geocoder();
+                                        const opts = { address: stopName };
+                                        if (userLat !== null && userLng !== null) {
+                                            opts.bounds = new google.maps.LatLngBounds(
+                                                new google.maps.LatLng(userLat - 0.2, userLng - 0.2),
+                                                new google.maps.LatLng(userLat + 0.2, userLng + 0.2)
+                                            );
+                                        }
+                                        geocoder.geocode(opts, (gres, gst) => {
+                                            if (gst === 'OK' && gres && gres.length > 0) {
+                                                const loc = gres[0].geometry.location;
+                                                resolve([loc.lng(), loc.lat()]);
+                                            } else {
+                                                resolve(null);
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    } catch(e) {
+                        console.error('Places error:', e);
+                        resolve(null);
                     }
-                } catch(e) { /* fall through */ }
-            }
-
-            // Fallback: Geocoding API (handles addresses and landmark names)
-            try {
-                const locBias = (userLat !== null && userLng !== null)
-                    ? `&location=${userLat},${userLng}&radius=20000`
-                    : '';
-                const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(stopName)}${locBias}&key=${key}`;
-                const res  = await fetch(url);
-                const data = await res.json();
-                if (data.status === 'OK' && data.results && data.results.length > 0) {
-                    const loc = data.results[0].geometry.location;
-                    return [loc.lng, loc.lat];
-                }
-            } catch(e) {}
-
-            return null; // couldn't resolve
+                });
+            });
         }
 
         async function twLaunchRoute() {
@@ -1299,10 +1346,17 @@
             if (selectedVehicle === 'car') profile = 'car';
             try {
                 if (!destCoords) {
-                    const res  = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(destQuery)}&key=${GOOGLE_MAPS_API_KEY}`);
-                    const data = await res.json();
-                    if (data.status !== 'OK') throw new Error('geocode failed');
-                    destCoords = [data.results[0].geometry.location.lng, data.results[0].geometry.location.lat];
+                    destCoords = await new Promise((resolve) => {
+                        onGoogleMapsReady(() => {
+                            new google.maps.Geocoder().geocode({ address: destQuery }, (results, status) => {
+                                if (status === 'OK' && results.length > 0) {
+                                    const loc = results[0].geometry.location;
+                                    resolve([loc.lng(), loc.lat()]);
+                                } else resolve(null);
+                            });
+                        });
+                    });
+                    if (!destCoords) throw new Error('geocode failed');
                 }
                 const routeRes  = await fetch(`https://router.project-osrm.org/route/v1/${profile}/${startCoords.join(',')};${destCoords.join(',')}?overview=full&geometries=geojson`);
                 const routeData = await routeRes.json();
@@ -1415,24 +1469,31 @@
 
         async function performSearch(query) {
             if (!query) return;
-            try {
-                const locBias = lastKnownPos ? `&location=${lastKnownPos.lat},${lastKnownPos.lng}&radius=50000` : '';
-                const res  = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}${locBias}&key=${GOOGLE_MAPS_API_KEY}`);
-                const data = await res.json();
-                if (data.status === 'OK' && data.results && data.results.length > 0) {
-                    const loc    = data.results[0].geometry.location;
-                    const latlng = [loc.lat, loc.lng];
-                    const name   = data.results[0].formatted_address.split(',')[0];
-                    if (searchMarker) map.removeLayer(searchMarker);
-                    searchMarker = L.marker(latlng, { icon: searchPinIcon }).addTo(map);
-                    searchMarker.bindPopup(`<div class="p-2"><h4 class="font-bold text-slate-800 text-xs">${name}</h4><p class="text-[10px] text-slate-500 mt-1">Location Found</p></div>`, { closeButton: false }).openPopup();
-                    map.flyTo(latlng, 14);
-                    if (currentMode === 'mobile') {
-                        const sidebar = document.getElementById('sidebar');
-                        if (!sidebar.classList.contains('is-collapsed')) toggleSidebarCollapse();
-                    }
+            onGoogleMapsReady(() => {
+                const geocoder = new google.maps.Geocoder();
+                const opts = { address: query };
+                if (lastKnownPos) {
+                    opts.bounds = new google.maps.LatLngBounds(
+                        new google.maps.LatLng(lastKnownPos.lat - 0.5, lastKnownPos.lng - 0.5),
+                        new google.maps.LatLng(lastKnownPos.lat + 0.5, lastKnownPos.lng + 0.5)
+                    );
                 }
-            } catch(err) { console.error("Search failed:", err); }
+                geocoder.geocode(opts, (results, status) => {
+                    if (status === 'OK' && results && results.length > 0) {
+                        const loc    = results[0].geometry.location;
+                        const latlng = [loc.lat(), loc.lng()];
+                        const name   = results[0].formatted_address.split(',')[0];
+                        if (searchMarker) map.removeLayer(searchMarker);
+                        searchMarker = L.marker(latlng, { icon: searchPinIcon }).addTo(map);
+                        searchMarker.bindPopup(`<div class="p-2"><h4 class="font-bold text-slate-800 text-xs">${name}</h4><p class="text-[10px] text-slate-500 mt-1">Location Found</p></div>`, { closeButton: false }).openPopup();
+                        map.flyTo(latlng, 14);
+                        if (currentMode === 'mobile') {
+                            const sidebar = document.getElementById('sidebar');
+                            if (!sidebar.classList.contains('is-collapsed')) toggleSidebarCollapse();
+                        }
+                    }
+                });
+            });
         }
 
         document.getElementById('global-search').onkeydown = (e) => { if (e.key === 'Enter') performSearch(e.target.value); };
