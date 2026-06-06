@@ -1201,52 +1201,72 @@
             'post office':    ['amenity=post_office'],
         };
 
-        // Build an Overpass QL query to find the nearest match within radiusMeters
+        // Build an Overpass QL query — returns ALL results sorted by distance server-side
         function buildOverpassQuery(tags, lat, lng, radiusMeters) {
             const parts = tags.map(tag => {
                 const [k, v] = tag.split('=');
                 const types = ['node','way','relation'];
                 return types.map(t => `  ${t}["${k}"="${v}"](around:${radiusMeters},${lat},${lng});`).join('\n');
             });
-            return `[out:json][timeout:10];\n(\n${parts.join('\n')}\n);\nout center 20;`;
+            // "out center" makes ways/relations return a center lat/lon
+            // "qt" sorts by distance from the query center automatically
+            return `[out:json][timeout:15];\n(\n${parts.join('\n')}\n);\nout center qt 50;`;
         }
 
         // Try Overpass for known business/amenity types
         async function resolveViaOverpass(stopName, userLat, userLng) {
             const key = stopName.toLowerCase().trim();
-            // Find the best matching tag list (exact match first, then partial)
+
+            // Exact match first, then check if the stop name contains a known key or vice versa
             let tags = OSM_TAG_MAP[key];
             if (!tags) {
-                const partialKey = Object.keys(OSM_TAG_MAP).find(k => key.includes(k) || k.includes(key));
+                // Try: does the stop name contain a known keyword? ("crunch fitness" → "crunch fitness")
+                const partialKey = Object.keys(OSM_TAG_MAP).find(k =>
+                    key.includes(k) || k.includes(key)
+                );
                 if (partialKey) tags = OSM_TAG_MAP[partialKey];
             }
             if (!tags || !userLat) return null;
 
-            const radiusMeters = (twVehicle === 'car') ? 48000 : 24000; // 30mi / 15mi
-            const query = buildOverpassQuery(tags, userLat, userLng, radiusMeters);
-            try {
-                const res = await fetch('https://overpass-api.de/api/interpreter', {
-                    method: 'POST',
-                    body: 'data=' + encodeURIComponent(query)
-                });
-                const data = await res.json();
-                if (!data.elements || data.elements.length === 0) return null;
+            // Start tight (5 miles) and expand if nothing found — ensures truly nearest result
+            const maxMiles = (twVehicle === 'car') ? 30 : 15;
+            const radii = [8000, 16000, Math.round(maxMiles * 1609)]; // 5mi, 10mi, max
 
-                // Pick the closest element
-                let best = null, bestDist = Infinity;
-                data.elements.forEach(el => {
-                    const lat = el.lat ?? el.center?.lat;
-                    const lng = el.lon ?? el.center?.lon;
-                    if (!lat || !lng) return;
-                    const d = haversineMiles(userLat, userLng, lat, lng);
-                    if (d < bestDist) { bestDist = d; best = { lat, lng }; }
-                });
-                if (best) { console.log(`Overpass found "${stopName}" at ${bestDist.toFixed(2)} mi`); }
-                return best ? [best.lng, best.lat] : null;
-            } catch(e) {
-                console.warn('Overpass error:', e);
-                return null;
+            for (const radiusMeters of radii) {
+                const query = buildOverpassQuery(tags, userLat, userLng, radiusMeters);
+                try {
+                    const res = await fetch('https://overpass-api.de/api/interpreter', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'data=' + encodeURIComponent(query)
+                    });
+                    const data = await res.json();
+                    if (!data.elements || data.elements.length === 0) continue; // expand radius
+
+                    // Collect all elements with valid coordinates and sort by true distance
+                    const candidates = [];
+                    data.elements.forEach(el => {
+                        const lat = el.lat ?? el.center?.lat;
+                        const lng = el.lon ?? el.center?.lon;
+                        if (!lat || !lng) return;
+                        const d = haversineMiles(userLat, userLng, lat, lng);
+                        candidates.push({ lat, lng, d, name: el.tags?.name || stopName });
+                    });
+
+                    if (candidates.length === 0) continue;
+
+                    // Sort by distance — pick absolute closest
+                    candidates.sort((a, b) => a.d - b.d);
+                    const best = candidates[0];
+                    console.log(`✅ Overpass: "${stopName}" → "${best.name}" at ${best.d.toFixed(2)} mi (${candidates.length} candidates checked)`);
+                    return [best.lng, best.lat];
+
+                } catch(e) {
+                    console.warn('Overpass error:', e);
+                    break; // don't retry on error, fall through to Nominatim
+                }
             }
+            return null;
         }
 
         // Try Nominatim for named places / addresses
