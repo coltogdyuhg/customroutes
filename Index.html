@@ -925,7 +925,7 @@
                     document.getElementById('weather-icon').src = `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
                     document.getElementById('weather-indicator').classList.remove('hidden');
                 }
-            } catch(e) {}
+            } catch(e) { /* weather unavailable */ }
         }
 
         // ── Trail Weaver State ──
@@ -1059,6 +1059,8 @@
             working = working.replace(/,?\s*(?:return(?:ing)?\s+(?:home|back)|end\s+at\s+(?:home|my\s+\w+))\s*[.,!?]*\s*$/gi, '');
             working = working.replace(/^.*?(?:starting\s+from|from)\s+(?:my\s+)?(?:house|home|place|location|here|current\s+location)[,\s]*/gi, '');
             working = working.replace(/^(?:i\s+(?:want|would\s+like|need|plan)\s+to\s+)?(?:go|run|walk|ride|bike|drive|head|do\s+a\s+(?:run|walk|ride))[,\s]*/gi, '');
+            working = working.replace(/^(?:take\s+me\s+to(?:\s+the\s+(?:nearest|closest))?|please\s+take\s+me\s+to)\s*/gi, '');
+            working = working.replace(/^(?:and\s+)?(?:then\s+)?(?:take\s+me\s+to(?:\s+the\s+(?:nearest|closest))?)\s*/gi, '');
             working = working.replace(/\s*(?:total|in\s+total|altogether|or\s+so|exactly|please|if\s+possible)[.,!?]*\s*$/gi, '');
             working = working.trim().replace(/^[,.\s]+|[,.\s]+$/g, '');
 
@@ -1069,6 +1071,7 @@
             const seen  = new Set();
             rawParts.forEach(raw => {
                 let s = raw
+                    .replace(/^(?:take\s+me\s+to(?:\s+the\s+(?:nearest|closest))?|take\s+me\s+to)\s+/gi, '')
                     .replace(/^(?:go(?:ing)?\s+to|head(?:ing)?\s+to|visit(?:ing)?|stop(?:ping)?\s+(?:at|by)|swing(?:ing)?\s+by|drop(?:ping)?\s+(?:by|in\s+at)|check(?:ing)?\s+out)\s+/gi, '')
                     .replace(/^(?:the\s+nearest|the\s+closest|nearest|closest)\s+/gi, '')
                     .replace(/^(?:the\s+|a\s+|my\s+)/gi, '')
@@ -1150,16 +1153,13 @@
             // Max search radius: 30 miles for car, 15 miles for everything else
             const maxMiles = (twVehicle === 'car') ? 30 : 15;
 
-            // Build query list: biased first (tight 25km bbox), then wider 50km, then unbiased
+            // Build query list: location-biased first, then unbiased fallback
             const urls = [];
             if (userLat !== null && userLng !== null) {
-                // Tight bias with locationbiasradius (Photon supports this)
-                urls.push(`https://photon.komoot.io/api/?q=${encoded}&lat=${userLat}&lon=${userLng}&limit=10&locationbiasscale=0.9`);
-                // Also try with explicit bbox (~30 mile box) as secondary
-                const deg = 0.4; // ~28 miles
-                urls.push(`https://photon.komoot.io/api/?q=${encoded}&lat=${userLat}&lon=${userLng}&limit=10&bbox=${userLng-deg},${userLat-deg},${userLng+deg},${userLat+deg}`);
+                // Photon supports lat/lon bias. Use high limit to get enough nearby candidates.
+                urls.push(`https://photon.komoot.io/api/?q=${encoded}&lat=${userLat}&lon=${userLng}&limit=15`);
             }
-            // Unbiased fallback (last resort)
+            // Unbiased fallback (last resort — only used if GPS unavailable)
             urls.push(`https://photon.komoot.io/api/?q=${encoded}&limit=10`);
 
             for (const url of urls) {
