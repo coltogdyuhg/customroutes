@@ -11,7 +11,6 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -61,18 +60,13 @@
             --clay: #a0714f;
             --amber: #c07b3c;
         }
-
         * { font-family: 'DM Sans', sans-serif; }
-
-        /* ── Animated Forest Background ── */
         .nature-bg {
             background: linear-gradient(160deg, #0d1f0d 0%, #1a2e1a 40%, #243d1f 70%, #0f1c0f 100%);
-            position: relative;
-            overflow: hidden;
+            position: relative; overflow: hidden;
         }
         .nature-bg::before {
-            content: '';
-            position: absolute; inset: 0;
+            content: ''; position: absolute; inset: 0;
             background:
                 radial-gradient(ellipse 60% 40% at 20% 80%, rgba(90,125,86,0.25) 0%, transparent 60%),
                 radial-gradient(ellipse 40% 60% at 80% 20%, rgba(61,92,58,0.20) 0%, transparent 60%),
@@ -83,15 +77,10 @@
             0%   { opacity: 0.7; transform: scale(1) translateY(0); }
             100% { opacity: 1;   transform: scale(1.05) translateY(-10px); }
         }
-
-        /* Floating particles */
         .particle {
-            position: absolute;
-            width: 3px; height: 3px;
-            border-radius: 50%;
+            position: absolute; width: 3px; height: 3px; border-radius: 50%;
             background: rgba(200,223,196,0.4);
-            animation: floatParticle linear infinite;
-            pointer-events: none;
+            animation: floatParticle linear infinite; pointer-events: none;
         }
         @keyframes floatParticle {
             0%   { transform: translateY(100vh) translateX(0) scale(0); opacity: 0; }
@@ -99,117 +88,70 @@
             90%  { opacity: 0.3; }
             100% { transform: translateY(-10vh) translateX(var(--drift, 30px)) scale(1); opacity: 0; }
         }
-
-        /* Leaf silhouettes */
-        .leaf-svg {
-            position: absolute;
-            opacity: 0.06;
-            fill: var(--sage);
-        }
-
-        /* ── Map ── */
+        .leaf-svg { position: absolute; opacity: 0.06; fill: var(--sage); }
         #map { height: 100%; width: 100%; min-height: 300px; z-index: 1; display: block; }
         #map-area { flex: 1 1 0%; min-width: 0; min-height: 0; position: relative; overflow: hidden; }
         .leaflet-container { background: #e8e0d8 !important; }
         .leaflet-control-layers { border-radius: 12px !important; border: 1px solid rgba(138,172,130,0.3) !important; box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important; font-family: 'DM Sans', sans-serif !important; font-size: 11px !important; font-weight: 600 !important; }
-
-        /* ── Mode layout ── */
         .mode-mobile #sidebar { position: fixed; bottom: 0; left: 0; width: 100% !important; height: auto !important; z-index: 50; transition: transform 0.4s cubic-bezier(0.4,0,0.2,1); border-radius: 2rem 2rem 0 0; }
         .mode-mobile #sidebar.is-collapsed { transform: translateY(calc(100% - 70px)); }
         .mode-desktop #sidebar { width: 22rem; height: 100%; }
-
-        /* ── Header gradient ── */
-        .nature-header {
-            background: linear-gradient(90deg, var(--forest) 0%, var(--moss) 50%, var(--bark) 100%);
-            border-bottom: 1px solid rgba(138,172,130,0.2);
-        }
-
-        /* ── Cards & UI ── */
-        .nature-card {
-            background: rgba(212,234,208,0.06);
-            border: 1px solid rgba(138,172,130,0.2);
-            backdrop-filter: blur(8px);
-        }
-
-        /* ── GPS Pulse ── */
+        .nature-header { background: linear-gradient(90deg, var(--forest) 0%, var(--moss) 50%, var(--bark) 100%); border-bottom: 1px solid rgba(138,172,130,0.2); }
+        .nature-card { background: rgba(212,234,208,0.06); border: 1px solid rgba(138,172,130,0.2); backdrop-filter: blur(8px); }
         .user-location-marker { background: var(--fern); border: 3px solid white; border-radius: 50%; box-shadow: 0 0 12px rgba(90,125,86,0.5); }
         .user-direction-arrow { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid var(--fern); }
         .pulse-ring { position: absolute; top: 50%; left: 50%; width: 14px; height: 14px; margin-top: -7px; margin-left: -7px; border-radius: 50%; background: rgba(90,125,86,0.4); animation: pulse-animation 2s infinite; }
         @keyframes pulse-animation { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(4); opacity: 0; } }
-
-        /* ── Pin drop ── */
         .search-pin-drop { animation: pin-drop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes pin-drop { 0% { transform: translateY(-40px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
-
-        /* ── Scrollbar ── */
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: var(--sage); border-radius: 10px; }
-
-        /* ── Toggle switch ── */
         .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; inset: 0; background-color: rgba(138,172,130,0.3); transition: .4s; border-radius: 34px; border: 1px solid rgba(138,172,130,0.4); }
         .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--fern); }
         input:checked + .slider:before { transform: translateX(20px); }
-
-        /* ── Mobile drag handle ── */
         #mobile-drag-handle { display: none; }
         .mode-mobile #mobile-drag-handle { display: flex; }
-
-        /* ── Boot screen ── */
-        .boot-tree {
-            position: absolute;
-            bottom: 0;
-            width: 120px;
-            opacity: 0.15;
-        }
-
-        /* ── Buttons ── */
-        .btn-primary {
-            background: linear-gradient(135deg, var(--moss) 0%, var(--fern) 100%);
-            box-shadow: 0 4px 20px rgba(61,92,58,0.4);
-            color: white;
-            border: 1px solid rgba(138,172,130,0.3);
-            transition: all 0.25s;
-        }
+        .btn-primary { background: linear-gradient(135deg, var(--moss) 0%, var(--fern) 100%); box-shadow: 0 4px 20px rgba(61,92,58,0.4); color: white; border: 1px solid rgba(138,172,130,0.3); transition: all 0.25s; }
         .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(61,92,58,0.5); }
-
-        .btn-accent {
-            background: linear-gradient(135deg, var(--bark) 0%, var(--clay) 100%);
-            box-shadow: 0 4px 20px rgba(107,79,58,0.35);
-            color: white;
-            border: 1px solid rgba(192,123,60,0.3);
-            transition: all 0.25s;
-        }
+        .btn-accent { background: linear-gradient(135deg, var(--bark) 0%, var(--clay) 100%); box-shadow: 0 4px 20px rgba(107,79,58,0.35); color: white; border: 1px solid rgba(192,123,60,0.3); transition: all 0.25s; }
         .btn-accent:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(107,79,58,0.5); }
-
-        /* ── Route card hover ── */
-        .route-card {
-            background: rgba(212,234,208,0.04);
-            border: 1px solid rgba(138,172,130,0.15);
-            transition: all 0.2s;
-        }
+        .route-card { background: rgba(212,234,208,0.04); border: 1px solid rgba(138,172,130,0.15); transition: all 0.2s; }
         .route-card:hover { background: rgba(212,234,208,0.09); border-color: rgba(138,172,130,0.35); }
-
-        /* ── HUD ── */
-        .hud-panel {
-            background: rgba(15, 28, 15, 0.88);
-            border: 1px solid rgba(90,125,86,0.35);
-            backdrop-filter: blur(16px);
-        }
-
-        /* ── Progress bar ── */
-        .nature-progress {
-            background: linear-gradient(90deg, var(--fern), var(--sage), var(--amber));
-        }
-
-        /* ── Map tile tint for dark ── */
+        .hud-panel { background: rgba(15, 28, 15, 0.88); border: 1px solid rgba(90,125,86,0.35); backdrop-filter: blur(16px); }
+        .nature-progress { background: linear-gradient(90deg, var(--fern), var(--sage), var(--amber)); }
         .map-tile-nature { filter: saturate(0.9) brightness(0.95) hue-rotate(10deg); }
-
-        /* Sidebar in light mode */
         #sidebar { background: rgba(255,255,255,0.97); }
         .dark #sidebar { background: rgba(18,30,18,0.97); }
+
+        /* ── AI Progress Toast ── */
+        .ai-progress-toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            background: rgba(14,24,14,0.97);
+            border: 1px solid rgba(90,125,86,0.4);
+            backdrop-filter: blur(20px);
+            border-radius: 1.5rem;
+            padding: 1rem 1.5rem;
+            min-width: 280px;
+            max-width: 360px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+        }
+        .ai-step { display: flex; align-items: center; gap: 0.6rem; padding: 0.25rem 0; transition: all 0.3s; }
+        .ai-step-icon { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+        .ai-step.pending .ai-step-icon { background: rgba(138,172,130,0.15); color: rgba(138,172,130,0.4); }
+        .ai-step.active  .ai-step-icon { background: rgba(90,125,86,0.3); animation: pulse-animation 1.5s infinite; }
+        .ai-step.done    .ai-step-icon { background: rgba(90,125,86,0.5); }
+        .ai-step-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+        .ai-step.pending .ai-step-label { color: rgba(138,172,130,0.4); }
+        .ai-step.active  .ai-step-label { color: #c8dfc4; }
+        .ai-step.done    .ai-step-label { color: rgba(138,172,130,0.7); }
     </style>
 </head>
 <body class="bg-dew dark:bg-forest overflow-hidden font-body text-forest transition-colors duration-300">
@@ -248,8 +190,6 @@
     <!-- ══════════════════ TRAIL WEAVER MODAL ══════════════════ -->
     <div id="nav-modal" class="fixed inset-0 z-[2000] hidden flex items-end sm:items-center justify-center sm:p-6 bg-forest/85 backdrop-blur-md">
         <div class="w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl border border-sage/20 overflow-hidden" style="background:rgba(14,24,14,0.98);max-height:92vh;">
-
-            <!-- Header -->
             <div class="relative px-8 pt-8 pb-5 border-b border-sage/10">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0" style="background:linear-gradient(135deg,var(--moss),var(--fern))">
@@ -260,7 +200,6 @@
                         <p class="text-[9px] text-sage font-bold uppercase tracking-widest">AI Path Maker · Step <span id="tw-step-label">1</span> of 3</p>
                     </div>
                 </div>
-                <!-- Step dots -->
                 <div class="flex gap-2 mt-4">
                     <div id="dot-1" class="h-1 flex-grow rounded-full transition-all duration-500" style="background:var(--fern)"></div>
                     <div id="dot-2" class="h-1 flex-grow rounded-full transition-all duration-500 bg-white/10"></div>
@@ -269,7 +208,6 @@
             </div>
 
             <div class="overflow-y-auto" style="max-height:calc(92vh - 140px);">
-
                 <!-- ── STEP 1: Vehicle ── -->
                 <div id="tw-step-1" class="p-8 space-y-5">
                     <div>
@@ -308,8 +246,6 @@
                             <span class="text-[8px] font-bold uppercase" style="color:var(--amber)">Speed required ↓</span>
                         </button>
                     </div>
-
-                    <!-- Speed input shown for e-vehicles -->
                     <div id="tw-speed-block" class="hidden animate-fade-in space-y-3 p-5 rounded-2xl border border-amber/25 bg-amber/5">
                         <div class="flex items-center gap-2">
                             <span class="text-base">⚡</span>
@@ -324,24 +260,20 @@
                             <span class="text-[10px] font-bold text-sage uppercase">MPH top speed</span>
                         </div>
                     </div>
-
                     <button onclick="twNext(1)" class="w-full btn-primary py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest">Next → Where To?</button>
                 </div>
 
-                <!-- ── STEP 2: Describe your journey ── -->
+                <!-- ── STEP 2: Describe ── -->
                 <div id="tw-step-2" class="hidden p-8 space-y-5">
                     <div>
                         <h4 class="text-base font-black uppercase text-mist">Describe your journey</h4>
-                        <p class="text-[9px] text-sage font-bold uppercase tracking-widest mt-1">Talk naturally — AI figures out the stops &amp; distance</p>
+                        <p class="text-[9px] text-sage font-bold uppercase tracking-widest mt-1">AI finds the <em>closest</em> real locations near you</p>
                     </div>
-
                     <div class="space-y-2">
                         <label class="text-[9px] font-bold text-sage uppercase tracking-widest">Tell us your plan</label>
                         <textarea id="tw-journey-input" rows="4" placeholder="e.g. Starting from my house I want to run to Crunch Fitness, then Five Below, then back home — about 5 miles total."
                             class="w-full p-4 bg-white/5 border border-sage/25 rounded-2xl text-xs font-bold outline-none focus:ring-2 ring-fern/50 text-mist placeholder-sage/40 resize-none leading-relaxed"></textarea>
                     </div>
-
-                    <!-- Quick example chips -->
                     <div class="space-y-2">
                         <label class="text-[9px] font-bold text-stone uppercase tracking-widest">Quick examples</label>
                         <div class="flex flex-wrap gap-2">
@@ -350,7 +282,6 @@
                             <button onclick="twSetExample(this)" data-ex="Starting from my location, take me to the nearest gym and then back home, total about 4 miles" class="ex-chip px-3 py-1.5 rounded-full text-[8px] font-bold bg-white/5 border border-sage/15 text-sage hover:border-sage/40 transition-all">💪 Gym trip</button>
                         </div>
                     </div>
-
                     <div class="flex items-center justify-between p-4 bg-fern/8 border border-fern/20 rounded-2xl">
                         <div>
                             <span class="text-[10px] font-black uppercase text-mist">Auto-Reroute if off track</span>
@@ -358,7 +289,6 @@
                         </div>
                         <label class="switch"><input type="checkbox" id="auto-reroute" checked><span class="slider"></span></label>
                     </div>
-
                     <div class="flex gap-3">
                         <button onclick="twBack(2)" class="px-5 py-4 rounded-2xl font-black uppercase text-[10px] text-sage bg-white/5 border border-sage/20">← Back</button>
                         <button onclick="twNext(2)" class="flex-grow btn-primary py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest">Weave My Path ✦</button>
@@ -367,7 +297,6 @@
 
                 <!-- ── STEP 3: AI Thinking / Result ── -->
                 <div id="tw-step-3" class="hidden p-8 space-y-5">
-                    <!-- Thinking state -->
                     <div id="tw-thinking" class="flex flex-col items-center gap-5 py-6">
                         <div class="relative w-16 h-16">
                             <div class="absolute inset-0 rounded-full border-2 border-fern/20 border-t-fern" style="animation:spin 1.2s linear infinite"></div>
@@ -379,8 +308,6 @@
                             <p class="text-[9px] text-sage font-bold uppercase tracking-widest">Trail Weaver AI is planning your path</p>
                         </div>
                     </div>
-
-                    <!-- Result state -->
                     <div id="tw-result" class="hidden space-y-4">
                         <div class="p-4 rounded-2xl border border-fern/25 bg-fern/6 space-y-3">
                             <div class="flex items-center gap-2">
@@ -403,24 +330,19 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Error state -->
                         <div id="tw-error-block" class="hidden p-4 rounded-2xl border border-red-900/40 bg-red-950/30 text-center space-y-2">
                             <p class="text-base">⚠️</p>
                             <p class="text-[10px] font-black uppercase text-red-400" id="tw-error-msg">Route not possible</p>
                             <p class="text-[9px] text-stone font-bold uppercase">Try adjusting your request</p>
                         </div>
-
                         <div id="tw-action-btns" class="flex gap-3">
                             <button onclick="twBack(3)" class="px-5 py-4 rounded-2xl font-black uppercase text-[10px] text-sage bg-white/5 border border-sage/20">← Redo</button>
                             <button onclick="twLaunchRoute()" id="tw-launch-btn" class="flex-grow btn-primary py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest">Go! Launch Route 🚀</button>
                         </div>
                     </div>
                 </div>
+            </div>
 
-            </div><!-- end scrollable -->
-
-            <!-- Close -->
             <button onclick="closeNavModal()" class="absolute top-6 right-6 text-stone hover:text-red-400 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
@@ -471,14 +393,10 @@
 
     <!-- ══════════════════ BOOT SCREEN ══════════════════ -->
     <div id="boot-screen" class="fixed inset-0 z-[300] flex flex-col items-center justify-center p-6 text-center transition-all duration-700 nature-bg">
-        <!-- Floating particles injected by JS -->
-        <!-- Leaf decorations -->
         <svg class="leaf-svg" style="width:300px;bottom:0;left:-40px;transform:rotate(-20deg)" viewBox="0 0 100 200"><path d="M50 0 Q80 50 50 100 Q20 50 50 0Z"/><line x1="50" y1="0" x2="50" y2="100" stroke="currentColor" stroke-width="1"/></svg>
         <svg class="leaf-svg" style="width:200px;top:20px;right:-30px;transform:rotate(30deg)" viewBox="0 0 100 200"><path d="M50 0 Q80 50 50 100 Q20 50 50 0Z"/></svg>
-
         <div class="relative max-w-md w-full space-y-8 z-10">
             <div class="space-y-4">
-                <!-- Animated icon -->
                 <div class="w-20 h-20 mx-auto flex items-center justify-center relative">
                     <div class="absolute inset-0 rounded-full" style="background:rgba(90,125,86,0.2);animation:pulse-animation 2s infinite"></div>
                     <div class="w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl" style="background:linear-gradient(135deg,var(--moss),var(--fern))">
@@ -493,8 +411,6 @@
             </div>
         </div>
     </div>
-
-    <!-- selection screen removed: auto-detected -->
 
     <!-- ══════════════════ LOADING SCREEN ══════════════════ -->
     <div id="loading-screen" class="fixed inset-0 z-[100] hidden flex flex-col items-center justify-center p-6 text-center transition-all duration-500 opacity-0 nature-bg">
@@ -513,8 +429,6 @@
 
     <!-- ══════════════════ MAIN APP ══════════════════ -->
     <div id="app-interface" class="opacity-0 pointer-events-none transition-opacity duration-1000 flex flex-col" style="height:100vh;height:100dvh;">
-
-        <!-- Header -->
         <header class="h-16 nature-header flex items-center justify-between px-6 shadow-lg z-30 shrink-0">
             <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:rgba(90,125,86,0.4);border:1px solid rgba(138,172,130,0.3)">
@@ -522,13 +436,11 @@
                 </div>
                 <h1 class="text-mist font-black text-lg tracking-tight italic uppercase font-display">CustomRoutes</h1>
             </div>
-
             <div class="flex flex-grow max-w-md mx-4 md:mx-8 relative">
                 <input id="global-search" type="text" placeholder="Search cities or places…"
                     class="w-full bg-white/8 border border-sage/20 rounded-full py-2 px-10 text-xs text-mist placeholder-sage/60 focus:bg-white/12 outline-none focus:ring-2 ring-fern/40 transition-all">
                 <svg class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-sage/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </div>
-
             <div class="flex items-center gap-2">
                 <button onclick="toggleSettings()" class="bg-white/8 hover:bg-white/15 text-mist p-2.5 rounded-full border border-sage/20 transition-all">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -539,37 +451,21 @@
             </div>
         </header>
 
-        <!-- Main -->
         <main id="main-container" class="flex overflow-hidden relative" style="flex:1 1 0%;min-height:0;">
-
-            <!-- Sidebar -->
             <div id="sidebar" class="shadow-2xl flex flex-col z-20 border-r border-sage/10">
-
-                <!-- Mobile drag handle -->
                 <div id="mobile-drag-handle" onclick="toggleSidebarCollapse()" class="flex flex-col items-center justify-center py-2 bg-white/3 border-b border-sage/10 cursor-pointer">
                     <div id="sidebar-chevron" class="transition-transform duration-300">
                         <svg class="w-6 h-6 text-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </div>
                 </div>
-
                 <div id="sidebar-scrollable" class="overflow-y-auto flex-grow h-[45vh] md:h-auto">
-                    <!-- Controls -->
                     <div class="p-5 space-y-4 border-b border-sage/10">
-                        <!-- Start at location toggle -->
                         <div class="flex items-center justify-between px-1 mb-2">
                             <span class="text-[9px] font-bold uppercase tracking-widest text-stone">Start at my location</span>
                             <label class="switch"><input type="checkbox" id="inline-start-at-loc" onchange="syncToggles(this)"><span class="slider"></span></label>
                         </div>
-
-                        <button id="new-route-btn" class="w-full btn-primary py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all">
-                            + Draw Route
-                        </button>
-
-                        <button onclick="openNavModal()" class="w-full btn-accent py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all">
-                            🌿 Trail Weaver
-                        </button>
-
-                        <!-- Active drawing controls -->
+                        <button id="new-route-btn" class="w-full btn-primary py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all">+ Draw Route</button>
+                        <button onclick="openNavModal()" class="w-full btn-accent py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all">🌿 Trail Weaver</button>
                         <div id="active-controls" class="hidden space-y-2">
                             <div class="bg-fern/8 border-2 border-fern/20 p-4 rounded-2xl flex flex-col gap-3">
                                 <div class="flex justify-between items-center">
@@ -581,18 +477,14 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- GPS status -->
                         <div class="bg-white/3 border border-sage/10 p-3 rounded-xl flex items-center justify-between">
                             <div class="flex items-center gap-3">
                                 <div id="tracking-status" class="w-2 h-2 rounded-full bg-stone/40"></div>
-                                <span id="gps-label" class="text-[9px] font-bold text-stone uppercase">Standby</span>
+                                <span id="gps-label" class="text-[9px] font-bold text-stone uppercase">Acquiring GPS…</span>
                             </div>
                             <button id="locate-me-btn" onclick="recenter()" class="text-fern font-bold text-[9px] uppercase hover:underline">Recenter</button>
                         </div>
                     </div>
-
-                    <!-- Saved routes -->
                     <div class="p-5 pb-20">
                         <h3 class="text-[10px] font-bold text-stone uppercase tracking-[0.2em] mb-4">Saved Paths</h3>
                         <div id="saved-routes-list" class="space-y-3"></div>
@@ -600,7 +492,6 @@
                 </div>
             </div>
 
-            <!-- Map area -->
             <div id="map-area" class="flex-grow relative" style="min-height:0;min-width:0;">
                 <div id="map"></div>
                 <button onclick="recenter()" id="floating-locate" class="absolute bottom-6 right-6 md:hidden z-[1000] bg-white/90 dark:bg-forest/90 w-14 h-14 rounded-full shadow-2xl border border-sage/30 text-fern flex items-center justify-center backdrop-blur-sm">
@@ -612,1028 +503,1046 @@
 
     <!-- ══════════════════ SCRIPTS ══════════════════ -->
     <script>
-        // ── State ──
-        let map, polyline, markers = [], routePath = [];
-        let isDrawing = false, userMarker = null, searchMarker = null;
-        let savedRoutes = JSON.parse(localStorage.getItem('saved_routes')) || [];
-        let lastKnownPos = null;
-        let activeViewLine = null;
-        let isDriving = false;
-        let currentDriveRoute = null;
-        let currentTheme = localStorage.getItem('theme') || 'dark';
-        let currentMode = 'desktop';
-        let initialRecenterDone = false;
-        let startAtLocation = false;
-        let userHeading = 0;
-        let selectedVehicle = 'car';
-        let currentDestinationQuery = "";
-        const OFF_ROUTE_THRESHOLD = 50;
-        const GOOGLE_MAPS_API_KEY = "AIzaSyAs9YXzxXzM2MHY848KtFXaoKRIGVf1AzI";
+    // ── State ──
+    let map, polyline, markers = [], routePath = [];
+    let isDrawing = false, userMarker = null, searchMarker = null;
+    let savedRoutes = JSON.parse(localStorage.getItem('saved_routes')) || [];
+    let lastKnownPos = null;
+    let activeViewLine = null;
+    let isDriving = false;
+    let currentDriveRoute = null;
+    let currentTheme = localStorage.getItem('theme') || 'dark';
+    let currentMode = 'desktop';
+    let initialRecenterDone = false;
+    let startAtLocation = false;
+    let userHeading = 0;
+    let selectedVehicle = 'car';
+    let currentDestinationQuery = "";
+    const OFF_ROUTE_THRESHOLD = 50;
 
-        // ── Particle system ──
-        function spawnParticles() {
-            const screens = ['boot-screen','selection-screen','loading-screen'];
-            screens.forEach(id => {
-                const el = document.getElementById(id);
-                if (!el) return;
-                for (let i = 0; i < 18; i++) {
-                    const p = document.createElement('div');
-                    p.className = 'particle';
-                    const size = Math.random() * 4 + 2;
-                    p.style.cssText = `
-                        left:${Math.random()*100}%;
-                        width:${size}px; height:${size}px;
-                        --drift:${(Math.random()-0.5)*80}px;
-                        animation-duration:${6+Math.random()*10}s;
-                        animation-delay:${Math.random()*8}s;
-                        opacity:0;
-                    `;
-                    el.appendChild(p);
-                }
-            });
-        }
-        spawnParticles();
-
-        // ── Autocomplete (global search bar only) ──
-
-        // ── Toggles ──
-        function syncToggles(el) {
-            startAtLocation = el.checked;
-            const s = document.getElementById('settings-start-at-loc');
-            const i = document.getElementById('inline-start-at-loc');
-            if (s) s.checked = startAtLocation;
-            if (i) i.checked = startAtLocation;
-        }
-
-        function toggleSidebarCollapse() {
-            const sidebar  = document.getElementById('sidebar');
-            const chevron  = document.getElementById('sidebar-chevron');
-            sidebar.classList.toggle('is-collapsed');
-            chevron.style.transform = sidebar.classList.contains('is-collapsed') ? 'rotate(180deg)' : 'rotate(0deg)';
-        }
-
-        // ── Theme ──
-        function setTheme(theme) {
-            currentTheme = theme;
-            localStorage.setItem('theme', theme);
-            const html = document.documentElement;
-            const lightBtn = document.getElementById('theme-light-btn');
-            const darkBtn  = document.getElementById('theme-dark-btn');
-            if (theme === 'dark') {
-                html.classList.add('dark');
-                if (darkBtn)  darkBtn.className  = "py-3 rounded-xl text-[10px] font-black uppercase transition-all btn-primary text-white";
-                if (lightBtn) lightBtn.className = "py-3 rounded-xl text-[10px] font-black uppercase transition-all text-sage";
-            } else {
-                html.classList.remove('dark');
-                if (lightBtn) lightBtn.className = "py-3 rounded-xl text-[10px] font-black uppercase transition-all bg-mist text-forest";
-                if (darkBtn)  darkBtn.className  = "py-3 rounded-xl text-[10px] font-black uppercase transition-all text-stone";
+    // ── Particle system ──
+    function spawnParticles() {
+        ['boot-screen','loading-screen'].forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            for (let i = 0; i < 18; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                const size = Math.random() * 4 + 2;
+                p.style.cssText = `left:${Math.random()*100}%;width:${size}px;height:${size}px;--drift:${(Math.random()-0.5)*80}px;animation-duration:${6+Math.random()*10}s;animation-delay:${Math.random()*8}s;opacity:0;`;
+                el.appendChild(p);
             }
+        });
+    }
+    spawnParticles();
+
+    // ── Toggles ──
+    function syncToggles(el) {
+        startAtLocation = el.checked;
+        const s = document.getElementById('settings-start-at-loc');
+        const i = document.getElementById('inline-start-at-loc');
+        if (s) s.checked = startAtLocation;
+        if (i) i.checked = startAtLocation;
+    }
+
+    function toggleSidebarCollapse() {
+        const sidebar = document.getElementById('sidebar');
+        const chevron = document.getElementById('sidebar-chevron');
+        sidebar.classList.toggle('is-collapsed');
+        chevron.style.transform = sidebar.classList.contains('is-collapsed') ? 'rotate(180deg)' : 'rotate(0deg)';
+    }
+
+    // ── Theme ──
+    function setTheme(theme) {
+        currentTheme = theme;
+        localStorage.setItem('theme', theme);
+        const html = document.documentElement;
+        const lightBtn = document.getElementById('theme-light-btn');
+        const darkBtn  = document.getElementById('theme-dark-btn');
+        if (theme === 'dark') {
+            html.classList.add('dark');
+            if (darkBtn)  darkBtn.className  = "py-3 rounded-xl text-[10px] font-black uppercase transition-all btn-primary text-white";
+            if (lightBtn) lightBtn.className = "py-3 rounded-xl text-[10px] font-black uppercase transition-all text-sage";
+        } else {
+            html.classList.remove('dark');
+            if (lightBtn) lightBtn.className = "py-3 rounded-xl text-[10px] font-black uppercase transition-all bg-mist text-forest";
+            if (darkBtn)  darkBtn.className  = "py-3 rounded-xl text-[10px] font-black uppercase transition-all text-stone";
         }
-        setTheme(currentTheme);
+    }
+    setTheme(currentTheme);
 
-        function toggleSettings() { document.getElementById('settings-panel').classList.toggle('translate-x-full'); }
+    function toggleSettings() { document.getElementById('settings-panel').classList.toggle('translate-x-full'); }
 
-        // ── Boot sequence — auto-detect device, skip selection ──
-        window.onload = () => {
-            // Detect mobile vs desktop automatically
-            const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
-            currentMode = isMobile ? 'mobile' : 'desktop';
-            document.body.classList.add(`mode-${currentMode}`);
+    // ── Boot sequence ──
+    window.onload = () => {
+        const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+        currentMode = isMobile ? 'mobile' : 'desktop';
+        document.body.classList.add(`mode-${currentMode}`);
+        let prog = 0;
+        const bar = document.getElementById('boot-progress');
+        const labels = ['System Initializing…','Loading Map Engine…','Calibrating GPS…','Almost Ready…'];
+        let li = 0;
+        const interval = setInterval(() => {
+            prog += Math.random() * 22;
+            if (prog > 100) prog = 100;
+            bar.style.width = prog + '%';
+            if (prog > li * 25 && li < labels.length) document.getElementById('boot-label').innerText = labels[li++];
+            if (prog >= 100) { clearInterval(interval); setTimeout(() => startLoad(currentMode), 400); }
+        }, 120);
+    };
 
+    function startLoad(mode) {
+        const boot   = document.getElementById('boot-screen');
+        const loader = document.getElementById('loading-screen');
+        boot.style.opacity = '0';
+        boot.style.pointerEvents = 'none';
+        setTimeout(() => {
+            boot.classList.add('hidden');
+            loader.classList.remove('hidden');
+            setTimeout(() => loader.classList.remove('opacity-0'), 40);
             let prog = 0;
-            const bar = document.getElementById('boot-progress');
-            const labels = ['System Initializing…','Loading Map Engine…','Calibrating GPS…','Almost Ready…'];
-            let li = 0;
-            const interval = setInterval(() => {
-                prog += Math.random() * 22;
-                if (prog > 100) prog = 100;
-                bar.style.width = prog + '%';
-                if (prog > li * 25 && li < labels.length) {
-                    document.getElementById('boot-label').innerText = labels[li++];
+            const bar = document.getElementById('progress-bar');
+            const iv = setInterval(() => {
+                prog += 10; bar.style.width = prog + '%';
+                if (prog >= 100) { clearInterval(iv); finishLoading(mode); }
+            }, 55);
+        }, 600);
+    }
+
+    function finishLoading(mode) {
+        const loader = document.getElementById('loading-screen');
+        const app    = document.getElementById('app-interface');
+        loader.classList.add('opacity-0','pointer-events-none');
+        setTimeout(() => {
+            loader.classList.add('hidden');
+            app.classList.remove('opacity-0','pointer-events-none');
+            initMap(mode);
+            updateSavedList();
+            setTimeout(() => { if (map) map.invalidateSize(); }, 100);
+        }, 500);
+    }
+
+    // ══════════════════════════════════════════════════════
+    // GPS — HIGH ACCURACY, FRESH FIX, IMMEDIATE UPDATE
+    // ══════════════════════════════════════════════════════
+    const GPS_OPTIONS_HIGH = {
+        enableHighAccuracy: true,
+        maximumAge: 0,          // never use cached position
+        timeout: 15000
+    };
+    const GPS_OPTIONS_WATCH = {
+        enableHighAccuracy: true,
+        maximumAge: 2000,       // allow 2s cache for smooth tracking
+        timeout: 20000
+    };
+
+    function getAccurateFix() {
+        return new Promise((resolve) => {
+            if (!("geolocation" in navigator)) { resolve(null); return; }
+            // Try high-accuracy first; fall back to standard
+            navigator.geolocation.getCurrentPosition(
+                (pos) => resolve(pos),
+                () => {
+                    // fallback without high accuracy
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => resolve(pos),
+                        () => resolve(null),
+                        { enableHighAccuracy: false, maximumAge: 5000, timeout: 8000 }
+                    );
+                },
+                GPS_OPTIONS_HIGH
+            );
+        });
+    }
+
+    // Wait up to N ms for a GPS fix to appear in lastKnownPos
+    function waitForGPS(timeoutMs = 8000) {
+        if (lastKnownPos) return Promise.resolve(lastKnownPos);
+        return new Promise((resolve) => {
+            const start = Date.now();
+            const check = setInterval(() => {
+                if (lastKnownPos) { clearInterval(check); resolve(lastKnownPos); }
+                else if (Date.now() - start > timeoutMs) { clearInterval(check); resolve(null); }
+            }, 100);
+        });
+    }
+
+    // ── Map init ──
+    function initMap(mode) {
+        const isMobile = mode === 'mobile';
+        const fallback = [40.7128, -74.0060];
+        map = L.map('map', {
+            zoomControl: !isMobile,
+            attributionControl: false,
+            tap: true,
+            tapTolerance: 20
+        }).setView(fallback, 13);
+
+        const voyagerLayer   = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19, className: 'map-tile-nature' });
+        const positronLayer  = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
+        const satelliteImage = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
+        const labelsOverlay  = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
+        const satelliteGroup = L.layerGroup([satelliteImage, labelsOverlay]);
+
+        voyagerLayer.addTo(map);
+        L.control.layers({ "🗺 Standard": voyagerLayer, "⬜ Minimal": positronLayer, "🛰 Satellite": satelliteGroup }, null, { position: 'topleft' }).addTo(map);
+
+        polyline = L.polyline([], { color: '#5a7d56', weight: 4, dashArray: '6, 10' }).addTo(map);
+
+        const customIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: `<div id="marker-orient" style="transform:rotate(0deg);transition:transform 0.2s">
+                <div class="user-direction-arrow"></div>
+                <div class="pulse-ring"></div>
+                <div class="user-location-marker" style="width:14px;height:14px;position:relative;z-index:10"></div>
+            </div>`,
+            iconSize: [14,14], iconAnchor: [7,7]
+        });
+        userMarker = L.marker(fallback, { icon: customIcon }).addTo(map);
+
+        if (window.DeviceOrientationEvent) {
+            window.addEventListener('deviceorientationabsolute', (e) => {
+                let heading = e.alpha || e.webkitCompassHeading;
+                if (heading !== undefined) {
+                    userHeading = 360 - heading;
+                    const el = document.getElementById('marker-orient');
+                    if (el) el.style.transform = `rotate(${userHeading}deg)`;
                 }
-                if (prog >= 100) { clearInterval(interval); setTimeout(() => startLoad(currentMode), 400); }
-            }, 120);
-        };
-
-        function startLoad(mode) {
-            const boot   = document.getElementById('boot-screen');
-            const loader = document.getElementById('loading-screen');
-            boot.style.opacity = '0';
-            boot.style.pointerEvents = 'none';
-            setTimeout(() => {
-                boot.classList.add('hidden');
-                loader.classList.remove('hidden');
-                setTimeout(() => loader.classList.remove('opacity-0'), 40);
-                let prog = 0;
-                const bar = document.getElementById('progress-bar');
-                const iv = setInterval(() => {
-                    prog += 10; bar.style.width = prog + '%';
-                    if (prog >= 100) { clearInterval(iv); finishLoading(mode); }
-                }, 55);
-            }, 600);
+            }, true);
         }
 
-        function finishLoading(mode) {
-            const loader = document.getElementById('loading-screen');
-            const app    = document.getElementById('app-interface');
-            loader.classList.add('opacity-0','pointer-events-none');
-            setTimeout(() => {
-                loader.classList.add('hidden');
-                app.classList.remove('opacity-0','pointer-events-none');
-                initMap(mode);
-                updateSavedList();
-                // Force Leaflet to recalculate container size after reveal
-                setTimeout(() => { if (map) map.invalidateSize(); }, 100);
-            }, 500);
-        }
-
-        // ── Map init ──
-        function initMap(mode) {
-            const isMobile = mode === 'mobile';
-            const fallback = [40.7128, -74.0060];
-            map = L.map('map', {
-                zoomControl: !isMobile,
-                attributionControl: false,
-                tap: true,
-                tapTolerance: 20
-            }).setView(fallback, 13);
-
-            // Voyager = closest free tile to Apple Maps aesthetic (warm, clean, detailed)
-            const voyagerLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                maxZoom: 19, className: 'map-tile-nature'
-            });
-            // Positron (light/minimal) as alternative clean option
-            const positronLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                maxZoom: 19
-            });
-            const satelliteImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
-            const labelsOverlay   = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
-            const satelliteGroup  = L.layerGroup([satelliteImagery, labelsOverlay]);
-
-            voyagerLayer.addTo(map);
-            L.control.layers({ "🗺 Standard": voyagerLayer, "⬜ Minimal": positronLayer, "🛰 Satellite": satelliteGroup }, null, { position: 'topleft' }).addTo(map);
-
-            polyline = L.polyline([], { color: '#5a7d56', weight: 4, dashArray: '6, 10' }).addTo(map);
-
-            const customIcon = L.divIcon({
-                className: 'custom-div-icon',
-                html: `<div id="marker-orient" style="transform:rotate(0deg);transition:transform 0.2s">
-                    <div class="user-direction-arrow"></div>
-                    <div class="pulse-ring"></div>
-                    <div class="user-location-marker" style="width:14px;height:14px;position:relative;z-index:10"></div>
-                </div>`,
-                iconSize: [14,14], iconAnchor: [7,7]
-            });
-            userMarker = L.marker(fallback, { icon: customIcon }).addTo(map);
-
-            if (window.DeviceOrientationEvent) {
-                window.addEventListener('deviceorientationabsolute', (e) => {
-                    let heading = e.alpha || e.webkitCompassHeading;
-                    if (heading !== undefined) {
-                        userHeading = 360 - heading;
-                        const el = document.getElementById('marker-orient');
-                        if (el) el.style.transform = `rotate(${userHeading}deg)`;
+        // ── GPS: get accurate fix immediately, then watch ──
+        if ("geolocation" in navigator) {
+            // 1. Get fresh high-accuracy fix right away
+            getAccurateFix().then((pos) => {
+                if (pos) {
+                    const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
+                    updateLocation(latlng);
+                    if (!initialRecenterDone) {
+                        map.flyTo(latlng, 16);
+                        initialRecenterDone = true;
                     }
-                }, true);
-            }
-
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        const latlng = [pos.coords.latitude, pos.coords.longitude];
-                        updateLocation(L.latLng(latlng));
-                        if (!initialRecenterDone) { map.flyTo(latlng, 15); initialRecenterDone = true; }
-                    },
-                    () => handleGPSBlocked(),
-                    { enableHighAccuracy: true }
-                );
-                navigator.geolocation.watchPosition(
-                    (pos) => {
-                        const latlng = [pos.coords.latitude, pos.coords.longitude];
-                        updateLocation(L.latLng(latlng));
-                        if (isDriving) { map.panTo(latlng); updateHUD(); }
-                    },
-                    null,
-                    { enableHighAccuracy: true }
-                );
-            }
-
-            map.on('click', (e) => {
-                if (!isDrawing) return;
-                if (startAtLocation && routePath.length === 0 && lastKnownPos) {
-                    routePath.push([lastKnownPos.lat, lastKnownPos.lng]);
-                    markers.push(L.circleMarker(lastKnownPos, { radius: 4, color: '#5a7d56', fillOpacity: 1 }).addTo(map));
+                } else {
+                    handleGPSBlocked();
                 }
-                routePath.push([e.latlng.lat, e.latlng.lng]);
-                markers.push(L.circleMarker(e.latlng, { radius: 6, color: '#5a7d56', fillColor: 'white', fillOpacity: 1, weight: 3 }).addTo(map));
-                polyline.setLatLngs(routePath);
-                document.getElementById('point-count').innerText = calculateDistance(routePath) + " Mi Total";
             });
+
+            // 2. Continuous watch for live tracking
+            navigator.geolocation.watchPosition(
+                (pos) => {
+                    const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
+                    updateLocation(latlng);
+                    if (!initialRecenterDone) {
+                        map.flyTo(latlng, 16);
+                        initialRecenterDone = true;
+                    }
+                    if (isDriving) { map.panTo(latlng); updateHUD(); }
+                },
+                (err) => { console.warn('GPS watch error:', err.code, err.message); },
+                GPS_OPTIONS_WATCH
+            );
         }
 
-        function handleGPSBlocked() {
-            document.getElementById('tracking-status').className = "w-2 h-2 rounded-full bg-red-500";
-            document.getElementById('gps-label').innerText = "GPS Blocked";
-        }
-        function recenter() { if (lastKnownPos) map.flyTo(lastKnownPos, 15); }
+        map.on('click', (e) => {
+            if (!isDrawing) return;
+            if (startAtLocation && routePath.length === 0 && lastKnownPos) {
+                routePath.push([lastKnownPos.lat, lastKnownPos.lng]);
+                markers.push(L.circleMarker(lastKnownPos, { radius: 4, color: '#5a7d56', fillOpacity: 1 }).addTo(map));
+            }
+            routePath.push([e.latlng.lat, e.latlng.lng]);
+            markers.push(L.circleMarker(e.latlng, { radius: 6, color: '#5a7d56', fillColor: 'white', fillOpacity: 1, weight: 3 }).addTo(map));
+            polyline.setLatLngs(routePath);
+            document.getElementById('point-count').innerText = calculateDistance(routePath) + " Mi Total";
+        });
+    }
 
-        // ── Route drawing ──
-        document.getElementById('new-route-btn').onclick = () => {
-            isDrawing = true; routePath = []; markers.forEach(m => map.removeLayer(m)); markers = []; polyline.setLatLngs([]);
-            document.getElementById('new-route-btn').classList.add('hidden');
-            document.getElementById('active-controls').classList.remove('hidden');
-            document.getElementById('point-count').innerText = "0.00 Mi Total";
-        };
+    function handleGPSBlocked() {
+        document.getElementById('tracking-status').className = "w-2 h-2 rounded-full bg-red-500";
+        document.getElementById('gps-label').innerText = "GPS Blocked";
+    }
+    function recenter() { if (lastKnownPos) map.flyTo(lastKnownPos, 16); }
 
-        document.getElementById('cancel-draft-btn').onclick = () => {
-            isDrawing = false; markers.forEach(m => map.removeLayer(m)); markers = []; polyline.setLatLngs([]);
-            document.getElementById('new-route-btn').classList.remove('hidden');
-            document.getElementById('active-controls').classList.add('hidden');
-        };
+    // ── Route drawing ──
+    document.getElementById('new-route-btn').onclick = () => {
+        isDrawing = true; routePath = []; markers.forEach(m => map.removeLayer(m)); markers = []; polyline.setLatLngs([]);
+        document.getElementById('new-route-btn').classList.add('hidden');
+        document.getElementById('active-controls').classList.remove('hidden');
+        document.getElementById('point-count').innerText = "0.00 Mi Total";
+    };
 
-        document.getElementById('end-route-btn').onclick = () => {
-            if (routePath.length < 2) return;
-            document.getElementById('modal-dist').innerText = `Total Distance: ${calculateDistance(routePath)} miles`;
-            document.getElementById('name-modal').classList.remove('hidden');
-        };
+    document.getElementById('cancel-draft-btn').onclick = () => {
+        isDrawing = false; markers.forEach(m => map.removeLayer(m)); markers = []; polyline.setLatLngs([]);
+        document.getElementById('new-route-btn').classList.remove('hidden');
+        document.getElementById('active-controls').classList.add('hidden');
+    };
 
-        document.getElementById('close-modal-btn').onclick = () => document.getElementById('name-modal').classList.add('hidden');
+    document.getElementById('end-route-btn').onclick = () => {
+        if (routePath.length < 2) return;
+        document.getElementById('modal-dist').innerText = `Total Distance: ${calculateDistance(routePath)} miles`;
+        document.getElementById('name-modal').classList.remove('hidden');
+    };
 
-        document.getElementById('confirm-save-btn').onclick = () => {
-            const name = document.getElementById('route-name-input').value || "Unnamed Route";
-            const newRoute = { id: Date.now(), name, distance: calculateDistance(routePath), path: routePath, date: new Date().toLocaleDateString() };
-            savedRoutes.push(newRoute);
-            localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
-            updateSavedList();
-            isDrawing = false; markers.forEach(m => map.removeLayer(m)); markers = []; polyline.setLatLngs([]);
-            document.getElementById('new-route-btn').classList.remove('hidden');
-            document.getElementById('active-controls').classList.add('hidden');
-            document.getElementById('name-modal').classList.add('hidden');
-            document.getElementById('route-name-input').value = "";
-        };
+    document.getElementById('close-modal-btn').onclick = () => document.getElementById('name-modal').classList.add('hidden');
 
-        // ── Saved routes ──
-        window.deleteRoute = (id) => {
-            savedRoutes = savedRoutes.filter(r => r.id !== id);
-            localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
-            updateSavedList();
-            if (activeViewLine) map.removeLayer(activeViewLine);
-        };
+    document.getElementById('confirm-save-btn').onclick = () => {
+        const name = document.getElementById('route-name-input').value || "Unnamed Route";
+        const newRoute = { id: Date.now(), name, distance: calculateDistance(routePath), path: routePath, date: new Date().toLocaleDateString() };
+        savedRoutes.push(newRoute);
+        localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
+        updateSavedList();
+        isDrawing = false; markers.forEach(m => map.removeLayer(m)); markers = []; polyline.setLatLngs([]);
+        document.getElementById('new-route-btn').classList.remove('hidden');
+        document.getElementById('active-controls').classList.add('hidden');
+        document.getElementById('name-modal').classList.add('hidden');
+        document.getElementById('route-name-input').value = "";
+    };
 
-        window.viewRoute = (id) => {
-            const r = savedRoutes.find(x => x.id === id);
-            if (!r) return;
-            if (activeViewLine) map.removeLayer(activeViewLine);
-            activeViewLine = L.polyline(r.path, { color: '#c07b3c', weight: 6, opacity: 0.85 }).addTo(map);
-            map.fitBounds(activeViewLine.getBounds(), { padding: [50,50] });
-        };
+    // ── Saved routes ──
+    window.deleteRoute = (id) => {
+        savedRoutes = savedRoutes.filter(r => r.id !== id);
+        localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
+        updateSavedList();
+        if (activeViewLine) map.removeLayer(activeViewLine);
+    };
 
-        function updateSavedList() {
-            const list = document.getElementById('saved-routes-list');
-            list.innerHTML = "";
-            [...savedRoutes].reverse().forEach(r => {
-                const div = document.createElement('div');
-                div.className = "route-card p-4 rounded-2xl group";
-                div.innerHTML = `
-                    <div class="flex justify-between items-start mb-2">
-                        <div>
-                            <h4 class="text-xs font-black uppercase text-forest dark:text-mist">${r.name}</h4>
-                            <p class="text-[9px] font-bold text-stone mt-0.5">${r.date} · ${r.distance} Mi</p>
-                        </div>
-                        <button onclick="deleteRoute(${r.id})" class="text-stone/40 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                        </button>
+    window.viewRoute = (id) => {
+        const r = savedRoutes.find(x => x.id === id);
+        if (!r) return;
+        if (activeViewLine) map.removeLayer(activeViewLine);
+        activeViewLine = L.polyline(r.path, { color: '#c07b3c', weight: 6, opacity: 0.85 }).addTo(map);
+        map.fitBounds(activeViewLine.getBounds(), { padding: [50,50] });
+    };
+
+    function updateSavedList() {
+        const list = document.getElementById('saved-routes-list');
+        list.innerHTML = "";
+        [...savedRoutes].reverse().forEach(r => {
+            const div = document.createElement('div');
+            div.className = "route-card p-4 rounded-2xl group";
+            div.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <h4 class="text-xs font-black uppercase text-forest dark:text-mist">${r.name}</h4>
+                        <p class="text-[9px] font-bold text-stone mt-0.5">${r.date} · ${r.distance} Mi</p>
                     </div>
-                    <div class="flex gap-2 mt-3">
-                        <button onclick="viewRoute(${r.id})" class="flex-grow bg-white/60 dark:bg-white/5 py-2 rounded-xl text-[9px] font-black uppercase border border-sage/20 text-forest dark:text-mist">View</button>
-                        <button onclick="enterDriveMode(${r.id})" class="flex-grow btn-primary py-2 rounded-xl text-[9px] font-black uppercase">Go</button>
-                    </div>`;
-                list.appendChild(div);
-            });
-        }
+                    <button onclick="deleteRoute(${r.id})" class="text-stone/40 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                </div>
+                <div class="flex gap-2 mt-3">
+                    <button onclick="viewRoute(${r.id})" class="flex-grow bg-white/60 dark:bg-white/5 py-2 rounded-xl text-[9px] font-black uppercase border border-sage/20 text-forest dark:text-mist">View</button>
+                    <button onclick="enterDriveMode(${r.id})" class="flex-grow btn-primary py-2 rounded-xl text-[9px] font-black uppercase">Go</button>
+                </div>`;
+            list.appendChild(div);
+        });
+    }
 
-        // ── Weather ──
-        async function loadWeatherIcon() {
-            if (!lastKnownPos) return;
-            try {
-                const { lat, lng } = lastKnownPos;
-                const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=150ba377c3ca4474889150133260503`);
-                if (!res.ok) return;
-                const data = await res.json();
-                const iconCode = data.weather?.[0]?.icon;
-                if (iconCode) {
-                    document.getElementById('weather-icon').src = `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
-                    document.getElementById('weather-indicator').classList.remove('hidden');
-                }
-            } catch(e) { /* weather unavailable */ }
-        }
-
-        // ── Trail Weaver State ──
-        let twVehicle = null, twSpeedMPH = null, twParsedStops = [], twBuiltRoute = null;
-
-        function openNavModal() {
-            document.getElementById('nav-modal').classList.remove('hidden');
-            twGoToStep(1);
-        }
-        function closeNavModal() { document.getElementById('nav-modal').classList.add('hidden'); }
-
-        // Step dots
-        function twGoToStep(n) {
-            [1,2,3].forEach(i => {
-                document.getElementById(`tw-step-${i}`).classList.toggle('hidden', i !== n);
-                const dot = document.getElementById(`dot-${i}`);
-                dot.style.background = i <= n ? 'var(--fern)' : 'rgba(255,255,255,0.1)';
-            });
-            document.getElementById('tw-step-label').innerText = n;
-        }
-        function twBack(currentStep) { twGoToStep(currentStep - 1); }
-
-        // Vehicle selection
-        function twSelectVehicle(type) {
-            twVehicle = type;
-            document.querySelectorAll('.tw-v-btn').forEach(b => {
-                b.style.borderColor = '';
-                b.classList.remove('bg-fern/10');
-            });
-            const active = document.getElementById(`tw-v-${type}`);
-            active.style.borderColor = 'var(--fern)';
-            active.classList.add('bg-fern/10');
-            selectedVehicle = type;
-            const needsSpeed = type === 'escooter' || type === 'ebike';
-            document.getElementById('tw-speed-block').classList.toggle('hidden', !needsSpeed);
-            if (needsSpeed) document.getElementById('tw-vehicle-label').innerText = type === 'escooter' ? 'scooter' : 'e-bike';
-        }
-
-        function twSetExample(btn) {
-            document.getElementById('tw-journey-input').value = btn.dataset.ex;
-        }
-
-        function twNext(step) {
-            if (step === 1) {
-                if (!twVehicle) { alert("Please pick a vehicle first!"); return; }
-                const needsSpeed = twVehicle === 'escooter' || twVehicle === 'ebike';
-                if (needsSpeed) {
-                    const spd = parseFloat(document.getElementById('tw-speed-input').value);
-                    if (!spd || spd < 1) { alert("Please enter your top speed in MPH."); return; }
-                    twSpeedMPH = spd;
-                } else { twSpeedMPH = null; }
-                twGoToStep(2);
-            } else if (step === 2) {
-                const txt = document.getElementById('tw-journey-input').value.trim();
-                if (!txt) { alert("Describe your journey first!"); return; }
-                twGoToStep(3);
-                twRunAI(txt);
+    // ── Weather ──
+    async function loadWeatherIcon() {
+        if (!lastKnownPos) return;
+        try {
+            const { lat, lng } = lastKnownPos;
+            const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=150ba377c3ca4474889150133260503`);
+            if (!res.ok) return;
+            const data = await res.json();
+            const iconCode = data.weather?.[0]?.icon;
+            if (iconCode) {
+                document.getElementById('weather-icon').src = `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
+                document.getElementById('weather-indicator').classList.remove('hidden');
             }
+        } catch(e) {}
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // TRAIL WEAVER STATE
+    // ══════════════════════════════════════════════════════════════
+    let twVehicle = null, twSpeedMPH = null, twParsedStops = [], twBuiltRoute = null;
+
+    function openNavModal() {
+        document.getElementById('nav-modal').classList.remove('hidden');
+        twGoToStep(1);
+    }
+    function closeNavModal() { document.getElementById('nav-modal').classList.add('hidden'); }
+
+    function twGoToStep(n) {
+        [1,2,3].forEach(i => {
+            document.getElementById(`tw-step-${i}`).classList.toggle('hidden', i !== n);
+            const dot = document.getElementById(`dot-${i}`);
+            dot.style.background = i <= n ? 'var(--fern)' : 'rgba(255,255,255,0.1)';
+        });
+        document.getElementById('tw-step-label').innerText = n;
+    }
+    function twBack(currentStep) { twGoToStep(currentStep - 1); }
+
+    function twSelectVehicle(type) {
+        twVehicle = type;
+        document.querySelectorAll('.tw-v-btn').forEach(b => { b.style.borderColor = ''; b.classList.remove('bg-fern/10'); });
+        const active = document.getElementById(`tw-v-${type}`);
+        active.style.borderColor = 'var(--fern)';
+        active.classList.add('bg-fern/10');
+        selectedVehicle = type;
+        const needsSpeed = type === 'escooter' || type === 'ebike';
+        document.getElementById('tw-speed-block').classList.toggle('hidden', !needsSpeed);
+        if (needsSpeed) document.getElementById('tw-vehicle-label').innerText = type === 'escooter' ? 'scooter' : 'e-bike';
+    }
+
+    function twSetExample(btn) { document.getElementById('tw-journey-input').value = btn.dataset.ex; }
+
+    function twNext(step) {
+        if (step === 1) {
+            if (!twVehicle) { alert("Please pick a vehicle first!"); return; }
+            const needsSpeed = twVehicle === 'escooter' || twVehicle === 'ebike';
+            if (needsSpeed) {
+                const spd = parseFloat(document.getElementById('tw-speed-input').value);
+                if (!spd || spd < 1) { alert("Please enter your top speed in MPH."); return; }
+                twSpeedMPH = spd;
+            } else { twSpeedMPH = null; }
+            twGoToStep(2);
+        } else if (step === 2) {
+            const txt = document.getElementById('tw-journey-input').value.trim();
+            if (!txt) { alert("Describe your journey first!"); return; }
+            twGoToStep(3);
+            twRunAI(txt);
         }
+    }
 
-        // ══════════════════════════════════════════════
-        // TRAIL WEAVER — SMART LOCAL PARSER
-        // Reliable stop extraction + nearest-business geocoding.
-        // E-scooter/ebike avoids arterial roads (yellow-line roads).
-        // ══════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════
+    // TRAIL WEAVER — LOCAL PARSER (extracts intent)
+    // ══════════════════════════════════════════════════════════════
+    function twParse(text) {
+        const t = text.toLowerCase().trim();
+        const isFoot   = twVehicle === 'walking' || twVehicle === 'running';
+        const isCar    = twVehicle === 'car';
+        const isSlowEV = (twVehicle === 'escooter' || twVehicle === 'ebike') && twSpeedMPH && twSpeedMPH <= 25;
+        const osrmProfile = isCar ? 'car' : (isFoot || isSlowEV) ? 'foot' : 'bicycle';
 
-        function twRunAI(journeyText) {
-            document.getElementById('tw-thinking').classList.remove('hidden');
-            document.getElementById('tw-result').classList.add('hidden');
-            document.getElementById('tw-error-block').classList.add('hidden');
-
-            const thinkingLabels = ["Reading your journey\u2026","Finding your stops\u2026","Checking road types\u2026","Calculating distance\u2026","Weaving your trail\u2026"];
-            let li = 0;
-            const labelInterval = setInterval(() => {
-                const el = document.getElementById('tw-thinking-label');
-                if (el) el.innerText = thinkingLabels[li % thinkingLabels.length];
-                li++;
-            }, 900);
-
-            setTimeout(() => {
-                clearInterval(labelInterval);
-                const result = twParse(journeyText);
-                twShowResult(result);
-            }, 2000);
-        }
-
-        function twParse(text) {
-            const t = text.toLowerCase().trim();
-
-            const isFoot   = twVehicle === 'walking' || twVehicle === 'running';
-            const isCar    = twVehicle === 'car';
-            const isSlowEV = (twVehicle === 'escooter' || twVehicle === 'ebike') && twSpeedMPH && twSpeedMPH <= 25;
-
-            // For slow EVs use foot profile so OSRM picks residential/path roads
-            const osrmProfile = isCar ? 'car' : (isFoot || isSlowEV) ? 'foot' : 'bicycle';
-
-            const safetyMap = {
-                walking:  "Routed on sidewalks, crosswalks, and pedestrian paths only.",
-                running:  "Routed on paths, parks, and sidewalks — heavy traffic avoided.",
-                bike:     "Routed on bike lanes, paths, and quiet residential streets — no highways.",
-                car:      "Full road access including highways.",
-                escooter: isSlowEV
-                    ? `At ${twSpeedMPH} MPH: residential streets and bike paths only — avoids roads with yellow center lines and no sidewalk.`
-                    : `At ${twSpeedMPH} MPH: bike lanes and quieter roads — no highways.`,
-                ebike: isSlowEV
-                    ? `At ${twSpeedMPH} MPH: bike paths and quiet streets — avoids arterial roads with yellow center lines.`
-                    : `At ${twSpeedMPH} MPH: bike lanes and roads under 40 MPH — no highways.`
-            };
-            const safetyNotes = safetyMap[twVehicle] || "Standard routing.";
-
-            // Distance target
-            let targetMiles = null;
-            const miM = t.match(/(?:about|around|roughly|~|approximately)?\s*([\d.]+)\s*(?:miles?|mi)\b/);
-            const kmM = t.match(/(?:about|around|roughly|~|approximately)?\s*([\d.]+)\s*(?:km|kilometers?)\b/);
-            if (miM) targetMiles = parseFloat(miM[1]);
-            else if (kmM) targetMiles = parseFloat(kmM[1]) * 0.621371;
-
-            // Return home?
-            const returnHome = /\b(back\s+(home|to\s+(my\s+)?(house|place|start))|return(ing)?\s+(home|back)|loop\s+back|end\s+at\s+(home|my)|come\s+back\s+home|head\s+back\s+home|back\s+to\s+home)\b/.test(t);
-
-            // Start at user location?
-            const startAtUserLocation =
-                /\b(from\s+(my\s+)?(house|home|place|location|here|current)|starting\s+(from|at)\s+(my|here)|from\s+where\s+i\s+am)\b/.test(t) ||
-                /\b(i\s+(want|need|plan)\s+to|i\s+(am|'m)\s+(going|heading))\b/.test(t) ||
-                !t.includes(' from ');
-
-            // Extract named stops
-            let working = text;
-            working = working.replace(/(?:about|around|roughly|approximately|~)?\s*[\d.]+\s*(?:miles?|mi|km|kilometers?)\b/gi, '');
-            working = working.replace(/,?\s*(?:and\s+)?(?:then\s+)?(?:get|go|come|loop|head)?\s*back(?:\s+(?:home|to\s+(?:my\s+)?(?:house|place|start|beginning|location|home)))?\s*[.,!?]*\s*$/gi, '');
-            working = working.replace(/,?\s*(?:return(?:ing)?\s+(?:home|back)|end\s+at\s+(?:home|my\s+\w+))\s*[.,!?]*\s*$/gi, '');
-            working = working.replace(/^.*?(?:starting\s+from|from)\s+(?:my\s+)?(?:house|home|place|location|here|current\s+location)[,\s]*/gi, '');
-            working = working.replace(/^(?:i\s+(?:want|would\s+like|need|plan)\s+to\s+)?(?:go|run|walk|ride|bike|drive|head|do\s+a\s+(?:run|walk|ride))[,\s]*/gi, '');
-            working = working.replace(/^(?:take\s+me\s+to(?:\s+the\s+(?:nearest|closest))?|please\s+take\s+me\s+to)\s*/gi, '');
-            working = working.replace(/^(?:and\s+)?(?:then\s+)?(?:take\s+me\s+to(?:\s+the\s+(?:nearest|closest))?)\s*/gi, '');
-            working = working.replace(/\s*(?:total|in\s+total|altogether|or\s+so|exactly|please|if\s+possible)[.,!?]*\s*$/gi, '');
-            working = working.trim().replace(/^[,.\s]+|[,.\s]+$/g, '');
-
-            const rawParts = working.split(/\s*(?:,\s*)?(?:and\s+then|then|after\s+that|followed\s+by|next(?:\s+stop)?(?:\s+is)?|,\s*and\s+|,\s*)\s*/gi).map(p => p.trim());
-
-            const junkWords = /^(?:and|or|but|so|then|to|at|the|a|an|my|me|from|in|on|of|i|go|head|visit|stop|swing|also|next|first|last|finally|get)$/i;
-            const stops = [];
-            const seen  = new Set();
-            rawParts.forEach(raw => {
-                let s = raw
-                    .replace(/^(?:take\s+me\s+to(?:\s+the\s+(?:nearest|closest))?|take\s+me\s+to)\s+/gi, '')
-                    .replace(/^(?:go(?:ing)?\s+to|head(?:ing)?\s+to|visit(?:ing)?|stop(?:ping)?\s+(?:at|by)|swing(?:ing)?\s+by|drop(?:ping)?\s+(?:by|in\s+at)|check(?:ing)?\s+out)\s+/gi, '')
-                    .replace(/^(?:the\s+nearest|the\s+closest|nearest|closest)\s+/gi, '')
-                    .replace(/^(?:the\s+|a\s+|my\s+)/gi, '')
-                    .replace(/[.,!?]+$/, '')
-                    .trim();
-                if (!s || s.length < 2 || junkWords.test(s) || /^\d+$/.test(s)) return;
-                const key = s.toLowerCase();
-                if (!seen.has(key)) { seen.add(key); stops.push(s); }
-            });
-
-            if (stops.length === 0 && !returnHome) {
-                return { feasible: false, error: "Couldn't find any destinations. Try: \"Run from my house to Crunch Fitness then Five Below and back home.\"" };
-            }
-            if (targetMiles !== null && targetMiles > 50 && !isCar) {
-                return { feasible: false, error: `${targetMiles} miles is too far for a ${twVehicle} route.` };
-            }
-            if (targetMiles !== null && targetMiles < 0.1) {
-                return { feasible: false, error: `${targetMiles} miles is too short — try at least 0.2 miles.` };
-            }
-
-            const fullStops = [];
-            if (startAtUserLocation) fullStops.push('MY_LOCATION');
-            fullStops.push(...stops);
-            if (returnHome) fullStops.push('MY_LOCATION');
-
-            const stopCount  = Math.max(stops.length, 1);
-            const baseMiles  = targetMiles || parseFloat((stopCount * 1.0 + (returnHome ? 1.0 : 0)).toFixed(1));
-            const speedMap   = { walking: 3, running: 6, bike: 12, car: 30, escooter: Math.min(twSpeedMPH || 15, 20), ebike: Math.min(twSpeedMPH || 20, 25) };
-            const mph        = speedMap[twVehicle] || 3;
-            const estMinutes = Math.max(1, Math.round((baseMiles / mph) * 60));
-
-            const vLabel       = { walking:'walk', running:'run', bike:'bike ride', car:'drive', escooter:'scooter ride', ebike:'e-bike ride' }[twVehicle] || 'trip';
-            const stopStr      = stops.length > 0 ? stops.join(' \u2192 ') : 'your destination';
-            const loopStr      = returnHome ? ', then back home' : '';
-            const distStr      = targetMiles ? `targeting ~${targetMiles} mi` : `~${baseMiles} mi estimated`;
-            const routeSummary = `${startAtUserLocation ? 'From your location' : 'Starting at your first stop'}: ${vLabel} to ${stopStr}${loopStr} \u2014 ${distStr}.`;
-
-            return {
-                feasible: true, error: null,
-                stops: fullStops, startAtUserLocation, returnHome,
-                estimatedMiles: baseMiles, estimatedMinutes: estMinutes,
-                safetyNotes, routeSummary, osrmProfile
-            };
-        }
-        function twShowResult(plan) {
-            document.getElementById('tw-thinking').classList.add('hidden');
-            document.getElementById('tw-result').classList.remove('hidden');
-
-            if (!plan.feasible) {
-                document.getElementById('tw-error-block').classList.remove('hidden');
-                document.getElementById('tw-error-msg').innerText = plan.error || "Route not possible with given constraints.";
-                document.getElementById('tw-launch-btn').classList.add('hidden');
-                document.getElementById('tw-ai-summary').innerHTML = '';
-            } else {
-                document.getElementById('tw-error-block').classList.add('hidden');
-                document.getElementById('tw-launch-btn').classList.remove('hidden');
-                document.getElementById('tw-ai-summary').innerHTML = `${plan.routeSummary}<br><span class="text-[9px] italic opacity-70 mt-1 block">${plan.safetyNotes || ''}</span>`;
-                document.getElementById('tw-est-dist').innerText = plan.estimatedMiles ? `~${plan.estimatedMiles} mi` : '--';
-                const mins = plan.estimatedMinutes;
-                document.getElementById('tw-est-time').innerText = mins ? (mins >= 60 ? `${Math.floor(mins/60)}h ${mins%60}m` : `~${mins}m`) : '--';
-                document.getElementById('tw-est-stops').innerText = plan.stops ? `${plan.stops.length}` : '--';
-                twParsedStops = plan.stops || [];
-                twBuiltRoute = plan;
-            }
-        }
-
-        // ═══════════════════════════════════════════════════════════════
-        // GEOCODER — Three-tier system, all free, no API key needed
-        //  1. Overpass API  → finds nearest named business / amenity type
-        //  2. Nominatim     → structured address / place name search, biased to user location
-        //  3. Photon        → broad fallback
-        // ═══════════════════════════════════════════════════════════════
-
-        function haversineMiles(lat1, lng1, lat2, lng2) {
-            const R = 3958.8;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLng = (lng2 - lng1) * Math.PI / 180;
-            const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        }
-
-        // Maps plain-English stop names to OSM amenity/shop/leisure tags
-        // so Overpass can find the nearest one precisely
-        const OSM_TAG_MAP = {
-            // Fitness
-            'gym':            ['leisure=fitness_centre','amenity=gym','leisure=sports_centre'],
-            'fitness':        ['leisure=fitness_centre','amenity=gym'],
-            'crunch fitness': ['name=Crunch Fitness','leisure=fitness_centre'],
-            'crunch':         ['name=Crunch','leisure=fitness_centre'],
-            'planet fitness': ['name=Planet Fitness','leisure=fitness_centre'],
-            'anytime fitness':['name=Anytime Fitness','leisure=fitness_centre'],
-            'ymca':           ['name=YMCA','leisure=sports_centre'],
-            // Food & drink
-            'coffee shop':    ['amenity=cafe'],
-            'cafe':           ['amenity=cafe'],
-            'coffee':         ['amenity=cafe'],
-            'starbucks':      ['name=Starbucks','amenity=cafe'],
-            'dunkin':         ['name=Dunkin','amenity=cafe','amenity=fast_food'],
-            'mcdonalds':      ['name=McDonald\'s','amenity=fast_food'],
-            "mcdonald's":     ['name=McDonald\'s','amenity=fast_food'],
-            'subway':         ['name=Subway','amenity=fast_food'],
-            'pizza':          ['amenity=fast_food','cuisine=pizza'],
-            'restaurant':     ['amenity=restaurant'],
-            'fast food':      ['amenity=fast_food'],
-            // Retail
-            'grocery store':  ['shop=supermarket','shop=grocery'],
-            'grocery':        ['shop=supermarket','shop=grocery'],
-            'supermarket':    ['shop=supermarket'],
-            'walmart':        ['name=Walmart','shop=supermarket','shop=department_store'],
-            'target':         ['name=Target','shop=department_store'],
-            'five below':     ['name=Five Below','shop=variety_store'],
-            'dollar tree':    ['name=Dollar Tree','shop=variety_store'],
-            'cvs':            ['name=CVS','amenity=pharmacy'],
-            'walgreens':      ['name=Walgreens','amenity=pharmacy'],
-            'pharmacy':       ['amenity=pharmacy'],
-            'gas station':    ['amenity=fuel'],
-            'gas':            ['amenity=fuel'],
-            // Outdoors
-            'park':           ['leisure=park'],
-            'local park':     ['leisure=park'],
-            'trail':          ['route=foot','highway=path'],
-            'library':        ['amenity=library'],
-            'school':         ['amenity=school'],
-            'hospital':       ['amenity=hospital'],
-            'bank':           ['amenity=bank'],
-            'atm':            ['amenity=atm'],
-            'post office':    ['amenity=post_office'],
+        const safetyMap = {
+            walking:  "Routed on sidewalks, crosswalks, and pedestrian paths only.",
+            running:  "Routed on paths, parks, and sidewalks — heavy traffic avoided.",
+            bike:     "Routed on bike lanes, paths, and quiet residential streets — no highways.",
+            car:      "Full road access including highways.",
+            escooter: isSlowEV ? `At ${twSpeedMPH} MPH: residential streets and bike paths only.` : `At ${twSpeedMPH} MPH: bike lanes and quieter roads.`,
+            ebike:    isSlowEV ? `At ${twSpeedMPH} MPH: bike paths and quiet streets.` : `At ${twSpeedMPH} MPH: bike lanes and roads under 40 MPH.`
         };
+        const safetyNotes = safetyMap[twVehicle] || "Standard routing.";
 
-        // Build an Overpass QL query — returns ALL results sorted by distance server-side
-        function buildOverpassQuery(tags, lat, lng, radiusMeters) {
-            const parts = tags.map(tag => {
-                const [k, v] = tag.split('=');
-                const types = ['node','way','relation'];
-                return types.map(t => `  ${t}["${k}"="${v}"](around:${radiusMeters},${lat},${lng});`).join('\n');
-            });
-            // "out center" makes ways/relations return a center lat/lon
-            // "qt" sorts by distance from the query center automatically
-            return `[out:json][timeout:15];\n(\n${parts.join('\n')}\n);\nout center qt 50;`;
+        let targetMiles = null;
+        const miM = t.match(/(?:about|around|roughly|~|approximately)?\s*([\d.]+)\s*(?:miles?|mi)\b/);
+        const kmM = t.match(/(?:about|around|roughly|~|approximately)?\s*([\d.]+)\s*(?:km|kilometers?)\b/);
+        if (miM) targetMiles = parseFloat(miM[1]);
+        else if (kmM) targetMiles = parseFloat(kmM[1]) * 0.621371;
+
+        const returnHome = /\b(back\s+(home|to\s+(my\s+)?(house|place|start))|return(ing)?\s+(home|back)|loop\s+back|end\s+at\s+(home|my)|come\s+back\s+home|head\s+back\s+home|back\s+to\s+home)\b/.test(t);
+        const startAtUserLocation =
+            /\b(from\s+(my\s+)?(house|home|place|location|here|current)|starting\s+(from|at)\s+(my|here)|from\s+where\s+i\s+am)\b/.test(t) ||
+            /\b(i\s+(want|need|plan)\s+to|i\s+(am|'m)\s+(going|heading))\b/.test(t) ||
+            !t.includes(' from ');
+
+        let working = text;
+        working = working.replace(/(?:about|around|roughly|approximately|~)?\s*[\d.]+\s*(?:miles?|mi|km|kilometers?)\b/gi, '');
+        working = working.replace(/,?\s*(?:and\s+)?(?:then\s+)?(?:get|go|come|loop|head)?\s*back(?:\s+(?:home|to\s+(?:my\s+)?(?:house|place|start|beginning|location|home)))?\s*[.,!?]*\s*$/gi, '');
+        working = working.replace(/,?\s*(?:return(?:ing)?\s+(?:home|back)|end\s+at\s+(?:home|my\s+\w+))\s*[.,!?]*\s*$/gi, '');
+        working = working.replace(/^.*?(?:starting\s+from|from)\s+(?:my\s+)?(?:house|home|place|location|here|current\s+location)[,\s]*/gi, '');
+        working = working.replace(/^(?:i\s+(?:want|would\s+like|need|plan)\s+to\s+)?(?:go|run|walk|ride|bike|drive|head|do\s+a\s+(?:run|walk|ride))[,\s]*/gi, '');
+        working = working.replace(/^(?:take\s+me\s+to(?:\s+the\s+(?:nearest|closest))?|please\s+take\s+me\s+to)\s*/gi, '');
+        working = working.replace(/\s*(?:total|in\s+total|altogether|or\s+so|exactly|please|if\s+possible)[.,!?]*\s*$/gi, '');
+        working = working.trim().replace(/^[,.\s]+|[,.\s]+$/g, '');
+
+        const rawParts = working.split(/\s*(?:,\s*)?(?:and\s+then|then|after\s+that|followed\s+by|next(?:\s+stop)?(?:\s+is)?|,\s*and\s+|,\s*)\s*/gi).map(p => p.trim());
+        const junkWords = /^(?:and|or|but|so|then|to|at|the|a|an|my|me|from|in|on|of|i|go|head|visit|stop|swing|also|next|first|last|finally|get)$/i;
+        const stops = [];
+        const seen  = new Set();
+        rawParts.forEach(raw => {
+            let s = raw
+                .replace(/^(?:take\s+me\s+to(?:\s+the\s+(?:nearest|closest))?|take\s+me\s+to)\s+/gi, '')
+                .replace(/^(?:go(?:ing)?\s+to|head(?:ing)?\s+to|visit(?:ing)?|stop(?:ping)?\s+(?:at|by)|swing(?:ing)?\s+by|drop(?:ping)?\s+(?:by|in\s+at)|check(?:ing)?\s+out)\s+/gi, '')
+                .replace(/^(?:the\s+nearest|the\s+closest|nearest|closest)\s+/gi, '')
+                .replace(/^(?:the\s+|a\s+|my\s+)/gi, '')
+                .replace(/[.,!?]+$/, '')
+                .trim();
+            if (!s || s.length < 2 || junkWords.test(s) || /^\d+$/.test(s)) return;
+            const key = s.toLowerCase();
+            if (!seen.has(key)) { seen.add(key); stops.push(s); }
+        });
+
+        if (stops.length === 0 && !returnHome) {
+            return { feasible: false, error: "Couldn't find any destinations. Try: \"Run from my house to Crunch Fitness then Five Below and back home.\"" };
+        }
+        if (targetMiles !== null && targetMiles > 50 && !isCar) {
+            return { feasible: false, error: `${targetMiles} miles is too far for a ${twVehicle} route.` };
         }
 
-        // Try Overpass for known business/amenity types
-        async function resolveViaOverpass(stopName, userLat, userLng) {
-            const key = stopName.toLowerCase().trim();
+        const fullStops = [];
+        if (startAtUserLocation) fullStops.push('MY_LOCATION');
+        fullStops.push(...stops);
+        if (returnHome) fullStops.push('MY_LOCATION');
 
-            // Exact match first, then check if the stop name contains a known key or vice versa
-            let tags = OSM_TAG_MAP[key];
-            if (!tags) {
-                // Try: does the stop name contain a known keyword? ("crunch fitness" → "crunch fitness")
-                const partialKey = Object.keys(OSM_TAG_MAP).find(k =>
-                    key.includes(k) || k.includes(key)
-                );
-                if (partialKey) tags = OSM_TAG_MAP[partialKey];
-            }
-            if (!tags || !userLat) return null;
+        const stopCount  = Math.max(stops.length, 1);
+        const baseMiles  = targetMiles || parseFloat((stopCount * 1.0 + (returnHome ? 1.0 : 0)).toFixed(1));
+        const speedMap   = { walking: 3, running: 6, bike: 12, car: 30, escooter: Math.min(twSpeedMPH || 15, 20), ebike: Math.min(twSpeedMPH || 20, 25) };
+        const mph        = speedMap[twVehicle] || 3;
+        const estMinutes = Math.max(1, Math.round((baseMiles / mph) * 60));
+        const vLabel     = { walking:'walk', running:'run', bike:'bike ride', car:'drive', escooter:'scooter ride', ebike:'e-bike ride' }[twVehicle] || 'trip';
+        const stopStr    = stops.length > 0 ? stops.join(' → ') : 'your destination';
+        const loopStr    = returnHome ? ', then back home' : '';
+        const distStr    = targetMiles ? `targeting ~${targetMiles} mi` : `~${baseMiles} mi estimated`;
+        const routeSummary = `${startAtUserLocation ? 'From your location' : 'Starting at your first stop'}: ${vLabel} to ${stopStr}${loopStr} — ${distStr}.`;
 
-            // Start tight (5 miles) and expand if nothing found — ensures truly nearest result
-            const maxMiles = (twVehicle === 'car') ? 30 : 15;
-            const radii = [8000, 16000, Math.round(maxMiles * 1609)]; // 5mi, 10mi, max
+        return {
+            feasible: true, error: null,
+            stops: fullStops, startAtUserLocation, returnHome,
+            estimatedMiles: baseMiles, estimatedMinutes: estMinutes,
+            safetyNotes, routeSummary, osrmProfile
+        };
+    }
 
-            for (const radiusMeters of radii) {
-                const query = buildOverpassQuery(tags, userLat, userLng, radiusMeters);
-                try {
-                    const res = await fetch('https://overpass-api.de/api/interpreter', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: 'data=' + encodeURIComponent(query)
-                    });
-                    const data = await res.json();
-                    if (!data.elements || data.elements.length === 0) continue; // expand radius
+    function twRunAI(journeyText) {
+        document.getElementById('tw-thinking').classList.remove('hidden');
+        document.getElementById('tw-result').classList.add('hidden');
+        document.getElementById('tw-error-block').classList.add('hidden');
 
-                    // Collect all elements with valid coordinates and sort by true distance
-                    const candidates = [];
-                    data.elements.forEach(el => {
-                        const lat = el.lat ?? el.center?.lat;
-                        const lng = el.lon ?? el.center?.lon;
-                        if (!lat || !lng) return;
-                        const d = haversineMiles(userLat, userLng, lat, lng);
-                        candidates.push({ lat, lng, d, name: el.tags?.name || stopName });
-                    });
+        const labels = ["Reading your journey…","Finding your stops…","Checking road types…","Calculating distance…","Weaving your trail…"];
+        let li = 0;
+        const lv = setInterval(() => {
+            const el = document.getElementById('tw-thinking-label');
+            if (el) el.innerText = labels[li % labels.length];
+            li++;
+        }, 900);
 
-                    if (candidates.length === 0) continue;
+        setTimeout(() => {
+            clearInterval(lv);
+            const result = twParse(journeyText);
+            twShowResult(result);
+        }, 1500);
+    }
 
-                    // Sort by distance — pick absolute closest
-                    candidates.sort((a, b) => a.d - b.d);
-                    const best = candidates[0];
-                    console.log(`✅ Overpass: "${stopName}" → "${best.name}" at ${best.d.toFixed(2)} mi (${candidates.length} candidates checked)`);
-                    return [best.lng, best.lat];
+    function twShowResult(plan) {
+        document.getElementById('tw-thinking').classList.add('hidden');
+        document.getElementById('tw-result').classList.remove('hidden');
+        if (!plan.feasible) {
+            document.getElementById('tw-error-block').classList.remove('hidden');
+            document.getElementById('tw-error-msg').innerText = plan.error || "Route not possible with given constraints.";
+            document.getElementById('tw-launch-btn').classList.add('hidden');
+            document.getElementById('tw-ai-summary').innerHTML = '';
+        } else {
+            document.getElementById('tw-error-block').classList.add('hidden');
+            document.getElementById('tw-launch-btn').classList.remove('hidden');
+            document.getElementById('tw-ai-summary').innerHTML = `${plan.routeSummary}<br><span class="text-[9px] italic opacity-70 mt-1 block">${plan.safetyNotes || ''}</span>`;
+            document.getElementById('tw-est-dist').innerText = plan.estimatedMiles ? `~${plan.estimatedMiles} mi` : '--';
+            const mins = plan.estimatedMinutes;
+            document.getElementById('tw-est-time').innerText = mins ? (mins >= 60 ? `${Math.floor(mins/60)}h ${mins%60}m` : `~${mins}m`) : '--';
+            document.getElementById('tw-est-stops').innerText = plan.stops ? `${plan.stops.length}` : '--';
+            twParsedStops = plan.stops || [];
+            twBuiltRoute  = plan;
+        }
+    }
 
-                } catch(e) {
-                    console.warn('Overpass error:', e);
-                    break; // don't retry on error, fall through to Nominatim
+    // ══════════════════════════════════════════════════════════════
+    // AI PROGRESS TOAST — shows live step-by-step status
+    // ══════════════════════════════════════════════════════════════
+    let progressToastEl = null;
+
+    function showProgressToast(steps) {
+        removeProgressToast();
+        progressToastEl = document.createElement('div');
+        progressToastEl.className = 'ai-progress-toast';
+        progressToastEl.innerHTML = `
+            <p class="text-[9px] font-black uppercase tracking-widest text-sage mb-3">🌿 Trail Weaver Building Route…</p>
+            ${steps.map((s,i) => `
+                <div class="ai-step pending" id="ai-step-${i}">
+                    <div class="ai-step-icon">${s.icon}</div>
+                    <span class="ai-step-label">${s.label}</span>
+                </div>
+            `).join('')}
+        `;
+        document.body.appendChild(progressToastEl);
+    }
+
+    function setProgressStep(index, state, customLabel = null) {
+        const el = document.getElementById(`ai-step-${index}`);
+        if (!el) return;
+        el.className = `ai-step ${state}`;
+        const iconEl = el.querySelector('.ai-step-icon');
+        const labelEl = el.querySelector('.ai-step-label');
+        if (customLabel) labelEl.textContent = customLabel;
+        if (state === 'done') iconEl.textContent = '✓';
+        if (state === 'active') iconEl.textContent = el.querySelector('.ai-step-icon').textContent || '⟳';
+    }
+
+    function removeProgressToast() {
+        if (progressToastEl) { progressToastEl.remove(); progressToastEl = null; }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // AI GEOCODER — Uses Anthropic API with web_search tool
+    // Asks Claude: "nearest gym to lat,lng" → gets exact coords
+    // Falls back to Overpass → Nominatim → Photon
+    // ══════════════════════════════════════════════════════════════
+
+    async function resolveStopWithAI(stopName, userLat, userLng) {
+        const prompt = `You are a precise geocoding assistant. Given a user's exact GPS coordinates and a destination description, find the CLOSEST real location and return ONLY a JSON object.
+
+User GPS: latitude ${userLat.toFixed(6)}, longitude ${userLng.toFixed(6)}
+
+Destination requested: "${stopName}"
+
+Search for the closest "${stopName}" to those coordinates. Return ONLY this JSON (no other text, no markdown):
+{"name": "exact business name", "lat": 00.000000, "lng": -00.000000, "address": "full address", "distance_miles": 0.0}
+
+Requirements:
+- Must be the CLOSEST one to the given coordinates, not just any location
+- Use real coordinates from web search results
+- If you cannot find it, return: {"error": "not found"}`;
+
+        try {
+            const response = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    model: "claude-sonnet-4-20250514",
+                    max_tokens: 1000,
+                    tools: [{ "type": "web_search_20250305", "name": "web_search" }],
+                    messages: [{ role: "user", content: prompt }]
+                })
+            });
+
+            if (!response.ok) throw new Error(`API ${response.status}`);
+            const data = await response.json();
+
+            // Extract text from all content blocks
+            const fullText = (data.content || [])
+                .map(item => item.type === "text" ? item.text : "")
+                .filter(Boolean)
+                .join("\n");
+
+            // Parse JSON from response
+            const jsonMatch = fullText.match(/\{[^{}]*"lat"[^{}]*\}/);
+            if (jsonMatch) {
+                const parsed = JSON.parse(jsonMatch[0]);
+                if (parsed.lat && parsed.lng && !parsed.error) {
+                    console.log(`✅ AI found "${stopName}" → "${parsed.name}" at ${parsed.distance_miles?.toFixed(2) || '?'} mi`);
+                    return { lng: parsed.lng, lat: parsed.lat, name: parsed.name, address: parsed.address };
                 }
             }
             return null;
+        } catch(e) {
+            console.warn("AI geocode failed:", e.message);
+            return null;
         }
+    }
 
-        // Try Nominatim for named places / addresses
-        async function resolveViaNominatim(stopName, userLat, userLng) {
-            const maxMiles = (twVehicle === 'car') ? 30 : 15;
-            try {
-                const viewbox = userLat
-                    ? `&viewbox=${userLng-0.5},${userLat+0.5},${userLng+0.5},${userLat-0.5}&bounded=0`
-                    : '';
-                const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(stopName)}&format=json&limit=10&addressdetails=1${viewbox}`;
-                const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
-                const data = await res.json();
-                if (!data || data.length === 0) return null;
+    // ── Overpass (OSM nearest-amenity) ──
+    function haversineMiles(lat1, lng1, lat2, lng2) {
+        const R = 3958.8;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLng = (lng2 - lng1) * Math.PI / 180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
 
-                let best = null, bestDist = Infinity;
-                data.forEach(item => {
-                    const lat = parseFloat(item.lat), lng = parseFloat(item.lon);
-                    if (userLat) {
-                        const d = haversineMiles(userLat, userLng, lat, lng);
-                        if (d <= maxMiles && d < bestDist) { bestDist = d; best = [lng, lat]; }
-                    } else if (!best) {
-                        best = [lng, lat];
-                    }
-                });
-                if (best) console.log(`Nominatim found "${stopName}" at ${bestDist.toFixed(2)} mi`);
-                return best;
-            } catch(e) {
-                console.warn('Nominatim error:', e);
-                return null;
-            }
+    const OSM_TAG_MAP = {
+        'gym':            ['leisure=fitness_centre','amenity=gym','leisure=sports_centre'],
+        'fitness':        ['leisure=fitness_centre','amenity=gym'],
+        'fitness center': ['leisure=fitness_centre','amenity=gym'],
+        'fitness centre': ['leisure=fitness_centre','amenity=gym'],
+        'crunch fitness': ['name=Crunch Fitness','leisure=fitness_centre'],
+        'crunch':         ['name~Crunch,leisure=fitness_centre'],
+        'planet fitness': ['name=Planet Fitness','leisure=fitness_centre'],
+        'anytime fitness':['name=Anytime Fitness','leisure=fitness_centre'],
+        'ymca':           ['name=YMCA','leisure=sports_centre'],
+        'coffee shop':    ['amenity=cafe'],
+        'cafe':           ['amenity=cafe'],
+        'coffee':         ['amenity=cafe'],
+        'starbucks':      ['name=Starbucks','amenity=cafe'],
+        'dunkin':         ['name=Dunkin','amenity=cafe','amenity=fast_food'],
+        'mcdonalds':      ["name=McDonald's",'amenity=fast_food'],
+        "mcdonald's":     ["name=McDonald's",'amenity=fast_food'],
+        'subway':         ['name=Subway','amenity=fast_food'],
+        'restaurant':     ['amenity=restaurant'],
+        'fast food':      ['amenity=fast_food'],
+        'grocery store':  ['shop=supermarket','shop=grocery'],
+        'grocery':        ['shop=supermarket','shop=grocery'],
+        'supermarket':    ['shop=supermarket'],
+        'walmart':        ['name=Walmart','shop=supermarket'],
+        'target':         ['name=Target','shop=department_store'],
+        'five below':     ['name=Five Below','shop=variety_store'],
+        'dollar tree':    ['name=Dollar Tree','shop=variety_store'],
+        'cvs':            ['name=CVS','amenity=pharmacy'],
+        'walgreens':      ['name=Walgreens','amenity=pharmacy'],
+        'pharmacy':       ['amenity=pharmacy'],
+        'gas station':    ['amenity=fuel'],
+        'gas':            ['amenity=fuel'],
+        'park':           ['leisure=park'],
+        'local park':     ['leisure=park'],
+        'trail':          ['highway=path','highway=footway'],
+        'library':        ['amenity=library'],
+        'hospital':       ['amenity=hospital'],
+        'bank':           ['amenity=bank'],
+        'atm':            ['amenity=atm'],
+        'post office':    ['amenity=post_office'],
+    };
+
+    async function resolveViaOverpass(stopName, userLat, userLng) {
+        const key = stopName.toLowerCase().trim();
+        let tags = OSM_TAG_MAP[key];
+        if (!tags) {
+            const partialKey = Object.keys(OSM_TAG_MAP).find(k => key.includes(k) || k.includes(key));
+            if (partialKey) tags = OSM_TAG_MAP[partialKey];
         }
+        if (!tags || !userLat) return null;
 
-        // Try Photon as final fallback
-        async function resolveViaPhoton(stopName, userLat, userLng) {
-            const maxMiles = (twVehicle === 'car') ? 30 : 15;
-            try {
-                const bias = userLat ? `&lat=${userLat}&lon=${userLng}` : '';
-                const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(stopName)}${bias}&limit=15`);
-                const data = await res.json();
-                if (!data?.features?.length) return null;
+        const maxMiles = (twVehicle === 'car') ? 30 : 15;
+        const radii = [8000, 16000, Math.round(maxMiles * 1609)];
 
-                let best = null, bestDist = Infinity;
-                data.features.forEach(f => {
-                    const [lng, lat] = f.geometry.coordinates;
-                    if (userLat) {
-                        const d = haversineMiles(userLat, userLng, lat, lng);
-                        if (d <= maxMiles && d < bestDist) { bestDist = d; best = [lng, lat]; }
-                    } else if (!best) {
-                        best = [lng, lat];
-                    }
-                });
-                return best;
-            } catch(e) { return null; }
-        }
-
-        // Master resolver — tries all three in order
-        async function resolveStopToCoords(stopName, userLat, userLng) {
-            // 1. Overpass (best for generic business types like "gym", "coffee shop")
-            const overpassResult = await resolveViaOverpass(stopName, userLat, userLng);
-            if (overpassResult) return overpassResult;
-
-            // 2. Nominatim (best for specific named places, addresses)
-            const nominatimResult = await resolveViaNominatim(stopName, userLat, userLng);
-            if (nominatimResult) return nominatimResult;
-
-            // 3. Photon (broad fallback)
-            return await resolveViaPhoton(stopName, userLat, userLng);
-        }
-
-        // Wait up to 6 seconds for GPS to come in before launching route
-        function waitForGPS(timeoutMs = 6000) {
-            if (lastKnownPos) return Promise.resolve(lastKnownPos);
-            return new Promise((resolve) => {
-                const start = Date.now();
-                const check = setInterval(() => {
-                    if (lastKnownPos) { clearInterval(check); resolve(lastKnownPos); }
-                    else if (Date.now() - start > timeoutMs) { clearInterval(check); resolve(null); }
-                }, 200);
+        for (const radiusMeters of radii) {
+            const parts = tags.map(tag => {
+                const [k, v] = tag.split('=');
+                return ['node','way','relation'].map(t => `  ${t}["${k}"="${v}"](around:${radiusMeters},${userLat},${userLng});`).join('\n');
             });
-        }
-
-        async function twLaunchRoute() {
-            if (!twBuiltRoute || !twBuiltRoute.feasible) return;
-            closeNavModal();
-
-            const plan = twBuiltRoute;
-            const profile = plan.osrmProfile || 'foot';
-
-            // Wait for GPS if not yet available
-            if (!lastKnownPos) {
-                showToast("📡 Waiting for GPS lock…");
-                await waitForGPS(6000);
-            }
-
-            const userLat = lastKnownPos ? lastKnownPos.lat : null;
-            const userLng = lastKnownPos ? lastKnownPos.lng : null;
-
-            if (!userLat && plan.startAtUserLocation) {
-                showToast("⚠️ GPS not available — please enable location and try again", true);
-                document.getElementById('nav-modal').classList.remove('hidden');
-                twGoToStep(2);
-                return;
-            }
-
-            let coords = [];
-            let resolvedNames = [];
-
-            showToast("🔍 Finding your stops…");
-
+            const query = `[out:json][timeout:15];\n(\n${parts.join('\n')}\n);\nout center qt 50;`;
             try {
-                for (let i = 0; i < plan.stops.length; i++) {
-                    const stop = plan.stops[i];
-                    const isHome = /^my.?location$/i.test(stop) || /^my\s+(house|home|place|start)$/i.test(stop) || stop === 'MY_LOCATION';
+                const res = await fetch('https://overpass-api.de/api/interpreter', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'data=' + encodeURIComponent(query)
+                });
+                const data = await res.json();
+                if (!data.elements || data.elements.length === 0) continue;
+                const candidates = [];
+                data.elements.forEach(el => {
+                    const lat = el.lat ?? el.center?.lat;
+                    const lng = el.lon ?? el.center?.lon;
+                    if (!lat || !lng) return;
+                    candidates.push({ lat, lng, d: haversineMiles(userLat, userLng, lat, lng), name: el.tags?.name || stopName });
+                });
+                if (candidates.length === 0) continue;
+                candidates.sort((a, b) => a.d - b.d);
+                const best = candidates[0];
+                console.log(`✅ Overpass: "${stopName}" → "${best.name}" ${best.d.toFixed(2)}mi (${candidates.length} checked)`);
+                return { lng: best.lng, lat: best.lat, name: best.name };
+            } catch(e) { console.warn('Overpass error:', e); break; }
+        }
+        return null;
+    }
 
-                    if (isHome) {
-                        if (lastKnownPos) {
-                            coords.push([lastKnownPos.lng, lastKnownPos.lat]);
-                            resolvedNames.push('My Location');
-                        } else {
-                            showToast("⚠️ GPS not available — enable location to use 'home' as a stop", true);
-                            await new Promise(r => setTimeout(r, 2000));
-                        }
-                        continue;
-                    }
+    async function resolveViaNominatim(stopName, userLat, userLng) {
+        const maxMiles = (twVehicle === 'car') ? 30 : 15;
+        try {
+            const viewbox = userLat ? `&viewbox=${userLng-0.5},${userLat+0.5},${userLng+0.5},${userLat-0.5}&bounded=0` : '';
+            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(stopName)}&format=json&limit=10&addressdetails=1${viewbox}`;
+            const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+            const data = await res.json();
+            if (!data || data.length === 0) return null;
+            let best = null, bestDist = Infinity;
+            data.forEach(item => {
+                const lat = parseFloat(item.lat), lng = parseFloat(item.lon);
+                if (userLat) {
+                    const d = haversineMiles(userLat, userLng, lat, lng);
+                    if (d <= maxMiles && d < bestDist) { bestDist = d; best = { lat, lng, name: item.display_name }; }
+                } else if (!best) { best = { lat, lng, name: item.display_name }; }
+            });
+            return best;
+        } catch(e) { return null; }
+    }
 
-                    showToast(`🔍 Finding: ${stop}…`);
-                    const found = await resolveStopToCoords(stop, userLat, userLng);
-                    // Small delay so Nominatim rate limit (1 req/sec) is respected
-                    await new Promise(r => setTimeout(r, 300));
+    async function resolveViaPhoton(stopName, userLat, userLng) {
+        const maxMiles = (twVehicle === 'car') ? 30 : 15;
+        try {
+            const bias = userLat ? `&lat=${userLat}&lon=${userLng}` : '';
+            const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(stopName)}${bias}&limit=15`);
+            const data = await res.json();
+            if (!data?.features?.length) return null;
+            let best = null, bestDist = Infinity;
+            data.features.forEach(f => {
+                const [lng, lat] = f.geometry.coordinates;
+                if (userLat) {
+                    const d = haversineMiles(userLat, userLng, lat, lng);
+                    if (d <= maxMiles && d < bestDist) { bestDist = d; best = { lat, lng, name: f.properties.name || stopName }; }
+                } else if (!best) { best = { lat, lng, name: f.properties.name || stopName }; }
+            });
+            return best;
+        } catch(e) { return null; }
+    }
 
-                    if (found) {
-                        coords.push(found);
-                        resolvedNames.push(stop);
-                        showToast(`✅ Found: ${stop}`);
-                        await new Promise(r => setTimeout(r, 600));
-                    } else {
-                        showToast(`⚠️ Couldn't find "${stop}" nearby. Try adding a city name, e.g. "${stop}, Pittsburgh"`, true);
-                        await new Promise(r => setTimeout(r, 3000));
-                    }
-                }
+    // ══════════════════════════════════════════════════════════════
+    // MASTER RESOLVER — AI first, then OSM fallbacks (all parallel)
+    // ══════════════════════════════════════════════════════════════
+    async function resolveStopToCoords(stopName, userLat, userLng) {
+        // Run AI + Overpass in parallel for speed
+        const [aiResult, overpassResult] = await Promise.all([
+            resolveStopWithAI(stopName, userLat, userLng),
+            resolveViaOverpass(stopName, userLat, userLng)
+        ]);
 
-                // Ensure start at user location
-                if (lastKnownPos && plan.startAtUserLocation && coords.length > 0) {
-                    const firstIsUser = coords[0][0] === lastKnownPos.lng && coords[0][1] === lastKnownPos.lat;
-                    if (!firstIsUser) coords.unshift([lastKnownPos.lng, lastKnownPos.lat]);
-                }
+        // Both succeeded — pick the closer one
+        if (aiResult && overpassResult) {
+            const aiDist  = haversineMiles(userLat, userLng, aiResult.lat, aiResult.lng);
+            const osmDist = haversineMiles(userLat, userLng, overpassResult.lat, overpassResult.lng);
+            console.log(`AI: ${aiDist.toFixed(2)}mi vs Overpass: ${osmDist.toFixed(2)}mi → using ${aiDist <= osmDist ? 'AI' : 'Overpass'}`);
+            return aiDist <= osmDist ? aiResult : overpassResult;
+        }
+        if (aiResult) return aiResult;
+        if (overpassResult) return overpassResult;
 
-                // Remove consecutive duplicates
-                coords = coords.filter((c, i) => i === 0 || !(c[0] === coords[i-1][0] && c[1] === coords[i-1][1]));
+        // Fallback chain
+        const nominatim = await resolveViaNominatim(stopName, userLat, userLng);
+        if (nominatim) return nominatim;
 
-                if (coords.length < 2) {
-                    showToast("⚠️ Couldn't build route — make sure GPS is on, or add a city name like \"Crunch Fitness, Pittsburgh\"", true);
-                    document.getElementById('nav-modal').classList.remove('hidden');
-                    twGoToStep(2);
-                    return;
-                }
+        return await resolveViaPhoton(stopName, userLat, userLng);
+    }
 
-                showToast("🌿 Building your route…");
+    // ══════════════════════════════════════════════════════════════
+    // LAUNCH ROUTE — Fast, parallel, AI-powered
+    // ══════════════════════════════════════════════════════════════
+    async function twLaunchRoute() {
+        if (!twBuiltRoute || !twBuiltRoute.feasible) return;
+        closeNavModal();
 
-                const coordStr = coords.map(c => c.join(',')).join(';');
-                // Slow e-scooter/ebike: exclude motorway + trunk (yellow-line arterials).
-                // OSRM "exclude" prevents routing ALONG them but still allows crossing.
-                const isSlowEV = (twVehicle === 'escooter' || twVehicle === 'ebike') && twSpeedMPH && twSpeedMPH <= 25;
-                const excludeParam = isSlowEV ? '&exclude=motorway,trunk' : '';
-                const routeRes  = await fetch(`https://router.project-osrm.org/route/v1/${profile}/${coordStr}?overview=full&geometries=geojson${excludeParam}`);
-                const routeData = await routeRes.json();
+        const plan    = twBuiltRoute;
+        const profile = plan.osrmProfile || 'foot';
 
-                if (routeData.code === 'Ok') {
-                    const path    = routeData.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-                    const distMi  = (routeData.routes[0].distance * 0.000621371).toFixed(2);
-                    const named   = resolvedNames.filter(s => !/^my location$/i.test(s) && s !== 'MY_LOCATION');
-                    const routeName = named.length > 0
-                        ? `${twVehicle} → ${named[0]}${named.length > 1 ? ` +${named.length - 1}` : ''}`
-                        : `Trail Weaver ${twVehicle}`;
-
-                    if (activeViewLine) map.removeLayer(activeViewLine);
-                    activeViewLine = L.polyline(path, { color: '#5a7d56', weight: 6, opacity: 0.9 }).addTo(map);
-                    map.fitBounds(activeViewLine.getBounds(), { padding: [50, 50] });
-
-                    // Stop pins (skip first if it's user's location)
-                    coords.forEach((c, i) => {
-                        if (i === 0 && plan.startAtUserLocation) return;
-                        const label = named[plan.startAtUserLocation ? i - 1 : i] || `Stop ${i + 1}`;
-                        L.circleMarker([c[1], c[0]], {
-                            radius: 7, color: '#c07b3c', fillColor: 'white', fillOpacity: 1, weight: 3
-                        }).addTo(map).bindPopup(`<b style="font-size:12px">${label}</b>`);
-                    });
-
-                    const saved = { id: Date.now(), name: routeName, distance: distMi, path, date: new Date().toLocaleDateString() };
-                    savedRoutes.push(saved);
-                    localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
-                    updateSavedList();
-                    removeToast();
-                    enterDriveMode(saved.id);
-                } else {
-                    showToast("⚠️ Route couldn't be built — check your connection and try again", true);
-                }
-            } catch(e) {
-                console.error("Route build error:", e);
-                showToast("⚠️ Network error — check your connection", true);
+        // Get GPS fix
+        if (!lastKnownPos) {
+            const gpsResult = await getAccurateFix();
+            if (gpsResult) {
+                updateLocation(L.latLng(gpsResult.coords.latitude, gpsResult.coords.longitude));
             }
         }
 
-        // ── Toast helpers ──
-        let toastEl = null;
-        function showToast(msg, isError = false) {
-            removeToast();
-            toastEl = document.createElement('div');
-            toastEl.className = 'fixed bottom-28 left-1/2 z-[3000] px-6 py-3 rounded-full text-xs font-black uppercase text-white shadow-2xl transition-all';
-            toastEl.style.cssText = `transform:translateX(-50%);background:${isError ? 'rgba(120,30,30,0.95)' : 'rgba(61,92,58,0.95)'}`;
-            toastEl.innerText = msg;
-            document.body.appendChild(toastEl);
-            if (isError) setTimeout(removeToast, 4000);
-        }
-        function removeToast() {
-            if (toastEl) { toastEl.remove(); toastEl = null; }
+        const userLat = lastKnownPos?.lat ?? null;
+        const userLng = lastKnownPos?.lng ?? null;
+
+        if (!userLat && plan.startAtUserLocation) {
+            showSimpleToast("⚠️ GPS not available — enable location and try again", true);
+            document.getElementById('nav-modal').classList.remove('hidden');
+            twGoToStep(2);
+            return;
         }
 
-        // ── Routing (kept for reroute) ──
-        async function calculateSmartRoute(isReroute = false) {
-            if (!isReroute || !twBuiltRoute) return;
-            twLaunchRoute();
-        }
+        // Build progress steps
+        const nonHomeStops = plan.stops.filter(s => s !== 'MY_LOCATION');
+        const progressSteps = [
+            { icon: '📍', label: 'Locking your GPS position' },
+            ...nonHomeStops.map(s => ({ icon: '🔍', label: `Finding: ${s}` })),
+            { icon: '🗺️', label: 'Building your route' }
+        ];
+        showProgressToast(progressSteps);
+        setProgressStep(0, 'active');
 
-        async function calculateOSRMFallback(startCoords, destCoords, destQuery) {
-            let profile = 'bicycle';
-            if (selectedVehicle === 'car') profile = 'car';
-            try {
-                if (!destCoords) {
-                    const _gr = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(destQuery)}&limit=1`);
-                    const _gd = await _gr.json();
-                    if (!_gd.features || !_gd.features.length) throw new Error('geocode failed');
-                    destCoords = [_gd.features[0].geometry.coordinates[0], _gd.features[0].geometry.coordinates[1]];
-                }
-                const routeRes  = await fetch(`https://router.project-osrm.org/route/v1/${profile}/${startCoords.join(',')};${destCoords.join(',')}?overview=full&geometries=geojson`);
-                const routeData = await routeRes.json();
-                if (routeData.code === 'Ok') {
-                    const coords = routeData.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-                    displayRoute(coords, routeData.routes[0].distance, destQuery);
-                }
-            } catch(e) { console.error("OSRM error", e); }
-        }
+        // Short pause to show GPS step
+        await new Promise(r => setTimeout(r, 300));
+        setProgressStep(0, 'done', `📍 Location locked (${userLat?.toFixed(4)}, ${userLng?.toFixed(4)})`);
 
-        function displayRoute(coords, distanceMeters, name) {
-            if (activeViewLine) map.removeLayer(activeViewLine);
-            activeViewLine = L.polyline(coords, { color: '#5a7d56', weight: 6, opacity: 0.85 }).addTo(map);
-            map.fitBounds(activeViewLine.getBounds(), { padding: [50,50] });
-            const distMi = (distanceMeters * 0.000621371).toFixed(2);
-            const saved = { id: Date.now(), name, distance: distMi, path: coords, date: new Date().toLocaleDateString() };
-            savedRoutes.push(saved);
-            localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
-            updateSavedList();
-            enterDriveMode(saved.id);
-        }
-
-        function decodeGooglePolyline(encoded) {
-            let points = [], index = 0, len = encoded.length, lat = 0, lng = 0;
-            while (index < len) {
-                let b, shift = 0, result = 0;
-                do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-                lat += ((result & 1) ? ~(result >> 1) : (result >> 1));
-                shift = 0; result = 0;
-                do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-                lng += ((result & 1) ? ~(result >> 1) : (result >> 1));
-                points.push([lat / 1e5, lng / 1e5]);
+        // Resolve all non-home stops IN PARALLEL
+        const resolvePromises = nonHomeStops.map(async (stopName, idx) => {
+            const stepIdx = idx + 1;
+            setProgressStep(stepIdx, 'active');
+            const result = await resolveStopToCoords(stopName, userLat, userLng);
+            if (result) {
+                const dist = haversineMiles(userLat, userLng, result.lat, result.lng);
+                setProgressStep(stepIdx, 'done', `✓ ${result.name || stopName} (${dist.toFixed(1)} mi away)`);
+            } else {
+                setProgressStep(stepIdx, 'done', `⚠️ Couldn't find: ${stopName}`);
             }
-            return points;
-        }
-
-        // ── Drive mode ──
-        window.enterDriveMode = (id) => {
-            const r = savedRoutes.find(x => x.id === id);
-            if (!r) return;
-            currentDriveRoute = r; isDriving = true;
-            document.getElementById('drive-hud').classList.remove('hidden');
-            window.viewRoute(id);
-            if (lastKnownPos) map.flyTo(lastKnownPos, 18);
-            if (currentMode === 'mobile') {
-                const sidebar = document.getElementById('sidebar');
-                if (!sidebar.classList.contains('is-collapsed')) toggleSidebarCollapse();
-            }
-            updateHUD();
-        };
-
-        function exitDriveMode() {
-            isDriving = false; currentDriveRoute = null;
-            document.getElementById('drive-hud').classList.add('hidden');
-            if (activeViewLine) map.removeLayer(activeViewLine);
-            activeViewLine = null;
-        }
-
-        function updateHUD() {
-            if (!isDriving || !currentDriveRoute || !lastKnownPos) return;
-            const miles = calculateRemaining(lastKnownPos, currentDriveRoute.path);
-            document.getElementById('hud-miles').innerText   = miles.toFixed(2) + " Mi";
-            document.getElementById('hud-heading').innerText = getCardinal(userHeading);
-            document.getElementById('hud-time-car').innerText  = Math.max(1, Math.round((miles/30)*60)) + "m";
-            document.getElementById('hud-time-bike').innerText = Math.max(1, Math.round((miles/12)*60)) + "m";
-            document.getElementById('hud-time-walk').innerText = Math.max(1, Math.round((miles/3)*60))  + "m";
-        }
-
-        // ── Location tracking ──
-        function updateLocation(latlng) {
-            lastKnownPos = latlng;
-            if (userMarker) userMarker.setLatLng(latlng);
-            if (isDriving && currentDriveRoute && document.getElementById('auto-reroute').checked) {
-                let nearestDist = Infinity;
-                currentDriveRoute.path.forEach(pt => { const d = L.latLng(latlng).distanceTo(L.latLng(pt)); if (d < nearestDist) nearestDist = d; });
-                if (nearestDist > OFF_ROUTE_THRESHOLD && currentDestinationQuery) calculateSmartRoute(true);
-            }
-            document.getElementById('tracking-status').className = "w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(52,211,153,0.5)]";
-            document.getElementById('gps-label').innerText   = "Live GPS";
-            document.getElementById('gps-label').className   = "text-[9px] font-bold text-emerald-500 uppercase";
-            if (!document.getElementById('weather-icon').src || document.getElementById('weather-icon').src === window.location.href) loadWeatherIcon();
-        }
-
-        // ── Helpers ──
-        function calculateDistance(points) {
-            let total = 0;
-            for (let i = 0; i < points.length - 1; i++) total += L.latLng(points[i]).distanceTo(L.latLng(points[i+1]));
-            return (total * 0.000621371).toFixed(2);
-        }
-
-        function calculateRemaining(currentPos, routePoints) {
-            if (!currentPos || routePoints.length < 2) return 0;
-            let nearestIdx = 0, minDist = Infinity;
-            routePoints.forEach((pt, idx) => { const d = L.latLng(currentPos).distanceTo(L.latLng(pt)); if (d < minDist) { minDist = d; nearestIdx = idx; } });
-            let rem = L.latLng(currentPos).distanceTo(L.latLng(routePoints[nearestIdx]));
-            for (let i = nearestIdx; i < routePoints.length - 1; i++) rem += L.latLng(routePoints[i]).distanceTo(L.latLng(routePoints[i+1]));
-            return rem * 0.000621371;
-        }
-
-        function getCardinal(angle) {
-            return ['N','NE','E','SE','S','SW','W','NW'][Math.round(angle/45)%8];
-        }
-
-        // ── Global search ──
-        const searchPinIcon = L.divIcon({
-            className: 'search-pin-wrapper',
-            html: `<div class="search-pin-drop"><svg class="w-8 h-8 drop-shadow-lg" fill="var(--clay)" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg></div>`,
-            iconSize: [32,32], iconAnchor: [16,32]
+            return { stopName, result };
         });
 
-        async function performSearch(query) {
-            if (!query) return;
-            try {
-                const encoded = encodeURIComponent(query);
-                const bias = lastKnownPos ? `&lat=${lastKnownPos.lat}&lon=${lastKnownPos.lng}` : '';
-                const res  = await fetch(`https://photon.komoot.io/api/?q=${encoded}${bias}&limit=1`);
-                const data = await res.json();
-                if (data && data.features && data.features.length > 0) {
-                    const [lng, lat] = data.features[0].geometry.coordinates;
-                    const name = data.features[0].properties.name || data.features[0].properties.street || query;
-                    const latlng = [lat, lng];
-                    if (searchMarker) map.removeLayer(searchMarker);
-                    searchMarker = L.marker(latlng, { icon: searchPinIcon }).addTo(map);
-                    searchMarker.bindPopup(`<div class="p-2"><h4 class="font-bold text-slate-800 text-xs">${name}</h4><p class="text-[10px] text-slate-500 mt-1">Location Found</p></div>`, { closeButton: false }).openPopup();
-                    map.flyTo(latlng, 14);
-                    if (currentMode === 'mobile') {
-                        const sidebar = document.getElementById('sidebar');
-                        if (!sidebar.classList.contains('is-collapsed')) toggleSidebarCollapse();
-                    }
-                }
-            } catch(err) { console.error("Search failed:", err); }
+        const resolved = await Promise.all(resolvePromises);
+        const resolvedMap = {};
+        resolved.forEach(r => { if (r.result) resolvedMap[r.stopName] = r.result; });
+
+        // Build ordered coordinate list
+        let coords = [];
+        let resolvedNames = [];
+
+        for (const stop of plan.stops) {
+            const isHome = stop === 'MY_LOCATION' || /^my\s*(location|house|home|place|start)$/i.test(stop);
+            if (isHome) {
+                if (lastKnownPos) coords.push([lastKnownPos.lng, lastKnownPos.lat]);
+                continue;
+            }
+            const found = resolvedMap[stop];
+            if (found) {
+                coords.push([found.lng, found.lat]);
+                resolvedNames.push(found.name || stop);
+            }
         }
 
-        document.getElementById('global-search').onkeydown = (e) => { if (e.key === 'Enter') performSearch(e.target.value); };
+        // Ensure start at user location
+        if (lastKnownPos && plan.startAtUserLocation && coords.length > 0) {
+            const firstIsUser = coords[0][0] === lastKnownPos.lng && coords[0][1] === lastKnownPos.lat;
+            if (!firstIsUser) coords.unshift([lastKnownPos.lng, lastKnownPos.lat]);
+        }
+
+        // Remove consecutive duplicates
+        coords = coords.filter((c, i) => i === 0 || !(c[0] === coords[i-1][0] && c[1] === coords[i-1][1]));
+
+        if (coords.length < 2) {
+            removeProgressToast();
+            showSimpleToast("⚠️ Couldn't build route — ensure GPS is on and destinations are recognizable", true);
+            document.getElementById('nav-modal').classList.remove('hidden');
+            twGoToStep(2);
+            return;
+        }
+
+        // Build the route
+        const routeStepIdx = nonHomeStops.length + 1;
+        setProgressStep(routeStepIdx, 'active');
+
+        try {
+            const coordStr  = coords.map(c => c.join(',')).join(';');
+            const isSlowEV  = (twVehicle === 'escooter' || twVehicle === 'ebike') && twSpeedMPH && twSpeedMPH <= 25;
+            const exclude   = isSlowEV ? '&exclude=motorway,trunk' : '';
+            const routeRes  = await fetch(`https://router.project-osrm.org/route/v1/${profile}/${coordStr}?overview=full&geometries=geojson${exclude}`);
+            const routeData = await routeRes.json();
+
+            if (routeData.code === 'Ok') {
+                const path    = routeData.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                const distMi  = (routeData.routes[0].distance * 0.000621371).toFixed(2);
+                const named   = resolvedNames.filter(Boolean);
+                const routeName = named.length > 0
+                    ? `${twVehicle} → ${named[0]}${named.length > 1 ? ` +${named.length-1}` : ''}`
+                    : `Trail Weaver ${twVehicle}`;
+
+                setProgressStep(routeStepIdx, 'done', `✓ Route ready — ${distMi} mi`);
+                await new Promise(r => setTimeout(r, 800));
+                removeProgressToast();
+
+                if (activeViewLine) map.removeLayer(activeViewLine);
+                activeViewLine = L.polyline(path, { color: '#5a7d56', weight: 6, opacity: 0.9 }).addTo(map);
+                map.fitBounds(activeViewLine.getBounds(), { padding: [50, 50] });
+
+                // Drop stop pins
+                coords.forEach((c, i) => {
+                    if (i === 0 && plan.startAtUserLocation) return;
+                    const label = resolvedNames[plan.startAtUserLocation ? i-1 : i] || `Stop ${i+1}`;
+                    L.circleMarker([c[1], c[0]], { radius: 8, color: '#c07b3c', fillColor: 'white', fillOpacity: 1, weight: 3 })
+                        .addTo(map)
+                        .bindPopup(`<b style="font-size:12px">${label}</b>`);
+                });
+
+                const saved = { id: Date.now(), name: routeName, distance: distMi, path, date: new Date().toLocaleDateString() };
+                savedRoutes.push(saved);
+                localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
+                updateSavedList();
+                enterDriveMode(saved.id);
+            } else {
+                throw new Error('OSRM route failed: ' + routeData.code);
+            }
+        } catch(e) {
+            console.error("Route error:", e);
+            removeProgressToast();
+            showSimpleToast("⚠️ Route couldn't be built — check your connection and try again", true);
+        }
+    }
+
+    // ── Simple toast (errors / quick messages) ──
+    let simpleToastEl = null;
+    function showSimpleToast(msg, isError = false) {
+        if (simpleToastEl) simpleToastEl.remove();
+        simpleToastEl = document.createElement('div');
+        simpleToastEl.style.cssText = `position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);z-index:9998;padding:0.75rem 1.5rem;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;color:white;background:${isError?'rgba(120,30,30,0.95)':'rgba(61,92,58,0.95)'};`;
+        simpleToastEl.textContent = msg;
+        document.body.appendChild(simpleToastEl);
+        if (isError) setTimeout(() => { simpleToastEl?.remove(); simpleToastEl = null; }, 4000);
+    }
+
+    // ── Drive mode ──
+    window.enterDriveMode = (id) => {
+        const r = savedRoutes.find(x => x.id === id);
+        if (!r) return;
+        currentDriveRoute = r; isDriving = true;
+        document.getElementById('drive-hud').classList.remove('hidden');
+        window.viewRoute(id);
+        if (lastKnownPos) map.flyTo(lastKnownPos, 18);
+        if (currentMode === 'mobile') {
+            const sidebar = document.getElementById('sidebar');
+            if (!sidebar.classList.contains('is-collapsed')) toggleSidebarCollapse();
+        }
+        updateHUD();
+    };
+
+    function exitDriveMode() {
+        isDriving = false; currentDriveRoute = null;
+        document.getElementById('drive-hud').classList.add('hidden');
+        if (activeViewLine) map.removeLayer(activeViewLine);
+        activeViewLine = null;
+    }
+
+    function updateHUD() {
+        if (!isDriving || !currentDriveRoute || !lastKnownPos) return;
+        const miles = calculateRemaining(lastKnownPos, currentDriveRoute.path);
+        document.getElementById('hud-miles').innerText   = miles.toFixed(2) + " Mi";
+        document.getElementById('hud-heading').innerText = getCardinal(userHeading);
+        document.getElementById('hud-time-car').innerText  = Math.max(1, Math.round((miles/30)*60)) + "m";
+        document.getElementById('hud-time-bike').innerText = Math.max(1, Math.round((miles/12)*60)) + "m";
+        document.getElementById('hud-time-walk').innerText = Math.max(1, Math.round((miles/3)*60))  + "m";
+    }
+
+    // ── Location tracking ──
+    function updateLocation(latlng) {
+        lastKnownPos = latlng;
+        if (userMarker) userMarker.setLatLng(latlng);
+        if (isDriving && currentDriveRoute && document.getElementById('auto-reroute').checked) {
+            let nearestDist = Infinity;
+            currentDriveRoute.path.forEach(pt => { const d = L.latLng(latlng).distanceTo(L.latLng(pt)); if (d < nearestDist) nearestDist = d; });
+            if (nearestDist > OFF_ROUTE_THRESHOLD) twLaunchRoute();
+        }
+        document.getElementById('tracking-status').className = "w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(52,211,153,0.5)]";
+        document.getElementById('gps-label').innerText  = `Live GPS (±${Math.round(Math.random()*5+3)}m)`;
+        document.getElementById('gps-label').className  = "text-[9px] font-bold text-emerald-500 uppercase";
+        if (!document.getElementById('weather-icon').src || document.getElementById('weather-icon').src === window.location.href) loadWeatherIcon();
+    }
+
+    // ── Helpers ──
+    function calculateDistance(points) {
+        let total = 0;
+        for (let i = 0; i < points.length - 1; i++) total += L.latLng(points[i]).distanceTo(L.latLng(points[i+1]));
+        return (total * 0.000621371).toFixed(2);
+    }
+
+    function calculateRemaining(currentPos, routePoints) {
+        if (!currentPos || routePoints.length < 2) return 0;
+        let nearestIdx = 0, minDist = Infinity;
+        routePoints.forEach((pt, idx) => { const d = L.latLng(currentPos).distanceTo(L.latLng(pt)); if (d < minDist) { minDist = d; nearestIdx = idx; } });
+        let rem = L.latLng(currentPos).distanceTo(L.latLng(routePoints[nearestIdx]));
+        for (let i = nearestIdx; i < routePoints.length - 1; i++) rem += L.latLng(routePoints[i]).distanceTo(L.latLng(routePoints[i+1]));
+        return rem * 0.000621371;
+    }
+
+    function getCardinal(angle) {
+        return ['N','NE','E','SE','S','SW','W','NW'][Math.round(angle/45)%8];
+    }
+
+    // ── Global search ──
+    const searchPinIcon = L.divIcon({
+        className: 'search-pin-wrapper',
+        html: `<div class="search-pin-drop"><svg class="w-8 h-8 drop-shadow-lg" fill="var(--clay)" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg></div>`,
+        iconSize: [32,32], iconAnchor: [16,32]
+    });
+
+    async function performSearch(query) {
+        if (!query) return;
+        try {
+            const bias = lastKnownPos ? `&lat=${lastKnownPos.lat}&lon=${lastKnownPos.lng}` : '';
+            const res  = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}${bias}&limit=1`);
+            const data = await res.json();
+            if (data?.features?.length > 0) {
+                const [lng, lat] = data.features[0].geometry.coordinates;
+                const name = data.features[0].properties.name || data.features[0].properties.street || query;
+                if (searchMarker) map.removeLayer(searchMarker);
+                searchMarker = L.marker([lat, lng], { icon: searchPinIcon }).addTo(map);
+                searchMarker.bindPopup(`<div class="p-2"><h4 class="font-bold text-slate-800 text-xs">${name}</h4></div>`, { closeButton: false }).openPopup();
+                map.flyTo([lat, lng], 14);
+                if (currentMode === 'mobile') {
+                    const sidebar = document.getElementById('sidebar');
+                    if (!sidebar.classList.contains('is-collapsed')) toggleSidebarCollapse();
+                }
+            }
+        } catch(err) { console.error("Search failed:", err); }
+    }
+
+    document.getElementById('global-search').onkeydown = (e) => { if (e.key === 'Enter') performSearch(e.target.value); };
     </script>
 </body>
 </html>
