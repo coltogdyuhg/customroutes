@@ -106,11 +106,46 @@
 
         .leaflet-control-layers { background: var(--bg-2) !important; border: 1px solid var(--border-2) !important; border-radius: 10px !important; box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important; color: var(--text-secondary) !important; font-family: 'Inter', sans-serif !important; font-size: 11px !important; font-weight: 600 !important; }
 
-        /* GPS marker */
-        .user-marker-wrap { position: relative; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
-        .user-ring { position: absolute; inset: -4px; border-radius: 50%; background: rgba(82,179,110,0.30); animation: user-pulse 2.5s ease-out infinite; }
-        .user-dot { width: 14px; height: 14px; background: var(--green-400); border: 2.5px solid white; border-radius: 50%; box-shadow: 0 0 16px rgba(82,179,110,0.6); position: relative; z-index: 2; }
-        .user-arrow-outer { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 9px solid var(--green-400); filter: drop-shadow(0 0 4px rgba(82,179,110,0.8)); z-index: 3; }
+        /* GPS marker — arrow always visible, rotates with heading */
+        .user-marker-wrap {
+            position: relative;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .user-ring {
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            background: rgba(82,179,110,0.30);
+            animation: user-pulse 2.5s ease-out infinite;
+        }
+        .user-dot {
+            width: 14px;
+            height: 14px;
+            background: var(--green-400);
+            border: 2.5px solid white;
+            border-radius: 50%;
+            box-shadow: 0 0 16px rgba(82,179,110,0.6);
+            position: relative;
+            z-index: 2;
+        }
+        /* Arrow sits outside the dot, at the top, rotates with parent */
+        .user-arrow-outer {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 9px solid var(--green-400);
+            filter: drop-shadow(0 0 4px rgba(82,179,110,0.8));
+            z-index: 3;
+        }
 
         @keyframes user-pulse { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(3.5); opacity: 0; } }
 
@@ -153,7 +188,13 @@
         .leaflet-popup-close-button { color: var(--text-muted) !important; }
 
         /* ── Stop builder ── */
-        .stop-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: var(--surface-1); border: 1px solid var(--border-1); transition: all 0.15s; animation: fadeIn 0.2s ease-out; }
+        .stop-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px; border-radius: 10px;
+            background: var(--surface-1); border: 1px solid var(--border-1);
+            transition: all 0.15s;
+            animation: fadeIn 0.2s ease-out;
+        }
         .stop-item.resolving { border-color: rgba(61,143,86,0.3); background: rgba(29,74,46,0.1); }
         .stop-item.resolved  { border-color: rgba(61,143,86,0.45); background: rgba(29,74,46,0.18); }
         .stop-item.error     { border-color: rgba(239,68,68,0.25); background: rgba(127,29,29,0.12); }
@@ -182,20 +223,6 @@
 
         /* Route legend chips */
         .leg-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 9999px; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
-
-        /* ── Weather Widget ── */
-        .wx-slot {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 9px;
-            padding: 0 12px;
-            transition: opacity 0.4s ease, transform 0.4s ease;
-            pointer-events: none;
-            will-change: opacity, transform;
-        }
     </style>
 </head>
 <body class="noise">
@@ -234,6 +261,7 @@
 <!-- ══ TRAIL WEAVER MODAL ══ -->
 <div id="nav-modal" class="fixed inset-0 z-[2000] hidden items-end sm:items-center justify-center sm:p-6 modal-backdrop" style="display:none">
     <div class="modal-sheet w-full max-w-lg rounded-t-[24px] sm:rounded-[24px] overflow-hidden shadow-2xl" style="max-height:92vh">
+        <!-- Header -->
         <div style="padding:24px 24px 16px;border-bottom:1px solid var(--border-1)">
             <div class="flex items-center gap-3">
                 <div style="width:36px;height:36px;border-radius:10px;background:var(--green-700);display:flex;align-items:center;justify-content:center;flex-shrink:0">
@@ -253,7 +281,7 @@
 
         <div style="overflow-y:auto;max-height:calc(92vh - 110px)">
 
-            <!-- Step 1: Vehicle -->
+            <!-- ══ Step 1: Vehicle ══ -->
             <div id="tw-step-1" style="padding:24px;display:flex;flex-direction:column;gap:20px">
                 <div>
                     <h4 style="font-size:15px;font-weight:700;color:var(--text-primary)">How are you getting around?</h4>
@@ -298,13 +326,17 @@
                 <button onclick="twNext(1)" class="btn btn-primary" style="height:44px;font-size:12px;font-weight:700;letter-spacing:0.04em">Continue →</button>
             </div>
 
-            <!-- Step 2: Stop Builder -->
+            <!-- ══ Step 2: Stop Builder ══ -->
             <div id="tw-step-2" style="display:none;padding:24px;flex-direction:column;gap:18px">
                 <div>
                     <h4 style="font-size:15px;font-weight:700;color:var(--text-primary)">Where do you want to go?</h4>
                     <p style="font-size:11px;color:var(--text-muted);margin-top:4px;font-weight:500">Just type a name — AI finds the closest real place to you</p>
                 </div>
+
+                <!-- Stops list -->
                 <div id="tw-stops-list" style="display:flex;flex-direction:column;gap:7px;min-height:40px"></div>
+
+                <!-- Add stop input -->
                 <div style="position:relative">
                     <div class="stop-input-row">
                         <div style="position:relative;flex:1">
@@ -318,12 +350,17 @@
                             Add Stop
                         </button>
                     </div>
+                    <!-- AI suggestions dropdown -->
                     <div id="stop-suggestions" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:100" class="suggestions-box"></div>
                 </div>
+
+                <!-- Quick chips -->
                 <div>
                     <p style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">Quick adds</p>
                     <div style="display:flex;flex-wrap:wrap;gap:6px" id="quick-chips"></div>
                 </div>
+
+                <!-- Return home toggle -->
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
                     <div>
                         <p style="font-size:12px;font-weight:600;color:var(--text-primary)">Return home at end</p>
@@ -331,6 +368,8 @@
                     </div>
                     <label class="toggle"><input type="checkbox" id="tw-return-home" checked><span class="toggle-track"></span></label>
                 </div>
+
+                <!-- Distance hint -->
                 <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:var(--surface-1);border:1px solid var(--border-1)">
                     <svg width="14" height="14" fill="none" stroke="var(--text-muted)" viewBox="0 0 24 24" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     <div style="flex:1">
@@ -340,13 +379,14 @@
                     <input id="tw-target-miles" type="number" min="0.1" max="100" step="0.5" placeholder="miles"
                         class="field" style="width:72px;height:32px;padding:4px 10px;font-size:12px;text-align:center">
                 </div>
+
                 <div style="display:flex;gap:10px">
                     <button onclick="twBack(2)" class="btn btn-ghost" style="height:44px;font-size:12px;font-weight:700;padding:0 20px">← Back</button>
                     <button onclick="twNext(2)" class="btn btn-primary" style="flex:1;height:44px;font-size:12px;font-weight:700;letter-spacing:0.04em" id="tw-weave-btn">Weave My Path ✦</button>
                 </div>
             </div>
 
-            <!-- Step 3: Result -->
+            <!-- ══ Step 3: Result ══ -->
             <div id="tw-step-3" style="display:none;padding:24px;flex-direction:column;gap:20px">
                 <div id="tw-thinking" style="display:flex;flex-direction:column;align-items:center;gap:20px;padding:32px 0">
                     <div style="position:relative;width:56px;height:56px">
@@ -366,6 +406,7 @@
                             <span style="font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--green-200)">Route Plan</span>
                         </div>
                         <p id="tw-ai-summary" style="font-size:12px;color:var(--text-secondary);line-height:1.6;font-weight:500"></p>
+                        <!-- Color legend -->
                         <div id="tw-color-legend" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px"></div>
                         <div style="display:flex;gap:20px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-1)">
                             <div>
@@ -431,6 +472,7 @@
             </div>
         </div>
     </div>
+    <!-- veya 2026 footer -->
     <div style="padding:16px 20px;border-top:1px solid var(--border-1);text-align:center">
         <span style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);opacity:0.6">veya 2026</span>
     </div>
@@ -538,50 +580,6 @@
 
         <div id="map-area" style="flex:1 1 0%;min-width:0;min-height:0;position:relative;overflow:hidden">
             <div id="map"></div>
-
-            <!-- ══ WEATHER WIDGET ══ -->
-            <div id="wx-widget" style="
-                position:absolute;
-                bottom:24px;
-                left:16px;
-                z-index:1000;
-                display:none;
-                width:100px;
-                height:46px;
-                border-radius:14px;
-                background:rgba(10,15,10,0.86);
-                border:1px solid rgba(61,143,86,0.20);
-                backdrop-filter:blur(20px);
-                -webkit-backdrop-filter:blur(20px);
-                box-shadow:0 4px 20px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.03);
-                overflow:hidden;
-            ">
-                <!-- Slot: Temperature -->
-                <div id="wx-slot-temp" class="wx-slot" style="opacity:1;transform:translateY(0)">
-                    <span id="wx-temp-icon" style="font-size:16px;line-height:1;flex-shrink:0">☀️</span>
-                    <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
-                        <span id="wx-temp-val" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:rgba(255,255,255,0.93);line-height:1">--°</span>
-                        <span style="font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.28)">High</span>
-                    </div>
-                </div>
-                <!-- Slot: Rain -->
-                <div id="wx-slot-rain" class="wx-slot" style="opacity:0;transform:translateY(14px)">
-                    <span id="wx-rain-icon" style="font-size:16px;line-height:1;flex-shrink:0">🌧️</span>
-                    <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
-                        <span id="wx-rain-val" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:rgba(255,255,255,0.93);line-height:1">--%</span>
-                        <span style="font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.28)">Rain</span>
-                    </div>
-                </div>
-                <!-- Slot: Time -->
-                <div id="wx-slot-time" class="wx-slot" style="opacity:0;transform:translateY(14px)">
-                    <span id="wx-time-icon" style="font-size:16px;line-height:1;flex-shrink:0">🌙</span>
-                    <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
-                        <span id="wx-time-val" style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:rgba(255,255,255,0.93);line-height:1.1">--:--</span>
-                        <span style="font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.28)">Local</span>
-                    </div>
-                </div>
-            </div>
-
             <button onclick="recenter()" id="floating-locate" style="position:absolute;bottom:24px;right:24px;z-index:1000;width:48px;height:48px;border-radius:14px;background:rgba(10,15,10,0.9);border:1px solid var(--border-2);color:var(--green-400);display:none;align-items:center;justify-content:center;backdrop-filter:blur(12px);box-shadow:0 8px 32px rgba(0,0,0,0.4);cursor:pointer" class="md:hidden">
                 <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
             </button>
@@ -596,8 +594,8 @@ let isDrawing = false, userMarker = null, searchMarker = null;
 let savedRoutes = JSON.parse(localStorage.getItem('saved_routes')) || [];
 let lastKnownPos = null;
 let activeViewLine = null;
-let activeLegs = [];
-let dissolveLegs = [];
+let activeLegs = [];          // multi-color leg polylines
+let dissolveLegs = [];        // per-leg dissolve state [{polyline, fullPath, dissolvedIdx}]
 let isDriving = false;
 let currentDriveRoute = null;
 let currentMode = 'desktop';
@@ -609,9 +607,13 @@ let twVehicle = null, twSpeedMPH = null;
 let twBuiltRoute = null;
 const OFF_ROUTE_THRESHOLD = 50;
 
+// ── Route segment colors ──
+// Leg 0 (start → stop1): orange
+// Leg N-1 (last stop → home): purple
+// Middle legs: cycle through these
 const LEG_COLORS = {
-    first:  '#e8943e',
-    return: '#9b6dce',
+    first:  '#e8943e',   // orange
+    return: '#9b6dce',   // purple
     mid: ['#3fb8d4', '#e85e5e', '#52b36e', '#d4b93e', '#5eaae8']
 };
 function getLegColor(legIdx, totalLegs) {
@@ -627,6 +629,7 @@ function getLegLabel(legIdx, totalLegs, stopNames) {
     return `→ ${stopNames[legIdx] || `Stop ${legIdx+1}`}`;
 }
 
+// ══ Trail Weaver Stop State ══
 let twStops = [];
 let suggestionDebounce = null;
 let aiSuggestController = null;
@@ -696,6 +699,7 @@ function finishLoading(mode) {
     }, 500);
 }
 
+// ── GPS ──
 const GPS_OPTIONS_HIGH  = { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 };
 const GPS_OPTIONS_WATCH = { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 };
 function getAccurateFix() {
@@ -722,6 +726,7 @@ function initMap(mode) {
     L.control.layers({ "🌑 Dark": darkLayer, "🗺 Standard": voyagerLayer, "🛰 Satellite": satelliteGroup }, null, { position: 'topleft' }).addTo(map);
     polyline = L.polyline([], { color: '#52b36e', weight: 4, dashArray: '8 12', lineCap: 'round' }).addTo(map);
 
+    // GPS marker: arrow + dot in a container that rotates as a whole
     const customIcon = L.divIcon({
         className: '',
         html: `<div id="user-marker-container" style="width:24px;height:24px;position:relative;transform:rotate(0deg);transition:transform 0.3s ease-out">
@@ -734,6 +739,7 @@ function initMap(mode) {
     });
     userMarker = L.marker(fallback, { icon: customIcon }).addTo(map);
 
+    // Device orientation — rotate the entire marker container
     function applyHeading(deg) {
         userHeading = deg;
         const el = document.getElementById('user-marker-container');
@@ -741,6 +747,7 @@ function initMap(mode) {
     }
 
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        // iOS 13+
         document.addEventListener('click', function iosPermOnce() {
             DeviceOrientationEvent.requestPermission().then(state => {
                 if (state === 'granted') {
@@ -772,7 +779,10 @@ function initMap(mode) {
         navigator.geolocation.watchPosition(
             (pos) => {
                 const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
-                if (pos.coords.heading != null && !isNaN(pos.coords.heading)) applyHeading(pos.coords.heading);
+                // Use GPS course/heading if available
+                if (pos.coords.heading != null && !isNaN(pos.coords.heading)) {
+                    applyHeading(pos.coords.heading);
+                }
                 updateLocation(latlng);
                 if (!initialRecenterDone) { map.flyTo(latlng, 16); initialRecenterDone = true; }
                 if (isDriving) { map.panTo(latlng); updateHUD(); advanceDissolve(latlng); }
@@ -798,6 +808,7 @@ function handleGPSBlocked() {
 }
 function recenter() { if (lastKnownPos) map.flyTo(lastKnownPos, 16); }
 
+// ── Route drawing ──
 document.getElementById('new-route-btn').onclick = () => {
     isDrawing = true; routePath = []; markers.forEach(m => map.removeLayer(m)); markers = []; polyline.setLatLngs([]);
     document.getElementById('new-route-btn').style.display = 'none';
@@ -826,6 +837,7 @@ document.getElementById('confirm-save-btn').onclick = () => {
     document.getElementById('route-name-input').value = '';
 };
 
+// ── Saved routes ──
 window.deleteRoute = (id) => {
     savedRoutes = savedRoutes.filter(r => r.id !== id);
     localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
@@ -861,7 +873,7 @@ function updateSavedList() {
     });
 }
 
-// ── Weather (header icon) ──
+// ── Weather ──
 async function loadWeatherIcon() {
     if (!lastKnownPos) return;
     try {
@@ -875,129 +887,9 @@ async function loadWeatherIcon() {
 }
 
 // ══════════════════════════════════════════════
-// ══ WEATHER WIDGET (map bottom-left) ══
+// ══ TRAIL WEAVER — REBUILT STOP BUILDER ══
 // ══════════════════════════════════════════════
-let wxData = { tempHigh: null, rainChance: null };
-let wxSlotIdx = 0;
-const WX_SLOT_IDS = ['wx-slot-temp', 'wx-slot-rain', 'wx-slot-time'];
-let wxLoaded = false;
 
-function wxShowSlot(idx) {
-    WX_SLOT_IDS.forEach((id, i) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        if (i === idx) {
-            el.style.opacity = '1';
-            el.style.transform = 'translateY(0)';
-        } else {
-            el.style.opacity = '0';
-            el.style.transform = i < idx ? 'translateY(-12px)' : 'translateY(12px)';
-        }
-    });
-}
-
-function wxCycle() {
-    // Briefly fade out current slot upward, then bring in next from below
-    const curEl = document.getElementById(WX_SLOT_IDS[wxSlotIdx]);
-    if (curEl) {
-        curEl.style.opacity = '0';
-        curEl.style.transform = 'translateY(-12px)';
-    }
-    wxSlotIdx = (wxSlotIdx + 1) % 3;
-    // Always refresh time slot before showing it
-    if (wxSlotIdx === 2) wxUpdateTimeSlot();
-    setTimeout(() => {
-        const nextEl = document.getElementById(WX_SLOT_IDS[wxSlotIdx]);
-        if (nextEl) {
-            nextEl.style.transform = 'translateY(12px)';
-            nextEl.style.opacity = '0';
-            // Small delay so the browser registers the starting position
-            requestAnimationFrame(() => requestAnimationFrame(() => {
-                nextEl.style.opacity = '1';
-                nextEl.style.transform = 'translateY(0)';
-            }));
-        }
-    }, 60);
-}
-
-function wxUpdateTimeSlot() {
-    const now = new Date();
-    const h = now.getHours();
-    const m = now.getMinutes();
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    const hh = h % 12 || 12;
-    const mm = String(m).padStart(2, '0');
-    const timeEl = document.getElementById('wx-time-val');
-    const iconEl = document.getElementById('wx-time-icon');
-    if (timeEl) timeEl.textContent = `${hh}:${mm}`;
-    // sub-label could show AM/PM — we'll fold it into the value
-    if (timeEl) timeEl.textContent = `${hh}:${mm} ${ampm}`;
-    if (iconEl) {
-        if (h >= 6 && h < 12) iconEl.textContent = '🌤️';
-        else if (h >= 12 && h < 17) iconEl.textContent = '☀️';
-        else if (h >= 17 && h < 20) iconEl.textContent = '🌆';
-        else iconEl.textContent = '🌙';
-    }
-}
-
-async function loadWeatherWidget() {
-    if (!lastKnownPos || wxLoaded) return;
-    wxLoaded = true;
-    const widget = document.getElementById('wx-widget');
-    if (widget) widget.style.display = 'block';
-    // Show time immediately while we fetch
-    wxUpdateTimeSlot();
-
-    try {
-        const { lat, lng } = lastKnownPos;
-        const res = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lng}&units=imperial&cnt=8&appid=150ba377c3ca4474889150133260503`);
-        if (!res.ok) throw new Error('wx');
-        const data = await res.json();
-
-        // Today's high
-        const todayStr = new Date().toISOString().slice(0, 10);
-        const todaySlots = data.list.filter(d => d.dt_txt.startsWith(todayStr));
-        const source = todaySlots.length ? todaySlots : data.list.slice(0, 3);
-        const highF = Math.round(Math.max(...source.map(d => d.main.temp_max ?? d.main.temp)));
-        const rainPct = Math.round(Math.max(...source.map(d => d.pop || 0)) * 100);
-
-        wxData = { tempHigh: highF, rainChance: rainPct };
-
-        // Map OWM icon code → emoji
-        const owmIcon = data.list[0]?.weather?.[0]?.icon || '';
-        const emojiMap = {
-            '01d':'☀️','01n':'🌙','02d':'⛅','02n':'⛅',
-            '03d':'☁️','03n':'☁️','04d':'☁️','04n':'☁️',
-            '09d':'🌧️','09n':'🌧️','10d':'🌦️','10n':'🌦️',
-            '11d':'⛈️','11n':'⛈️','13d':'❄️','13n':'❄️','50d':'🌫️','50n':'🌫️'
-        };
-        const tempIconEl = document.getElementById('wx-temp-icon');
-        if (tempIconEl) tempIconEl.textContent = emojiMap[owmIcon] || '🌡️';
-
-        const tempValEl = document.getElementById('wx-temp-val');
-        if (tempValEl) tempValEl.textContent = `${highF}°`;
-
-        const rainValEl = document.getElementById('wx-rain-val');
-        if (rainValEl) rainValEl.textContent = `${rainPct}%`;
-
-        const rainIconEl = document.getElementById('wx-rain-icon');
-        if (rainIconEl) rainIconEl.textContent = rainPct > 60 ? '🌧️' : rainPct > 20 ? '🌦️' : '🌤️';
-
-    } catch(e) {
-        // Graceful fallback — widget still shows time
-        const tempValEl = document.getElementById('wx-temp-val');
-        const rainValEl = document.getElementById('wx-rain-val');
-        if (tempValEl) tempValEl.textContent = '--°';
-        if (rainValEl) rainValEl.textContent = '--%';
-    }
-
-    // Start the cycle: every 3s switch slot
-    if (!window._wxInterval) {
-        window._wxInterval = setInterval(wxCycle, 3000);
-    }
-}
-
-// ══ Trail Weaver ══
 function openNavModal() {
     document.getElementById('nav-modal').style.display = 'flex';
     twGoToStep(1);
@@ -1017,7 +909,10 @@ function twGoToStep(n) {
     document.getElementById('tw-step-label').innerText = n;
     if (n === 2) renderStopBuilder();
 }
-function twBack(step) { twGoToStep(step - 1); hideSuggestions(); }
+function twBack(step) {
+    twGoToStep(step - 1);
+    hideSuggestions();
+}
 
 function twSelectVehicle(type) {
     twVehicle = type; selectedVehicle = type;
@@ -1049,7 +944,11 @@ function twNext(step) {
     }
 }
 
-function renderStopBuilder() { renderStopsList(); renderQuickChips(); }
+// ── Stop Builder UI ──
+function renderStopBuilder() {
+    renderStopsList();
+    renderQuickChips();
+}
 
 function renderQuickChips() {
     const c = document.getElementById('quick-chips');
@@ -1074,11 +973,13 @@ function renderStopsList() {
         const div = document.createElement('div');
         div.className = `stop-item ${stop.status === 'resolving' ? 'resolving' : stop.status === 'resolved' ? 'resolved' : stop.status === 'error' ? 'error' : ''}`;
         div.id = `stop-item-${idx}`;
+
         const spinner = stop.status === 'resolving'
             ? `<div class="stop-spinner"></div>`
             : `<button onclick="removeStop(${idx})" style="width:20px;height:20px;border-radius:5px;background:transparent;border:none;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;transition:color 0.12s" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">
                 <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>`;
+
         const subText = stop.status === 'resolving'
             ? `<div class="stop-sub">Searching nearby…</div>`
             : stop.status === 'resolved' && stop.resolved
@@ -1086,6 +987,7 @@ function renderStopsList() {
             : stop.status === 'error'
             ? `<div class="stop-sub err">⚠ Couldn't find — try a different name</div>`
             : `<div class="stop-sub">Queued</div>`;
+
         div.innerHTML = `
             <div class="stop-num">${idx + 1}</div>
             <div style="flex:1;min-width:0">
@@ -1097,9 +999,15 @@ function renderStopsList() {
     });
 }
 
-window.removeStop = (idx) => { twStops.splice(idx, 1); renderStopsList(); };
+window.removeStop = (idx) => {
+    twStops.splice(idx, 1);
+    renderStopsList();
+};
 
-function addQuickChip(label) { document.getElementById('stop-text-input').value = label; addStopFromInput(); }
+function addQuickChip(label) {
+    document.getElementById('stop-text-input').value = label;
+    addStopFromInput();
+}
 
 function addStopFromInput() {
     const input = document.getElementById('stop-text-input');
@@ -1128,11 +1036,16 @@ async function resolveStop(idx) {
             const dist = userLat ? haversineMiles(userLat, userLng, result.lat, result.lng).toFixed(1) : null;
             twStops[idx].resolved = { ...result, distance_mi: dist };
             twStops[idx].status = 'resolved';
-        } else if (twStops[idx]) { twStops[idx].status = 'error'; }
-    } catch(e) { if (twStops[idx]) twStops[idx].status = 'error'; }
+        } else if (twStops[idx]) {
+            twStops[idx].status = 'error';
+        }
+    } catch(e) {
+        if (twStops[idx]) twStops[idx].status = 'error';
+    }
     renderStopsList();
 }
 
+// ── AI Suggestions ──
 function onStopInput(val) {
     clearTimeout(suggestionDebounce);
     if (!val || val.length < 2) { hideSuggestions(); return; }
@@ -1171,7 +1084,9 @@ Rules:
         const text = (data.content || []).map(i => i.text || '').join('');
         const match = text.match(/\[[\s\S]*\]/);
         if (match) showSuggestions(JSON.parse(match[0]));
-    } catch(e) { if (e.name !== 'AbortError') hideSuggestions(); }
+    } catch(e) {
+        if (e.name !== 'AbortError') hideSuggestions();
+    }
 }
 function showSuggestions(items) {
     const box = document.getElementById('stop-suggestions');
@@ -1188,14 +1103,22 @@ function showSuggestions(items) {
     box.style.display = 'block';
 }
 function hideSuggestions() { document.getElementById('stop-suggestions').style.display = 'none'; }
-function pickSuggestion(label) { document.getElementById('stop-text-input').value = label; hideSuggestions(); addStopFromInput(); }
+function pickSuggestion(label) {
+    document.getElementById('stop-text-input').value = label;
+    hideSuggestions();
+    addStopFromInput();
+}
 
+// ── Build route summary ──
 function twBuildSummary() {
     document.getElementById('tw-thinking').style.display = 'flex';
     document.getElementById('tw-result').style.display = 'none';
     const labels = ['Computing path…','Checking road types…','Calculating distances…','Weaving your trail…'];
     let li = 0;
-    const lv = setInterval(() => { const el = document.getElementById('tw-thinking-label'); if (el) el.innerText = labels[li % labels.length]; li++; }, 900);
+    const lv = setInterval(() => {
+        const el = document.getElementById('tw-thinking-label');
+        if (el) el.innerText = labels[li % labels.length]; li++;
+    }, 900);
     setTimeout(() => {
         clearInterval(lv);
         const resolvedStops = twStops.filter(s => s.status === 'resolved' && s.resolved);
@@ -1215,9 +1138,13 @@ function twBuildSummary() {
         const loopStr = returnHome ? ', then back home' : '';
         const distStr = targetMiles ? `targeting ~${targetMiles} mi` : `~${baseMiles} mi estimated`;
         const safetyMap = { walking:'Routed on sidewalks and pedestrian paths.', running:'Paths and parks — heavy traffic avoided.', bike:'Bike lanes and quiet streets — no highways.', car:'Full road access.', escooter:`At ${twSpeedMPH} MPH: residential streets and bike paths.`, ebike:`At ${twSpeedMPH} MPH: bike lanes and quieter roads.` };
+
+        // Build color legend for the modal
         const totalLegs = stopCount + (returnHome ? 1 : 0);
         const legendEl = document.getElementById('tw-color-legend');
         legendEl.innerHTML = '';
+        const legLabels = [...stopNames];
+        if (returnHome) legLabels.push('Home');
         for (let i = 0; i < totalLegs; i++) {
             const color = getLegColor(i, totalLegs);
             const label = getLegLabel(i, totalLegs, stopNames);
@@ -1227,6 +1154,7 @@ function twBuildSummary() {
             chip.innerHTML = `<span style="width:8px;height:8px;border-radius:2px;background:${color};display:inline-block"></span>${label}`;
             legendEl.appendChild(chip);
         }
+
         document.getElementById('tw-thinking').style.display = 'none';
         document.getElementById('tw-result').style.display = 'flex';
         if (resolvedStops.length === 0) {
@@ -1245,6 +1173,7 @@ function twBuildSummary() {
     }, 1800);
 }
 
+// ── Progress Toast ──
 let progressToastEl = null;
 function showProgressToast(steps) {
     removeProgressToast();
@@ -1263,6 +1192,7 @@ function setProgressStep(index, state, customLabel = null) {
 }
 function removeProgressToast() { if (progressToastEl) { progressToastEl.remove(); progressToastEl = null; } }
 
+// ── Geocoding helpers ──
 function haversineMiles(lat1, lng1, lat2, lng2) {
     const R = 3958.8, dLat = (lat2-lat1)*Math.PI/180, dLng = (lng2-lng1)*Math.PI/180;
     const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
@@ -1346,15 +1276,23 @@ async function resolveStopToCoords(stopName, userLat, userLng) {
     return await resolveViaPhoton(stopName, userLat, userLng);
 }
 
+// ══ MULTI-COLOR LEG MANAGEMENT ══
+
 function clearActiveLegs() {
     activeLegs.forEach(l => { if (l && map.hasLayer(l)) map.removeLayer(l); });
     activeLegs = [];
     dissolveLegs = [];
 }
 
+/**
+ * Split a full OSRM path into legs based on waypoint coordinates.
+ * Each waypoint snaps to the closest point on the path.
+ */
 function splitPathIntoLegs(fullPath, waypoints) {
+    // waypoints = [[lat,lng], ...] — the intermediate stop coordinates + optional home
     const legs = [];
     let remaining = [...fullPath];
+
     for (let w = 0; w < waypoints.length; w++) {
         const target = waypoints[w];
         let bestIdx = 0, bestDist = Infinity;
@@ -1362,45 +1300,69 @@ function splitPathIntoLegs(fullPath, waypoints) {
             const d = haversineMiles(remaining[i][0], remaining[i][1], target[0], target[1]);
             if (d < bestDist) { bestDist = d; bestIdx = i; }
         }
+        // Leg = remaining[0 .. bestIdx+1]
         legs.push(remaining.slice(0, bestIdx + 1));
         remaining = remaining.slice(bestIdx);
     }
+    // Last leg = everything remaining
     if (remaining.length > 1) legs.push(remaining);
     return legs.filter(l => l.length >= 2);
 }
 
+/**
+ * Draw colored polylines for each leg and set up dissolve state.
+ */
 function drawColoredLegs(legs, stopNames, returnHome) {
     clearActiveLegs();
     const totalLegs = legs.length;
     legs.forEach((leg, i) => {
         const color = getLegColor(i, totalLegs);
-        const pl = L.polyline(leg, { color, weight: 6, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
+        const pl = L.polyline(leg, {
+            color,
+            weight: 6,
+            opacity: 0.9,
+            lineCap: 'round',
+            lineJoin: 'round'
+        }).addTo(map);
         activeLegs.push(pl);
         dissolveLegs.push({ polyline: pl, fullPath: [...leg], dissolvedIdx: 0, color });
     });
 }
 
+/**
+ * Dissolve effect: as user moves, trim the portion of each leg they've passed.
+ */
 function advanceDissolve(userLatLng) {
     if (!dissolveLegs.length) return;
     const userLat = userLatLng.lat, userLng = userLatLng.lng;
+
     for (let li = 0; li < dissolveLegs.length; li++) {
         const leg = dissolveLegs[li];
         if (leg.dissolvedIdx >= leg.fullPath.length - 1) continue;
+
+        // Find the closest point on this leg to the user
         let bestIdx = leg.dissolvedIdx, bestDist = Infinity;
         for (let i = leg.dissolvedIdx; i < leg.fullPath.length; i++) {
             const d = haversineMiles(leg.fullPath[i][0], leg.fullPath[i][1], userLat, userLng);
             if (d < bestDist) { bestDist = d; bestIdx = i; }
-            if (i > leg.dissolvedIdx + 60) break;
+            if (i > leg.dissolvedIdx + 60) break; // look-ahead limit
         }
+
+        // Only dissolve if user is close to this leg (within ~80m)
         if (bestDist < 0.05) {
             leg.dissolvedIdx = Math.max(leg.dissolvedIdx, bestIdx);
             const remaining = leg.fullPath.slice(leg.dissolvedIdx);
-            if (remaining.length >= 2) leg.polyline.setLatLngs(remaining);
-            else leg.polyline.setStyle({ opacity: 0.15 });
+            if (remaining.length >= 2) {
+                leg.polyline.setLatLngs(remaining);
+            } else {
+                // Leg fully traveled — fade it out
+                leg.polyline.setStyle({ opacity: 0.15 });
+            }
         }
     }
 }
 
+// ── Launch route ──
 async function twLaunchRoute() {
     if (!twBuiltRoute?.feasible) return;
     closeNavModal();
@@ -1445,21 +1407,28 @@ async function twLaunchRoute() {
             await new Promise(r=>setTimeout(r,800));
             removeProgressToast();
 
+            // Clear old route overlays
             if (activeViewLine) { map.removeLayer(activeViewLine); activeViewLine = null; }
             clearActiveLegs();
 
-            const waypointCoords = resolvedStops.filter(s => s.resolved).map(s => [s.resolved.lat, s.resolved.lng]);
+            // Build waypoints list for splitting (stops + optional home)
+            const waypointCoords = resolvedStops
+                .filter(s => s.resolved)
+                .map(s => [s.resolved.lat, s.resolved.lng]);
             if (plan.returnHome && userLat) waypointCoords.push([userLat, userLng]);
 
+            // Split path into legs and draw with colors
             const legs = splitPathIntoLegs(fullPath, waypointCoords);
             drawColoredLegs(legs, stopNames, plan.returnHome);
 
+            // Fit map to route
             if (legs.length) {
                 const allPoints = legs.flat();
                 const bounds = L.latLngBounds(allPoints);
                 map.fitBounds(bounds, { padding: [50, 50] });
             }
 
+            // Drop stop markers
             resolvedStops.forEach((s, i) => {
                 if (!s.resolved) return;
                 const color = getLegColor(i, legs.length);
@@ -1471,6 +1440,7 @@ async function twLaunchRoute() {
                 );
             });
 
+            // Save and enter drive mode
             const saved = { id: Date.now(), name: routeName, distance: distMi, path: fullPath, date: new Date().toLocaleDateString() };
             savedRoutes.push(saved);
             localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
@@ -1484,6 +1454,7 @@ async function twLaunchRoute() {
     }
 }
 
+// ── Simple toast ──
 let simpleToastEl = null;
 function showSimpleToast(msg, isError=false) {
     if (simpleToastEl) simpleToastEl.remove();
@@ -1494,6 +1465,7 @@ function showSimpleToast(msg, isError=false) {
     if (isError) setTimeout(() => { simpleToastEl?.remove(); simpleToastEl = null; }, 4000);
 }
 
+// ── Drive mode ──
 window.enterDriveMode = (id) => {
     const r = savedRoutes.find(x => x.id === id); if (!r) return;
     currentDriveRoute = r; isDriving = true;
@@ -1504,6 +1476,7 @@ window.enterDriveMode = (id) => {
     updateHUD();
 };
 
+// Drive mode for trail weaver routes (uses colored legs already on map)
 function enterDriveModeWithLegs(id) {
     const r = savedRoutes.find(x => x.id === id); if (!r) return;
     currentDriveRoute = r; isDriving = true;
@@ -1530,19 +1503,22 @@ function updateHUD() {
     document.getElementById('hud-time-walk').innerText = Math.max(1, Math.round((miles/3)*60))  + 'm';
 }
 
+// ── Location tracking ──
 function updateLocation(latlng) {
     lastKnownPos = latlng;
     if (userMarker) userMarker.setLatLng(latlng);
+    if (isDriving && currentDriveRoute) {
+        let nearestDist = Infinity;
+        currentDriveRoute.path.forEach(pt => { const d = L.latLng(latlng).distanceTo(L.latLng(pt)); if (d < nearestDist) nearestDist = d; });
+    }
     const dot = document.getElementById('tracking-status');
     dot.style.background = '#52b36e'; dot.classList.add('gps-active');
     document.getElementById('gps-label').innerText = `Live GPS (±${Math.round(Math.random()*5+3)}m)`;
     document.getElementById('gps-label').style.color = '#52b36e';
-    // Load header weather icon
     if (!document.getElementById('weather-icon').src || document.getElementById('weather-icon').src === window.location.href) loadWeatherIcon();
-    // Load weather widget (once GPS is ready)
-    loadWeatherWidget();
 }
 
+// ── Helpers ──
 function calculateDistance(points) {
     let total = 0;
     for (let i = 0; i < points.length-1; i++) total += L.latLng(points[i]).distanceTo(L.latLng(points[i+1]));
@@ -1558,6 +1534,7 @@ function calculateRemaining(currentPos, routePoints) {
 }
 function getCardinal(angle) { return ['N','NE','E','SE','S','SW','W','NW'][Math.round(angle/45)%8]; }
 
+// ── Global search ──
 const searchPinIcon = L.divIcon({
     className: 'search-pin-wrapper',
     html: `<div class="pin-drop-anim"><svg width="28" height="28" fill="var(--amber-500)" viewBox="0 0 20 20" style="filter:drop-shadow(0 4px 8px rgba(0,0,0,0.4))"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg></div>`,
