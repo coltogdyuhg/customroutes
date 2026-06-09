@@ -106,10 +106,48 @@
 
         .leaflet-control-layers { background: var(--bg-2) !important; border: 1px solid var(--border-2) !important; border-radius: 10px !important; box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important; color: var(--text-secondary) !important; font-family: 'Inter', sans-serif !important; font-size: 11px !important; font-weight: 600 !important; }
 
-        .user-dot { width: 14px; height: 14px; background: var(--green-400); border: 2.5px solid white; border-radius: 50%; box-shadow: 0 0 16px rgba(82,179,110,0.6); }
-        .user-arrow { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 9px solid var(--green-400); }
+        /* GPS marker — arrow always visible, rotates with heading */
+        .user-marker-wrap {
+            position: relative;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .user-ring {
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            background: rgba(82,179,110,0.30);
+            animation: user-pulse 2.5s ease-out infinite;
+        }
+        .user-dot {
+            width: 14px;
+            height: 14px;
+            background: var(--green-400);
+            border: 2.5px solid white;
+            border-radius: 50%;
+            box-shadow: 0 0 16px rgba(82,179,110,0.6);
+            position: relative;
+            z-index: 2;
+        }
+        /* Arrow sits outside the dot, at the top, rotates with parent */
+        .user-arrow-outer {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 9px solid var(--green-400);
+            filter: drop-shadow(0 0 4px rgba(82,179,110,0.8));
+            z-index: 3;
+        }
+
         @keyframes user-pulse { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(3.5); opacity: 0; } }
-        .user-ring { position: absolute; inset: -2px; border-radius: 50%; background: rgba(82,179,110,0.35); animation: user-pulse 2.5s ease-out infinite; }
 
         @keyframes pin-drop { 0% { transform: translateY(-30px); opacity: 0; } 80% { transform: translateY(3px); } 100% { transform: translateY(0); opacity: 1; } }
         .pin-drop-anim { animation: pin-drop 0.4s cubic-bezier(0.2, 1, 0.4, 1); }
@@ -182,6 +220,9 @@
         .return-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 9999px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.15s; user-select: none; }
         .return-chip.off { background: var(--surface-1); border: 1px solid var(--border-1); color: var(--text-muted); }
         .return-chip.on  { background: rgba(29,74,46,0.35); border: 1px solid rgba(61,143,86,0.4); color: var(--green-200); }
+
+        /* Route legend chips */
+        .leg-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 9999px; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
     </style>
 </head>
 <body class="noise">
@@ -365,6 +406,8 @@
                             <span style="font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--green-200)">Route Plan</span>
                         </div>
                         <p id="tw-ai-summary" style="font-size:12px;color:var(--text-secondary);line-height:1.6;font-weight:500"></p>
+                        <!-- Color legend -->
+                        <div id="tw-color-legend" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px"></div>
                         <div style="display:flex;gap:20px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-1)">
                             <div>
                                 <p style="font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">Distance</p>
@@ -413,14 +456,14 @@
 </div>
 
 <!-- ══ SETTINGS PANEL ══ -->
-<div id="settings-panel" class="fixed inset-y-0 right-0 w-full z-[1100] translate-x-full transition-transform duration-300 shadow-2xl" style="max-width:300px">
+<div id="settings-panel" class="fixed inset-y-0 right-0 w-full z-[1100] translate-x-full transition-transform duration-300 shadow-2xl" style="max-width:300px;display:flex;flex-direction:column">
     <div style="height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid var(--border-1)">
         <span style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-secondary)">Settings</span>
         <button onclick="toggleSettings()" style="width:32px;height:32px;border-radius:8px;background:var(--surface-1);border:1px solid var(--border-1);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">
             <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
     </div>
-    <div style="padding:24px;display:flex;flex-direction:column;gap:24px">
+    <div style="padding:24px;display:flex;flex-direction:column;gap:24px;flex:1">
         <div>
             <p style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Preferences</p>
             <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
@@ -428,6 +471,10 @@
                 <label class="toggle"><input type="checkbox" id="settings-start-at-loc" onchange="syncToggles(this)"><span class="toggle-track"></span></label>
             </div>
         </div>
+    </div>
+    <!-- veya 2026 footer -->
+    <div style="padding:16px 20px;border-top:1px solid var(--border-1);text-align:center">
+        <span style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);opacity:0.6">veya 2026</span>
     </div>
 </div>
 
@@ -547,6 +594,8 @@ let isDrawing = false, userMarker = null, searchMarker = null;
 let savedRoutes = JSON.parse(localStorage.getItem('saved_routes')) || [];
 let lastKnownPos = null;
 let activeViewLine = null;
+let activeLegs = [];          // multi-color leg polylines
+let dissolveLegs = [];        // per-leg dissolve state [{polyline, fullPath, dissolvedIdx}]
 let isDriving = false;
 let currentDriveRoute = null;
 let currentMode = 'desktop';
@@ -558,8 +607,30 @@ let twVehicle = null, twSpeedMPH = null;
 let twBuiltRoute = null;
 const OFF_ROUTE_THRESHOLD = 50;
 
+// ── Route segment colors ──
+// Leg 0 (start → stop1): orange
+// Leg N-1 (last stop → home): purple
+// Middle legs: cycle through these
+const LEG_COLORS = {
+    first:  '#e8943e',   // orange
+    return: '#9b6dce',   // purple
+    mid: ['#3fb8d4', '#e85e5e', '#52b36e', '#d4b93e', '#5eaae8']
+};
+function getLegColor(legIdx, totalLegs) {
+    if (totalLegs === 1) return LEG_COLORS.first;
+    if (legIdx === 0) return LEG_COLORS.first;
+    if (legIdx === totalLegs - 1) return LEG_COLORS.return;
+    return LEG_COLORS.mid[(legIdx - 1) % LEG_COLORS.mid.length];
+}
+function getLegLabel(legIdx, totalLegs, stopNames) {
+    if (totalLegs === 1) return `To ${stopNames[0] || 'Stop 1'}`;
+    if (legIdx === 0) return `Start → ${stopNames[0] || 'Stop 1'}`;
+    if (legIdx === totalLegs - 1) return 'Return home';
+    return `→ ${stopNames[legIdx] || `Stop ${legIdx+1}`}`;
+}
+
 // ══ Trail Weaver Stop State ══
-let twStops = []; // [{label, resolved:{lat,lng,name,address}|null, status:'pending'|'resolving'|'resolved'|'error'}]
+let twStops = [];
 let suggestionDebounce = null;
 let aiSuggestController = null;
 
@@ -649,23 +720,57 @@ function initMap(mode) {
     const darkLayer    = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
     const voyagerLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
     const satelliteImg = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
-    const labelsOverlay = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y{r}.png', { maxZoom: 19 });
+    const labelsOverlay = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
     const satelliteGroup = L.layerGroup([satelliteImg, labelsOverlay]);
     darkLayer.addTo(map);
     L.control.layers({ "🌑 Dark": darkLayer, "🗺 Standard": voyagerLayer, "🛰 Satellite": satelliteGroup }, null, { position: 'topleft' }).addTo(map);
     polyline = L.polyline([], { color: '#52b36e', weight: 4, dashArray: '8 12', lineCap: 'round' }).addTo(map);
+
+    // GPS marker: arrow + dot in a container that rotates as a whole
     const customIcon = L.divIcon({
-        className: 'custom-div-icon',
-        html: `<div id="marker-orient" style="transform:rotate(0deg);transition:transform 0.2s;position:relative;width:14px;height:14px"><div class="user-arrow"></div><div class="user-ring"></div><div class="user-dot" style="position:relative;z-index:10"></div></div>`,
-        iconSize: [14,14], iconAnchor: [7,7]
+        className: '',
+        html: `<div id="user-marker-container" style="width:24px;height:24px;position:relative;transform:rotate(0deg);transition:transform 0.3s ease-out">
+                 <div class="user-ring"></div>
+                 <div class="user-arrow-outer" id="user-arrow"></div>
+                 <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:14px;height:14px;background:var(--green-400);border:2.5px solid white;border-radius:50%;box-shadow:0 0 16px rgba(82,179,110,0.6);z-index:2"></div>
+               </div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
     });
     userMarker = L.marker(fallback, { icon: customIcon }).addTo(map);
-    if (window.DeviceOrientationEvent) {
-        window.addEventListener('deviceorientationabsolute', (e) => {
-            let heading = e.alpha || e.webkitCompassHeading;
-            if (heading !== undefined) { userHeading = 360 - heading; const el = document.getElementById('marker-orient'); if (el) el.style.transform = `rotate(${userHeading}deg)`; }
-        }, true);
+
+    // Device orientation — rotate the entire marker container
+    function applyHeading(deg) {
+        userHeading = deg;
+        const el = document.getElementById('user-marker-container');
+        if (el) el.style.transform = `rotate(${deg}deg)`;
     }
+
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        // iOS 13+
+        document.addEventListener('click', function iosPermOnce() {
+            DeviceOrientationEvent.requestPermission().then(state => {
+                if (state === 'granted') {
+                    window.addEventListener('deviceorientation', (e) => {
+                        const h = e.webkitCompassHeading ?? (e.alpha ? (360 - e.alpha) : null);
+                        if (h !== null) applyHeading(h);
+                    });
+                }
+            }).catch(console.warn);
+            document.removeEventListener('click', iosPermOnce);
+        }, { once: true });
+    } else {
+        window.addEventListener('deviceorientationabsolute', (e) => {
+            const h = e.webkitCompassHeading ?? (e.alpha ? (360 - e.alpha) : null);
+            if (h !== null) applyHeading(h);
+        }, true);
+        window.addEventListener('deviceorientation', (e) => {
+            if (e.absolute) return;
+            const h = e.webkitCompassHeading ?? (e.alpha ? (360 - e.alpha) : null);
+            if (h !== null) applyHeading(h);
+        });
+    }
+
     if ("geolocation" in navigator) {
         getAccurateFix().then((pos) => {
             if (pos) { const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude); updateLocation(latlng); if (!initialRecenterDone) { map.flyTo(latlng, 16); initialRecenterDone = true; } }
@@ -674,9 +779,13 @@ function initMap(mode) {
         navigator.geolocation.watchPosition(
             (pos) => {
                 const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
+                // Use GPS course/heading if available
+                if (pos.coords.heading != null && !isNaN(pos.coords.heading)) {
+                    applyHeading(pos.coords.heading);
+                }
                 updateLocation(latlng);
                 if (!initialRecenterDone) { map.flyTo(latlng, 16); initialRecenterDone = true; }
-                if (isDriving) { map.panTo(latlng); updateHUD(); }
+                if (isDriving) { map.panTo(latlng); updateHUD(); advanceDissolve(latlng); }
             }, (err) => console.warn('GPS watch error:', err.code, err.message), GPS_OPTIONS_WATCH);
     }
     map.on('click', (e) => {
@@ -690,7 +799,6 @@ function initMap(mode) {
         polyline.setLatLngs(routePath);
         document.getElementById('point-count').innerText = calculateDistance(routePath) + ' mi total';
     });
-    // Close suggestions on map click
     map.on('click', hideSuggestions);
 }
 function handleGPSBlocked() {
@@ -734,10 +842,12 @@ window.deleteRoute = (id) => {
     savedRoutes = savedRoutes.filter(r => r.id !== id);
     localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
     updateSavedList(); if (activeViewLine) map.removeLayer(activeViewLine);
+    clearActiveLegs();
 };
 window.viewRoute = (id) => {
     const r = savedRoutes.find(x => x.id === id); if (!r) return;
     if (activeViewLine) map.removeLayer(activeViewLine);
+    clearActiveLegs();
     activeViewLine = L.polyline(r.path, { color: '#e8943e', weight: 5, opacity: 0.9 }).addTo(map);
     map.fitBounds(activeViewLine.getBounds(), { padding: [50,50] });
 };
@@ -914,7 +1024,6 @@ function addStopFromInput() {
 async function resolveStop(idx) {
     const stop = twStops[idx];
     if (!stop) return;
-    // Get GPS if needed
     let userLat = lastKnownPos?.lat ?? null;
     let userLng = lastKnownPos?.lng ?? null;
     if (!userLat) {
@@ -936,18 +1045,16 @@ async function resolveStop(idx) {
     renderStopsList();
 }
 
-// ── AI Suggestions (debounced) ──
+// ── AI Suggestions ──
 function onStopInput(val) {
     clearTimeout(suggestionDebounce);
     if (!val || val.length < 2) { hideSuggestions(); return; }
     suggestionDebounce = setTimeout(() => fetchAISuggestions(val), 380);
 }
-
 function onStopKeydown(e) {
     if (e.key === 'Enter') { e.preventDefault(); addStopFromInput(); }
     if (e.key === 'Escape') hideSuggestions();
 }
-
 async function fetchAISuggestions(query) {
     if (aiSuggestController) aiSuggestController.abort();
     aiSuggestController = new AbortController();
@@ -965,31 +1072,22 @@ Rules:
 - Relevant to ${twVehicle || 'walking'} travel distance
 - Mix exact business names and category descriptions
 - Keep labels short (under 30 chars)`;
-
     try {
         const response = await fetch("https://api.anthropic.com/v1/messages", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             signal: aiSuggestController.signal,
-            body: JSON.stringify({
-                model: "claude-sonnet-4-20250514",
-                max_tokens: 300,
-                messages: [{ role: "user", content: prompt }]
-            })
+            body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 300, messages: [{ role: "user", content: prompt }] })
         });
         if (!response.ok) return;
         const data = await response.json();
         const text = (data.content || []).map(i => i.text || '').join('');
         const match = text.match(/\[[\s\S]*\]/);
-        if (match) {
-            const suggestions = JSON.parse(match[0]);
-            showSuggestions(suggestions);
-        }
+        if (match) showSuggestions(JSON.parse(match[0]));
     } catch(e) {
         if (e.name !== 'AbortError') hideSuggestions();
     }
 }
-
 function showSuggestions(items) {
     const box = document.getElementById('stop-suggestions');
     if (!items || !items.length) { hideSuggestions(); return; }
@@ -1004,9 +1102,7 @@ function showSuggestions(items) {
     ).join('');
     box.style.display = 'block';
 }
-function hideSuggestions() {
-    document.getElementById('stop-suggestions').style.display = 'none';
-}
+function hideSuggestions() { document.getElementById('stop-suggestions').style.display = 'none'; }
 function pickSuggestion(label) {
     document.getElementById('stop-text-input').value = label;
     hideSuggestions();
@@ -1042,6 +1138,23 @@ function twBuildSummary() {
         const loopStr = returnHome ? ', then back home' : '';
         const distStr = targetMiles ? `targeting ~${targetMiles} mi` : `~${baseMiles} mi estimated`;
         const safetyMap = { walking:'Routed on sidewalks and pedestrian paths.', running:'Paths and parks — heavy traffic avoided.', bike:'Bike lanes and quiet streets — no highways.', car:'Full road access.', escooter:`At ${twSpeedMPH} MPH: residential streets and bike paths.`, ebike:`At ${twSpeedMPH} MPH: bike lanes and quieter roads.` };
+
+        // Build color legend for the modal
+        const totalLegs = stopCount + (returnHome ? 1 : 0);
+        const legendEl = document.getElementById('tw-color-legend');
+        legendEl.innerHTML = '';
+        const legLabels = [...stopNames];
+        if (returnHome) legLabels.push('Home');
+        for (let i = 0; i < totalLegs; i++) {
+            const color = getLegColor(i, totalLegs);
+            const label = getLegLabel(i, totalLegs, stopNames);
+            const chip = document.createElement('div');
+            chip.className = 'leg-chip';
+            chip.style.cssText = `background:${color}22;border:1px solid ${color}55;color:${color};`;
+            chip.innerHTML = `<span style="width:8px;height:8px;border-radius:2px;background:${color};display:inline-block"></span>${label}`;
+            legendEl.appendChild(chip);
+        }
+
         document.getElementById('tw-thinking').style.display = 'none';
         document.getElementById('tw-result').style.display = 'flex';
         if (resolvedStops.length === 0) {
@@ -1085,7 +1198,6 @@ function haversineMiles(lat1, lng1, lat2, lng2) {
     const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
-
 async function resolveStopWithAI(stopName, userLat, userLng) {
     const prompt = `You are a geocoding assistant. Given GPS coordinates and a destination description, return the CLOSEST real location as JSON.\n\nUser GPS: latitude ${userLat?.toFixed(6)}, longitude ${userLng?.toFixed(6)}\nDestination: "${stopName}"\n\nReturn ONLY this JSON (no markdown, no other text):\n{"name": "exact name", "lat": 0.000000, "lng": 0.000000, "address": "full address", "distance_miles": 0.0}\n\nIf not found: {"error": "not found"}`;
     try {
@@ -1104,9 +1216,7 @@ async function resolveStopWithAI(stopName, userLat, userLng) {
         return null;
     } catch(e) { return null; }
 }
-
 const OSM_TAG_MAP = { 'gym':['leisure=fitness_centre','amenity=gym'], 'fitness':['leisure=fitness_centre'], 'coffee shop':['amenity=cafe'], 'cafe':['amenity=cafe'], 'coffee':['amenity=cafe'], 'starbucks':['name=Starbucks','amenity=cafe'], 'mcdonalds':["name=McDonald's",'amenity=fast_food'], "mcdonald's":["name=McDonald's",'amenity=fast_food'], 'subway':['name=Subway','amenity=fast_food'], 'restaurant':['amenity=restaurant'], 'fast food':['amenity=fast_food'], 'grocery store':['shop=supermarket','shop=grocery'], 'grocery':['shop=supermarket'], 'supermarket':['shop=supermarket'], 'walmart':['name=Walmart','shop=supermarket'], 'target':['name=Target','shop=department_store'], 'five below':['name=Five Below','shop=variety_store'], 'cvs':['name=CVS','amenity=pharmacy'], 'walgreens':['name=Walgreens','amenity=pharmacy'], 'pharmacy':['amenity=pharmacy'], 'gas station':['amenity=fuel'], 'park':['leisure=park'], 'local park':['leisure=park'], 'library':['amenity=library'], 'hospital':['amenity=hospital'], 'bank':['amenity=bank'], 'crunch fitness':['name=Crunch Fitness','leisure=fitness_centre'], 'planet fitness':['name=Planet Fitness','leisure=fitness_centre'], 'nearest coffee shop':['amenity=cafe'], 'nearest gym':['leisure=fitness_centre'], 'nearest park':['leisure=park'], 'nearest grocery store':['shop=supermarket'], 'nearest pharmacy':['amenity=pharmacy'], 'nearest gas station':['amenity=fuel'] };
-
 async function resolveViaOverpass(stopName, userLat, userLng) {
     const key = stopName.toLowerCase().trim().replace(/^nearest\s+/,'');
     let tags = OSM_TAG_MAP[stopName.toLowerCase().trim()] || OSM_TAG_MAP[key];
@@ -1128,7 +1238,6 @@ async function resolveViaOverpass(stopName, userLat, userLng) {
     }
     return null;
 }
-
 async function resolveViaNominatim(stopName, userLat, userLng) {
     const maxMiles = twVehicle === 'car' ? 30 : 15;
     try {
@@ -1141,7 +1250,6 @@ async function resolveViaNominatim(stopName, userLat, userLng) {
         return best;
     } catch(e) { return null; }
 }
-
 async function resolveViaPhoton(stopName, userLat, userLng) {
     const maxMiles = twVehicle === 'car' ? 30 : 15;
     try {
@@ -1154,7 +1262,6 @@ async function resolveViaPhoton(stopName, userLat, userLng) {
         return best;
     } catch(e) { return null; }
 }
-
 async function resolveStopToCoords(stopName, userLat, userLng) {
     const [aiResult, overpassResult] = await Promise.all([resolveStopWithAI(stopName, userLat, userLng), resolveViaOverpass(stopName, userLat, userLng)]);
     if (aiResult && overpassResult) {
@@ -1167,6 +1274,92 @@ async function resolveStopToCoords(stopName, userLat, userLng) {
     const nominatim = await resolveViaNominatim(stopName, userLat, userLng);
     if (nominatim) return nominatim;
     return await resolveViaPhoton(stopName, userLat, userLng);
+}
+
+// ══ MULTI-COLOR LEG MANAGEMENT ══
+
+function clearActiveLegs() {
+    activeLegs.forEach(l => { if (l && map.hasLayer(l)) map.removeLayer(l); });
+    activeLegs = [];
+    dissolveLegs = [];
+}
+
+/**
+ * Split a full OSRM path into legs based on waypoint coordinates.
+ * Each waypoint snaps to the closest point on the path.
+ */
+function splitPathIntoLegs(fullPath, waypoints) {
+    // waypoints = [[lat,lng], ...] — the intermediate stop coordinates + optional home
+    const legs = [];
+    let remaining = [...fullPath];
+
+    for (let w = 0; w < waypoints.length; w++) {
+        const target = waypoints[w];
+        let bestIdx = 0, bestDist = Infinity;
+        for (let i = 0; i < remaining.length; i++) {
+            const d = haversineMiles(remaining[i][0], remaining[i][1], target[0], target[1]);
+            if (d < bestDist) { bestDist = d; bestIdx = i; }
+        }
+        // Leg = remaining[0 .. bestIdx+1]
+        legs.push(remaining.slice(0, bestIdx + 1));
+        remaining = remaining.slice(bestIdx);
+    }
+    // Last leg = everything remaining
+    if (remaining.length > 1) legs.push(remaining);
+    return legs.filter(l => l.length >= 2);
+}
+
+/**
+ * Draw colored polylines for each leg and set up dissolve state.
+ */
+function drawColoredLegs(legs, stopNames, returnHome) {
+    clearActiveLegs();
+    const totalLegs = legs.length;
+    legs.forEach((leg, i) => {
+        const color = getLegColor(i, totalLegs);
+        const pl = L.polyline(leg, {
+            color,
+            weight: 6,
+            opacity: 0.9,
+            lineCap: 'round',
+            lineJoin: 'round'
+        }).addTo(map);
+        activeLegs.push(pl);
+        dissolveLegs.push({ polyline: pl, fullPath: [...leg], dissolvedIdx: 0, color });
+    });
+}
+
+/**
+ * Dissolve effect: as user moves, trim the portion of each leg they've passed.
+ */
+function advanceDissolve(userLatLng) {
+    if (!dissolveLegs.length) return;
+    const userLat = userLatLng.lat, userLng = userLatLng.lng;
+
+    for (let li = 0; li < dissolveLegs.length; li++) {
+        const leg = dissolveLegs[li];
+        if (leg.dissolvedIdx >= leg.fullPath.length - 1) continue;
+
+        // Find the closest point on this leg to the user
+        let bestIdx = leg.dissolvedIdx, bestDist = Infinity;
+        for (let i = leg.dissolvedIdx; i < leg.fullPath.length; i++) {
+            const d = haversineMiles(leg.fullPath[i][0], leg.fullPath[i][1], userLat, userLng);
+            if (d < bestDist) { bestDist = d; bestIdx = i; }
+            if (i > leg.dissolvedIdx + 60) break; // look-ahead limit
+        }
+
+        // Only dissolve if user is close to this leg (within ~80m)
+        if (bestDist < 0.05) {
+            leg.dissolvedIdx = Math.max(leg.dissolvedIdx, bestIdx);
+            const remaining = leg.fullPath.slice(leg.dissolvedIdx);
+            if (remaining.length >= 2) {
+                leg.polyline.setLatLngs(remaining);
+            } else {
+                // Leg fully traveled — fade it out
+                leg.polyline.setStyle({ opacity: 0.15 });
+            }
+        }
+    }
 }
 
 // ── Launch route ──
@@ -1188,38 +1381,77 @@ async function twLaunchRoute() {
     resolvedStops.forEach((s, i) => setProgressStep(i+1, 'done', `✓ ${s.resolved?.name || s.label}`));
     const routeStepIdx = resolvedStops.length + 1;
     setProgressStep(routeStepIdx, 'active');
+
     let coords = [];
     if (userLat) coords.push([userLng, userLat]);
     resolvedStops.forEach(s => { if (s.resolved) coords.push([s.resolved.lng, s.resolved.lat]); });
     if (plan.returnHome && userLat) coords.push([userLng, userLat]);
     coords = coords.filter((c,i) => i===0 || !(c[0]===coords[i-1][0] && c[1]===coords[i-1][1]));
+
     if (coords.length < 2) { removeProgressToast(); showSimpleToast('⚠️ Need GPS + at least one stop to build route', true); return; }
+
     try {
         const coordStr = coords.map(c=>c.join(',')).join(';');
         const isSlowEV = (twVehicle==='escooter'||twVehicle==='ebike') && twSpeedMPH && twSpeedMPH<=25;
         const exclude = isSlowEV ? '&exclude=motorway,trunk' : '';
         const routeRes = await fetch(`https://router.project-osrm.org/route/v1/${profile}/${coordStr}?overview=full&geometries=geojson${exclude}`);
         const routeData = await routeRes.json();
+
         if (routeData.code === 'Ok') {
-            const path = routeData.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
+            const fullPath = routeData.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
             const distMi = (routeData.routes[0].distance * 0.000621371).toFixed(2);
             const stopNames = resolvedStops.map(s => s.resolved?.name || s.label);
-            const routeName = `${twVehicle} → ${stopNames[0]}${stopNames.length>1?' +'+( stopNames.length-1):''}`;
+            const routeName = `${twVehicle} → ${stopNames[0]}${stopNames.length>1?' +'+(stopNames.length-1):''}`;
+
             setProgressStep(routeStepIdx, 'done', `✓ Route ready — ${distMi} mi`);
             await new Promise(r=>setTimeout(r,800));
             removeProgressToast();
-            if (activeViewLine) map.removeLayer(activeViewLine);
-            activeViewLine = L.polyline(path, { color:'#52b36e', weight:6, opacity:0.9 }).addTo(map);
-            map.fitBounds(activeViewLine.getBounds(), { padding:[50,50] });
-            resolvedStops.forEach(s => {
+
+            // Clear old route overlays
+            if (activeViewLine) { map.removeLayer(activeViewLine); activeViewLine = null; }
+            clearActiveLegs();
+
+            // Build waypoints list for splitting (stops + optional home)
+            const waypointCoords = resolvedStops
+                .filter(s => s.resolved)
+                .map(s => [s.resolved.lat, s.resolved.lng]);
+            if (plan.returnHome && userLat) waypointCoords.push([userLat, userLng]);
+
+            // Split path into legs and draw with colors
+            const legs = splitPathIntoLegs(fullPath, waypointCoords);
+            drawColoredLegs(legs, stopNames, plan.returnHome);
+
+            // Fit map to route
+            if (legs.length) {
+                const allPoints = legs.flat();
+                const bounds = L.latLngBounds(allPoints);
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+
+            // Drop stop markers
+            resolvedStops.forEach((s, i) => {
                 if (!s.resolved) return;
-                L.circleMarker([s.resolved.lat, s.resolved.lng], { radius:8, color:'#e8943e', fillColor:'#1f4a2e', fillOpacity:1, weight:2.5 }).addTo(map).bindPopup(`<b style="font-size:12px;color:var(--text-primary)">${s.resolved.name||s.label}</b>`, { closeButton:false });
+                const color = getLegColor(i, legs.length);
+                L.circleMarker([s.resolved.lat, s.resolved.lng], {
+                    radius: 8, color, fillColor: '#0f160f', fillOpacity: 1, weight: 2.5
+                }).addTo(map).bindPopup(
+                    `<b style="font-size:12px;color:var(--text-primary)">${s.resolved.name || s.label}</b>`,
+                    { closeButton: false }
+                );
             });
-            const saved = { id:Date.now(), name:routeName, distance:distMi, path, date:new Date().toLocaleDateString() };
-            savedRoutes.push(saved); localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
-            updateSavedList(); enterDriveMode(saved.id);
+
+            // Save and enter drive mode
+            const saved = { id: Date.now(), name: routeName, distance: distMi, path: fullPath, date: new Date().toLocaleDateString() };
+            savedRoutes.push(saved);
+            localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
+            updateSavedList();
+            enterDriveModeWithLegs(saved.id);
         } else throw new Error('OSRM: ' + routeData.code);
-    } catch(e) { console.error(e); removeProgressToast(); showSimpleToast('⚠️ Route failed — check connection and try again', true); }
+    } catch(e) {
+        console.error(e);
+        removeProgressToast();
+        showSimpleToast('⚠️ Route failed — check connection and try again', true);
+    }
 }
 
 // ── Simple toast ──
@@ -1243,11 +1475,24 @@ window.enterDriveMode = (id) => {
     if (currentMode === 'mobile') { const sb = document.getElementById('sidebar'); if (!sb.classList.contains('is-collapsed')) toggleSidebarCollapse(); }
     updateHUD();
 };
+
+// Drive mode for trail weaver routes (uses colored legs already on map)
+function enterDriveModeWithLegs(id) {
+    const r = savedRoutes.find(x => x.id === id); if (!r) return;
+    currentDriveRoute = r; isDriving = true;
+    document.getElementById('drive-hud').classList.remove('hidden');
+    if (lastKnownPos) map.flyTo(lastKnownPos, 18);
+    if (currentMode === 'mobile') { const sb = document.getElementById('sidebar'); if (!sb.classList.contains('is-collapsed')) toggleSidebarCollapse(); }
+    updateHUD();
+}
+
 function exitDriveMode() {
     isDriving = false; currentDriveRoute = null;
     document.getElementById('drive-hud').classList.add('hidden');
-    if (activeViewLine) map.removeLayer(activeViewLine); activeViewLine = null;
+    if (activeViewLine) { map.removeLayer(activeViewLine); activeViewLine = null; }
+    clearActiveLegs();
 }
+
 function updateHUD() {
     if (!isDriving || !currentDriveRoute || !lastKnownPos) return;
     const miles = calculateRemaining(lastKnownPos, currentDriveRoute.path);
@@ -1265,7 +1510,6 @@ function updateLocation(latlng) {
     if (isDriving && currentDriveRoute) {
         let nearestDist = Infinity;
         currentDriveRoute.path.forEach(pt => { const d = L.latLng(latlng).distanceTo(L.latLng(pt)); if (d < nearestDist) nearestDist = d; });
-        if (nearestDist > OFF_ROUTE_THRESHOLD) twLaunchRoute();
     }
     const dot = document.getElementById('tracking-status');
     dot.style.background = '#52b36e'; dot.classList.add('gps-active');
@@ -1315,7 +1559,6 @@ async function performSearch(query) {
 }
 document.getElementById('global-search').onkeydown = (e) => { if (e.key === 'Enter') performSearch(e.target.value); };
 
-// Close suggestions when clicking outside
 document.addEventListener('click', (e) => {
     if (!e.target.closest('#stop-text-input') && !e.target.closest('#stop-suggestions')) hideSuggestions();
 });
