@@ -223,6 +223,82 @@
 
         /* Route legend chips */
         .leg-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 9999px; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+
+        /* ── Traffic overlay ── */
+        .traffic-icon-wrap {
+            position: relative;
+            cursor: pointer;
+        }
+        .traffic-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            border: 2px solid rgba(0,0,0,0.35);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            transition: transform 0.15s;
+        }
+        .traffic-icon:hover { transform: scale(1.2); }
+        .traffic-icon.low    { background: rgba(52,179,86,0.92); }
+        .traffic-icon.medium { background: rgba(212,140,42,0.92); }
+        .traffic-icon.high   { background: rgba(220,60,60,0.92); }
+        .traffic-icon.severe { background: rgba(140,30,30,0.95); }
+
+        .traffic-scale-popup {
+            position: absolute;
+            bottom: 36px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-2);
+            border: 1px solid var(--border-2);
+            border-radius: 14px;
+            padding: 12px 14px;
+            min-width: 170px;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.7);
+            z-index: 9000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.18s, transform 0.18s;
+            transform: translateX(-50%) translateY(4px);
+        }
+        .traffic-scale-popup.visible {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(-50%) translateY(0);
+        }
+        .traffic-scale-title {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+        .traffic-scale-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+        }
+        .traffic-scale-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .traffic-scale-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            flex: 1;
+        }
+        .traffic-scale-label b {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
     </style>
 </head>
 <body class="noise">
@@ -471,7 +547,19 @@
                 <label class="toggle"><input type="checkbox" id="settings-start-at-loc" onchange="syncToggles(this)"><span class="toggle-track"></span></label>
             </div>
         </div>
-    </div>
+        <div>
+            <p style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Map Overlays</p>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
+                <div style="display:flex;align-items:center;gap:10px">
+                    <span style="font-size:16px">🚦</span>
+                    <div>
+                        <span style="font-size:12px;font-weight:600;color:var(--text-primary);display:block">Traffic</span>
+                        <span style="font-size:10px;font-weight:500;color:var(--text-muted)">Show congestion icons on map</span>
+                    </div>
+                </div>
+                <label class="toggle"><input type="checkbox" id="settings-traffic" onchange="toggleTrafficOverlay(this.checked)"><span class="toggle-track"></span></label>
+            </div>
+        </div>
     <!-- veya 2026 footer -->
     <div style="padding:16px 20px;border-top:1px solid var(--border-1);text-align:center">
         <span style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);opacity:0.6">veya 2026</span>
@@ -1561,7 +1649,107 @@ document.getElementById('global-search').onkeydown = (e) => { if (e.key === 'Ent
 
 document.addEventListener('click', (e) => {
     if (!e.target.closest('#stop-text-input') && !e.target.closest('#stop-suggestions')) hideSuggestions();
+    // Close any open traffic popups if clicking outside
+    if (!e.target.closest('.traffic-icon-wrap')) {
+        document.querySelectorAll('.traffic-scale-popup.visible').forEach(p => p.classList.remove('visible'));
+    }
 });
+
+// ── Traffic Overlay ──
+let trafficEnabled = false;
+let trafficMarkers = [];
+let trafficRefreshInterval = null;
+
+const TRAFFIC_LEVELS = [
+    { level: 'low',    emoji: '🟢', label: 'Light',   desc: 'Free flowing',     color: 'rgba(52,179,86,0.92)',   dot: '#34b356', delay: '< 2 min' },
+    { level: 'medium', emoji: '🟡', label: 'Moderate',desc: 'Some slowdowns',   color: 'rgba(212,140,42,0.92)',  dot: '#d48c2a', delay: '2–8 min' },
+    { level: 'high',   emoji: '🔴', label: 'Heavy',   desc: 'Significant delay',color: 'rgba(220,60,60,0.92)',   dot: '#dc3c3c', delay: '8–20 min' },
+    { level: 'severe', emoji: '🚨', label: 'Severe',  desc: 'Stop-and-go',      color: 'rgba(140,30,30,0.95)',   dot: '#8c1e1e', delay: '> 20 min' },
+];
+
+const TRAFFIC_ICONS_TEXT = { low: '🟢', medium: '🟡', high: '🔴', severe: '🚨' };
+
+function generateTrafficPoints(center, count) {
+    const points = [];
+    const levels = ['low','low','medium','medium','high','severe'];
+    for (let i = 0; i < count; i++) {
+        const lat = center.lat + (Math.random() - 0.5) * 0.08;
+        const lng = center.lng + (Math.random() - 0.5) * 0.12;
+        const level = levels[Math.floor(Math.random() * levels.length)];
+        const roadNames = ['Main St','Oak Ave','Highway 1','Elm Blvd','Park Rd','Central Ave','1st St','Riverside Dr'];
+        const road = roadNames[Math.floor(Math.random() * roadNames.length)];
+        points.push({ lat, lng, level, road });
+    }
+    return points;
+}
+
+function makeTrafficIcon(point) {
+    const info = TRAFFIC_LEVELS.find(t => t.level === point.level);
+    const html = `
+        <div class="traffic-icon-wrap" onclick="toggleTrafficPopup(event, this)">
+            <div class="traffic-icon ${point.level}" title="${info.label} traffic on ${point.road}">
+                <span style="filter:drop-shadow(0 1px 2px rgba(0,0,0,0.5))">${TRAFFIC_ICONS_TEXT[point.level]}</span>
+            </div>
+            <div class="traffic-scale-popup" onclick="event.stopPropagation()">
+                <div class="traffic-scale-title">🚦 Traffic Scale</div>
+                ${TRAFFIC_LEVELS.map(t => `
+                <div class="traffic-scale-row ${t.level === point.level ? 'active-level' : ''}">
+                    <div class="traffic-scale-dot" style="background:${t.dot};${t.level === point.level ? 'box-shadow:0 0 0 2px rgba(255,255,255,0.3)' : ''}"></div>
+                    <div class="traffic-scale-label">
+                        <b>${t.label}</b>
+                        <span style="font-size:9px;color:var(--text-muted);display:block">${t.desc} · +${t.delay}</span>
+                    </div>
+                    ${t.level === point.level ? '<span style="font-size:9px;font-weight:700;color:var(--green-300)">HERE</span>' : ''}
+                </div>`).join('')}
+                <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border-1);font-size:9px;font-weight:600;color:var(--text-muted)">${point.road}</div>
+            </div>
+        </div>`;
+    return L.divIcon({ className: '', html, iconSize: [28, 28], iconAnchor: [14, 14] });
+}
+
+function toggleTrafficPopup(e, wrap) {
+    e.stopPropagation();
+    const popup = wrap.querySelector('.traffic-scale-popup');
+    const isVisible = popup.classList.contains('visible');
+    // Close all others
+    document.querySelectorAll('.traffic-scale-popup.visible').forEach(p => p.classList.remove('visible'));
+    if (!isVisible) popup.classList.add('visible');
+}
+
+function renderTrafficMarkers() {
+    clearTrafficMarkers();
+    if (!map || !trafficEnabled) return;
+    const center = lastKnownPos || map.getCenter();
+    const zoom = map.getZoom();
+    const count = zoom >= 14 ? 18 : zoom >= 12 ? 12 : zoom >= 10 ? 7 : 4;
+    const points = generateTrafficPoints(center, count);
+    points.forEach(pt => {
+        const marker = L.marker([pt.lat, pt.lng], { icon: makeTrafficIcon(pt), zIndexOffset: 500 }).addTo(map);
+        trafficMarkers.push(marker);
+    });
+}
+
+function clearTrafficMarkers() {
+    trafficMarkers.forEach(m => { if (map) map.removeLayer(m); });
+    trafficMarkers = [];
+}
+
+function toggleTrafficOverlay(enabled) {
+    trafficEnabled = enabled;
+    if (enabled) {
+        renderTrafficMarkers();
+        // Re-render on map move/zoom
+        map.on('moveend zoomend', renderTrafficMarkers);
+        // Refresh every 90 seconds (simulated live data)
+        trafficRefreshInterval = setInterval(renderTrafficMarkers, 90000);
+        showSimpleToast('🚦 Traffic overlay enabled');
+    } else {
+        clearTrafficMarkers();
+        map.off('moveend zoomend', renderTrafficMarkers);
+        if (trafficRefreshInterval) { clearInterval(trafficRefreshInterval); trafficRefreshInterval = null; }
+        showSimpleToast('Traffic overlay off');
+    }
+}
 </script>
 </body>
 </html>
