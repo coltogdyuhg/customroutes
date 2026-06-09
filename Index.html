@@ -27,7 +27,6 @@
 
     <style>
         :root {
-            /* Core palette — deep forest with glass-green accents */
             --bg-0:      #0a0f0a;
             --bg-1:      #0f160f;
             --bg-2:      #141e13;
@@ -35,7 +34,6 @@
             --surface-2: rgba(255,255,255,0.07);
             --border-1:  rgba(255,255,255,0.07);
             --border-2:  rgba(255,255,255,0.12);
-
             --green-900: #0d2211;
             --green-800: #163320;
             --green-700: #1f4a2e;
@@ -45,257 +43,78 @@
             --green-300: #7cce94;
             --green-200: #b2e4c0;
             --green-100: #dff3e5;
-
             --amber-600: #b05d1a;
             --amber-500: #d4752a;
             --amber-400: #e8943e;
             --amber-300: #f0b070;
-
             --text-primary:   rgba(255,255,255,0.92);
             --text-secondary: rgba(255,255,255,0.50);
             --text-muted:     rgba(255,255,255,0.28);
         }
 
         * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
-
         html, body { background: var(--bg-0); color: var(--text-primary); overflow: hidden; }
-
-        /* ── Scrollbar ── */
         ::-webkit-scrollbar { width: 3px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
 
-        /* ── Boot / Loading ── */
-        .boot-bg {
-            background: var(--bg-0);
-            position: relative;
-            overflow: hidden;
-        }
-        .boot-bg::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background:
-                radial-gradient(ellipse 70% 50% at 20% 70%, rgba(61,143,86,0.18) 0%, transparent 60%),
-                radial-gradient(ellipse 50% 70% at 80% 20%, rgba(29,74,46,0.15) 0%, transparent 60%);
-        }
+        .boot-bg { background: var(--bg-0); position: relative; overflow: hidden; }
+        .boot-bg::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 70% 50% at 20% 70%, rgba(61,143,86,0.18) 0%, transparent 60%), radial-gradient(ellipse 50% 70% at 80% 20%, rgba(29,74,46,0.15) 0%, transparent 60%); }
+        .noise::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9999; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E"); background-repeat: repeat; background-size: 200px 200px; opacity: 0.4; }
+        .progress-bar-fill { background: linear-gradient(90deg, var(--green-700), var(--green-400), var(--green-300)); height: 100%; border-radius: 9999px; transition: width 0.2s ease-out; }
 
-        /* ── Noise texture overlay ── */
-        .noise::after {
-            content: '';
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            z-index: 9999;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
-            background-repeat: repeat;
-            background-size: 200px 200px;
-            opacity: 0.4;
-        }
-
-        /* ── Progress bar ── */
-        .progress-bar-fill {
-            background: linear-gradient(90deg, var(--green-700), var(--green-400), var(--green-300));
-            height: 100%;
-            border-radius: 9999px;
-            transition: width 0.2s ease-out;
-        }
-
-        /* ── App chrome ── */
         #app-interface { height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
-
-        /* ── Header ── */
-        .app-header {
-            height: 56px;
-            background: var(--bg-1);
-            border-bottom: 1px solid var(--border-1);
-            display: flex;
-            align-items: center;
-            padding: 0 20px;
-            gap: 16px;
-            flex-shrink: 0;
-            z-index: 30;
-        }
-
-        /* ── Sidebar ── */
-        #sidebar {
-            background: var(--bg-1);
-            border-right: 1px solid var(--border-1);
-            flex-shrink: 0;
-        }
-
-        /* ── Map ── */
+        .app-header { height: 56px; background: var(--bg-1); border-bottom: 1px solid var(--border-1); display: flex; align-items: center; padding: 0 20px; gap: 16px; flex-shrink: 0; z-index: 30; }
+        #sidebar { background: var(--bg-1); border-right: 1px solid var(--border-1); flex-shrink: 0; }
         #map { height: 100%; width: 100%; z-index: 1; display: block; }
         #map-area { flex: 1 1 0%; min-width: 0; min-height: 0; position: relative; overflow: hidden; }
         .leaflet-container { background: #0d1208 !important; }
 
-        /* ── Buttons ── */
-        .btn {
-            display: flex; align-items: center; justify-content: center;
-            font-weight: 600; letter-spacing: 0.02em;
-            border-radius: 10px;
-            transition: all 0.18s ease;
-            cursor: pointer;
-            border: none;
-            outline: none;
-        }
+        .btn { display: flex; align-items: center; justify-content: center; font-weight: 600; letter-spacing: 0.02em; border-radius: 10px; transition: all 0.18s ease; cursor: pointer; border: none; outline: none; }
         .btn:active { transform: scale(0.97); }
-
-        .btn-primary {
-            background: var(--green-700);
-            color: var(--green-100);
-            border: 1px solid rgba(61,143,86,0.4);
-        }
+        .btn-primary { background: var(--green-700); color: var(--green-100); border: 1px solid rgba(61,143,86,0.4); }
         .btn-primary:hover { background: var(--green-600); }
-
-        .btn-accent {
-            background: rgba(176,93,26,0.25);
-            color: var(--amber-300);
-            border: 1px solid rgba(212,117,42,0.25);
-        }
+        .btn-accent { background: rgba(176,93,26,0.25); color: var(--amber-300); border: 1px solid rgba(212,117,42,0.25); }
         .btn-accent:hover { background: rgba(176,93,26,0.4); }
-
-        .btn-ghost {
-            background: var(--surface-1);
-            color: var(--text-secondary);
-            border: 1px solid var(--border-1);
-        }
+        .btn-ghost { background: var(--surface-1); color: var(--text-secondary); border: 1px solid var(--border-1); }
         .btn-ghost:hover { background: var(--surface-2); color: var(--text-primary); }
 
-        /* ── Pill label ── */
-        .label-pill {
-            font-size: 9px;
-            font-weight: 700;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            padding: 2px 8px;
-            border-radius: 9999px;
-        }
-
-        /* ── Input ── */
-        .field {
-            background: var(--surface-1);
-            border: 1px solid var(--border-1);
-            border-radius: 10px;
-            color: var(--text-primary);
-            font-size: 13px;
-            font-weight: 500;
-            padding: 10px 14px;
-            outline: none;
-            transition: border-color 0.18s, background 0.18s;
-            width: 100%;
-        }
+        .field { background: var(--surface-1); border: 1px solid var(--border-1); border-radius: 10px; color: var(--text-primary); font-size: 13px; font-weight: 500; padding: 10px 14px; outline: none; transition: border-color 0.18s, background 0.18s; width: 100%; }
         .field::placeholder { color: var(--text-muted); }
         .field:focus { border-color: rgba(61,143,86,0.5); background: var(--surface-2); }
 
-        /* ── Toggle ── */
         .toggle { position: relative; display: inline-flex; width: 36px; height: 20px; flex-shrink: 0; }
         .toggle input { opacity: 0; width: 0; height: 0; }
-        .toggle-track {
-            position: absolute; inset: 0;
-            background: var(--surface-2);
-            border: 1px solid var(--border-2);
-            border-radius: 9999px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .toggle-track::before {
-            content: '';
-            position: absolute;
-            left: 3px; top: 2px;
-            width: 14px; height: 14px;
-            background: rgba(255,255,255,0.4);
-            border-radius: 50%;
-            transition: transform 0.2s, background 0.2s;
-        }
+        .toggle-track { position: absolute; inset: 0; background: var(--surface-2); border: 1px solid var(--border-2); border-radius: 9999px; cursor: pointer; transition: background 0.2s; }
+        .toggle-track::before { content: ''; position: absolute; left: 3px; top: 2px; width: 14px; height: 14px; background: rgba(255,255,255,0.4); border-radius: 50%; transition: transform 0.2s, background 0.2s; }
         .toggle input:checked + .toggle-track { background: var(--green-700); border-color: rgba(61,143,86,0.4); }
         .toggle input:checked + .toggle-track::before { transform: translateX(16px); background: white; }
 
-        /* ── Route card ── */
-        .route-card {
-            background: var(--surface-1);
-            border: 1px solid var(--border-1);
-            border-radius: 12px;
-            padding: 14px;
-            transition: all 0.15s;
-        }
+        .route-card { background: var(--surface-1); border: 1px solid var(--border-1); border-radius: 12px; padding: 14px; transition: all 0.15s; }
         .route-card:hover { background: var(--surface-2); border-color: var(--border-2); }
 
-        /* ── GPS dot ── */
-        @keyframes gps-pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(61,143,86,0.5); }
-            50% { box-shadow: 0 0 0 6px rgba(61,143,86,0); }
-        }
+        @keyframes gps-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(61,143,86,0.5); } 50% { box-shadow: 0 0 0 6px rgba(61,143,86,0); } }
         .gps-active { animation: gps-pulse 2s ease-in-out infinite; }
 
-        /* ── Drive HUD ── */
-        .hud-glass {
-            background: rgba(10,15,10,0.92);
-            border: 1px solid rgba(61,143,86,0.25);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-        }
+        .hud-glass { background: rgba(10,15,10,0.92); border: 1px solid rgba(61,143,86,0.25); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+        .modal-backdrop { background: rgba(0,0,0,0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .modal-sheet { background: var(--bg-2); border: 1px solid var(--border-1); }
 
-        /* ── Modal backdrop ── */
-        .modal-backdrop {
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-        }
-
-        /* ── Modal sheet ── */
-        .modal-sheet {
-            background: var(--bg-2);
-            border: 1px solid var(--border-1);
-        }
-
-        /* ── Vehicle button ── */
-        .veh-btn {
-            background: var(--surface-1);
-            border: 1px solid var(--border-1);
-            border-radius: 12px;
-            padding: 16px 12px;
-            display: flex; flex-direction: column; align-items: center; gap: 6px;
-            cursor: pointer;
-            transition: all 0.15s;
-            color: var(--text-secondary);
-        }
+        .veh-btn { background: var(--surface-1); border: 1px solid var(--border-1); border-radius: 12px; padding: 16px 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; transition: all 0.15s; color: var(--text-secondary); }
         .veh-btn:hover { background: var(--surface-2); border-color: var(--border-2); color: var(--text-primary); }
         .veh-btn.active { background: rgba(29,74,46,0.4); border-color: rgba(61,143,86,0.5); color: var(--green-200); }
 
-        /* ── Map controls ── */
-        .leaflet-control-layers {
-            background: var(--bg-2) !important;
-            border: 1px solid var(--border-2) !important;
-            border-radius: 10px !important;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
-            color: var(--text-secondary) !important;
-            font-family: 'Inter', sans-serif !important;
-            font-size: 11px !important;
-            font-weight: 600 !important;
-        }
+        .leaflet-control-layers { background: var(--bg-2) !important; border: 1px solid var(--border-2) !important; border-radius: 10px !important; box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important; color: var(--text-secondary) !important; font-family: 'Inter', sans-serif !important; font-size: 11px !important; font-weight: 600 !important; }
 
-        /* ── User marker ── */
         .user-dot { width: 14px; height: 14px; background: var(--green-400); border: 2.5px solid white; border-radius: 50%; box-shadow: 0 0 16px rgba(82,179,110,0.6); }
         .user-arrow { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 9px solid var(--green-400); }
         @keyframes user-pulse { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(3.5); opacity: 0; } }
         .user-ring { position: absolute; inset: -2px; border-radius: 50%; background: rgba(82,179,110,0.35); animation: user-pulse 2.5s ease-out infinite; }
 
-        /* ── Search marker ── */
         @keyframes pin-drop { 0% { transform: translateY(-30px); opacity: 0; } 80% { transform: translateY(3px); } 100% { transform: translateY(0); opacity: 1; } }
         .pin-drop-anim { animation: pin-drop 0.4s cubic-bezier(0.2, 1, 0.4, 1); }
 
-        /* ── AI progress toast ── */
-        .ai-toast {
-            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-            z-index: 9999;
-            background: var(--bg-2);
-            border: 1px solid var(--border-2);
-            border-radius: 16px;
-            padding: 16px 20px;
-            min-width: 280px; max-width: 360px;
-            box-shadow: 0 24px 64px rgba(0,0,0,0.6);
-        }
+        .ai-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 9999; background: var(--bg-2); border: 1px solid var(--border-2); border-radius: 16px; padding: 16px 20px; min-width: 280px; max-width: 360px; box-shadow: 0 24px 64px rgba(0,0,0,0.6); }
         .ai-step { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
         .ai-step-dot { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; font-weight: 700; }
         .ai-step.pending .ai-step-dot { background: var(--surface-1); color: var(--text-muted); }
@@ -306,49 +125,63 @@
         .ai-step.active  .ai-step-text { color: var(--text-primary); }
         .ai-step.done    .ai-step-text { color: var(--text-secondary); }
 
-        /* ── Thinking spinner ── */
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes spin-rev { to { transform: rotate(-360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.25s ease-out; }
 
-        /* ── Step progress dots ── */
         .step-dot { height: 3px; flex-grow: 1; border-radius: 9999px; transition: background 0.4s; }
 
-        /* ── Mobile sidebar ── */
-        .mode-mobile #sidebar {
-            position: fixed; bottom: 0; left: 0; width: 100% !important; height: auto !important;
-            z-index: 50; transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
-            border-radius: 20px 20px 0 0; border-right: none;
-            border-top: 1px solid var(--border-1);
-        }
+        .mode-mobile #sidebar { position: fixed; bottom: 0; left: 0; width: 100% !important; height: auto !important; z-index: 50; transition: transform 0.35s cubic-bezier(0.4,0,0.2,1); border-radius: 20px 20px 0 0; border-right: none; border-top: 1px solid var(--border-1); }
         .mode-mobile #sidebar.is-collapsed { transform: translateY(calc(100% - 64px)); }
         .mode-desktop #sidebar { width: 320px; height: 100%; }
         #mobile-drag-handle { display: none; }
         .mode-mobile #mobile-drag-handle { display: flex; }
 
-        /* ── Section divider ── */
         .divider { height: 1px; background: var(--border-1); margin: 0 -20px; }
 
-        /* ── Slide in ── */
         @keyframes slide-up { 0% { opacity: 0; transform: translateY(16px); } 100% { opacity: 1; transform: translateY(0); } }
         .slide-up { animation: slide-up 0.3s ease-out; }
 
-        /* ── Settings panel ── */
-        #settings-panel {
-            background: var(--bg-2);
-            border-left: 1px solid var(--border-1);
-        }
+        #settings-panel { background: var(--bg-2); border-left: 1px solid var(--border-1); }
 
-        /* Leaflet popup override */
-        .leaflet-popup-content-wrapper {
-            background: var(--bg-2) !important;
-            border: 1px solid var(--border-2) !important;
-            border-radius: 12px !important;
-            box-shadow: 0 16px 48px rgba(0,0,0,0.5) !important;
-            color: var(--text-primary) !important;
-            font-family: 'Inter', sans-serif !important;
-        }
+        .leaflet-popup-content-wrapper { background: var(--bg-2) !important; border: 1px solid var(--border-2) !important; border-radius: 12px !important; box-shadow: 0 16px 48px rgba(0,0,0,0.5) !important; color: var(--text-primary) !important; font-family: 'Inter', sans-serif !important; }
         .leaflet-popup-tip { background: var(--bg-2) !important; }
         .leaflet-popup-close-button { color: var(--text-muted) !important; }
+
+        /* ── Stop builder ── */
+        .stop-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px; border-radius: 10px;
+            background: var(--surface-1); border: 1px solid var(--border-1);
+            transition: all 0.15s;
+            animation: fadeIn 0.2s ease-out;
+        }
+        .stop-item.resolving { border-color: rgba(61,143,86,0.3); background: rgba(29,74,46,0.1); }
+        .stop-item.resolved  { border-color: rgba(61,143,86,0.45); background: rgba(29,74,46,0.18); }
+        .stop-item.error     { border-color: rgba(239,68,68,0.25); background: rgba(127,29,29,0.12); }
+        .stop-num { width: 22px; height: 22px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--border-2); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: var(--text-muted); flex-shrink: 0; }
+        .stop-item.resolved .stop-num { background: rgba(29,74,46,0.5); border-color: rgba(61,143,86,0.4); color: var(--green-300); }
+        .stop-name { font-size: 12px; font-weight: 600; color: var(--text-primary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .stop-sub { font-size: 9px; font-weight: 500; color: var(--text-muted); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .stop-sub.ok { color: var(--green-400); }
+        .stop-sub.err { color: #fca5a5; }
+        .stop-spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(61,143,86,0.2); border-top-color: var(--green-400); animation: spin 0.8s linear infinite; flex-shrink: 0; }
+
+        /* Stop input area */
+        .stop-input-row { display: flex; gap: 8px; align-items: center; }
+        #stop-text-input { flex: 1; }
+
+        /* suggestions */
+        .suggestions-box { background: var(--bg-2); border: 1px solid var(--border-2); border-radius: 12px; overflow: hidden; box-shadow: 0 16px 40px rgba(0,0,0,0.5); }
+        .suggestion-item { padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text-secondary); cursor: pointer; transition: all 0.12s; display: flex; align-items: center; gap: 8px; }
+        .suggestion-item:hover { background: var(--surface-2); color: var(--text-primary); }
+        .suggestion-icon { font-size: 14px; flex-shrink: 0; }
+
+        /* return home chip */
+        .return-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 9999px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.15s; user-select: none; }
+        .return-chip.off { background: var(--surface-1); border: 1px solid var(--border-1); color: var(--text-muted); }
+        .return-chip.on  { background: rgba(29,74,46,0.35); border: 1px solid rgba(61,143,86,0.4); color: var(--green-200); }
     </style>
 </head>
 <body class="noise">
@@ -406,7 +239,8 @@
         </div>
 
         <div style="overflow-y:auto;max-height:calc(92vh - 110px)">
-            <!-- Step 1: Vehicle -->
+
+            <!-- ══ Step 1: Vehicle ══ -->
             <div id="tw-step-1" style="padding:24px;display:flex;flex-direction:column;gap:20px">
                 <div>
                     <h4 style="font-size:15px;font-weight:700;color:var(--text-primary)">How are you getting around?</h4>
@@ -451,48 +285,67 @@
                 <button onclick="twNext(1)" class="btn btn-primary" style="height:44px;font-size:12px;font-weight:700;letter-spacing:0.04em">Continue →</button>
             </div>
 
-            <!-- Step 2: Describe -->
-            <div id="tw-step-2" style="display:none;padding:24px;flex-direction:column;gap:20px">
+            <!-- ══ Step 2: Stop Builder ══ -->
+            <div id="tw-step-2" style="display:none;padding:24px;flex-direction:column;gap:18px">
                 <div>
-                    <h4 style="font-size:15px;font-weight:700;color:var(--text-primary)">Describe your journey</h4>
-                    <p style="font-size:11px;color:var(--text-muted);margin-top:4px;font-weight:500">AI finds the closest real places near you</p>
+                    <h4 style="font-size:15px;font-weight:700;color:var(--text-primary)">Where do you want to go?</h4>
+                    <p style="font-size:11px;color:var(--text-muted);margin-top:4px;font-weight:500">Just type a name — AI finds the closest real place to you</p>
                 </div>
-                <textarea id="tw-journey-input" rows="4" placeholder="e.g. Starting from my house, run to Crunch Fitness, then Five Below, then back home — about 5 miles total."
-                    class="field" style="resize:none;line-height:1.6"></textarea>
-                <div>
-                    <p style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">Quick examples</p>
-                    <div style="display:flex;flex-wrap:wrap;gap:6px">
-                        <button onclick="twSetExample(this)" data-ex="Run from my location to the nearest local park and back, keeping it under 3 miles"
-                            style="padding:6px 12px;border-radius:9999px;font-size:10px;font-weight:600;background:var(--surface-1);border:1px solid var(--border-1);color:var(--text-secondary);cursor:pointer;transition:all 0.15s"
-                            onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface-1)'">
-                            🏃 Park loop
-                        </button>
-                        <button onclick="twSetExample(this)" data-ex="Bike from my location to the nearest coffee shop, then the nearest grocery store, then back home"
-                            style="padding:6px 12px;border-radius:9999px;font-size:10px;font-weight:600;background:var(--surface-1);border:1px solid var(--border-1);color:var(--text-secondary);cursor:pointer;transition:all 0.15s"
-                            onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface-1)'">
-                            ☕ Coffee &amp; errands
-                        </button>
-                        <button onclick="twSetExample(this)" data-ex="Starting from my location, take me to the nearest gym and then back home, total about 4 miles"
-                            style="padding:6px 12px;border-radius:9999px;font-size:10px;font-weight:600;background:var(--surface-1);border:1px solid var(--border-1);color:var(--text-secondary);cursor:pointer;transition:all 0.15s"
-                            onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface-1)'">
-                            💪 Gym trip
+
+                <!-- Stops list -->
+                <div id="tw-stops-list" style="display:flex;flex-direction:column;gap:7px;min-height:40px"></div>
+
+                <!-- Add stop input -->
+                <div style="position:relative">
+                    <div class="stop-input-row">
+                        <div style="position:relative;flex:1">
+                            <input id="stop-text-input" type="text" class="field"
+                                placeholder="e.g. Starbucks, nearest park, Crunch Fitness…"
+                                autocomplete="off"
+                                oninput="onStopInput(this.value)"
+                                onkeydown="onStopKeydown(event)">
+                        </div>
+                        <button onclick="addStopFromInput()" class="btn btn-primary" style="height:40px;padding:0 16px;font-size:12px;font-weight:700;white-space:nowrap;flex-shrink:0">
+                            Add Stop
                         </button>
                     </div>
+                    <!-- AI suggestions dropdown -->
+                    <div id="stop-suggestions" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:100" class="suggestions-box"></div>
                 </div>
+
+                <!-- Quick chips -->
+                <div>
+                    <p style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">Quick adds</p>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px" id="quick-chips"></div>
+                </div>
+
+                <!-- Return home toggle -->
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
                     <div>
-                        <p style="font-size:12px;font-weight:600;color:var(--text-primary)">Auto-reroute</p>
-                        <p style="font-size:10px;color:var(--text-muted);font-weight:500">Recalculate if you go off track</p>
+                        <p style="font-size:12px;font-weight:600;color:var(--text-primary)">Return home at end</p>
+                        <p style="font-size:10px;color:var(--text-muted);font-weight:500">Loop back to your starting point</p>
                     </div>
-                    <label class="toggle"><input type="checkbox" id="auto-reroute" checked><span class="toggle-track"></span></label>
+                    <label class="toggle"><input type="checkbox" id="tw-return-home" checked><span class="toggle-track"></span></label>
                 </div>
+
+                <!-- Distance hint -->
+                <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:var(--surface-1);border:1px solid var(--border-1)">
+                    <svg width="14" height="14" fill="none" stroke="var(--text-muted)" viewBox="0 0 24 24" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <div style="flex:1">
+                        <span style="font-size:11px;font-weight:500;color:var(--text-secondary)">Target distance </span>
+                        <span style="font-size:10px;color:var(--text-muted);font-weight:500">(optional)</span>
+                    </div>
+                    <input id="tw-target-miles" type="number" min="0.1" max="100" step="0.5" placeholder="miles"
+                        class="field" style="width:72px;height:32px;padding:4px 10px;font-size:12px;text-align:center">
+                </div>
+
                 <div style="display:flex;gap:10px">
                     <button onclick="twBack(2)" class="btn btn-ghost" style="height:44px;font-size:12px;font-weight:700;padding:0 20px">← Back</button>
-                    <button onclick="twNext(2)" class="btn btn-primary" style="flex:1;height:44px;font-size:12px;font-weight:700;letter-spacing:0.04em">Weave My Path ✦</button>
+                    <button onclick="twNext(2)" class="btn btn-primary" style="flex:1;height:44px;font-size:12px;font-weight:700;letter-spacing:0.04em" id="tw-weave-btn">Weave My Path ✦</button>
                 </div>
             </div>
 
-            <!-- Step 3: Result -->
+            <!-- ══ Step 3: Result ══ -->
             <div id="tw-step-3" style="display:none;padding:24px;flex-direction:column;gap:20px">
                 <div id="tw-thinking" style="display:flex;flex-direction:column;align-items:center;gap:20px;padding:32px 0">
                     <div style="position:relative;width:56px;height:56px">
@@ -501,8 +354,8 @@
                         <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px">🌿</div>
                     </div>
                     <div style="text-align:center">
-                        <p id="tw-thinking-label" style="font-size:13px;font-weight:700;color:var(--text-primary)">Interpreting your journey…</p>
-                        <p style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:4px">Trail Weaver AI is planning your path</p>
+                        <p id="tw-thinking-label" style="font-size:13px;font-weight:700;color:var(--text-primary)">Weaving your path…</p>
+                        <p style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:4px">Trail Weaver AI is building your route</p>
                     </div>
                 </div>
                 <div id="tw-result" style="display:none;flex-direction:column;gap:16px">
@@ -530,10 +383,10 @@
                     <div id="tw-error-block" style="display:none;padding:16px;border-radius:12px;border:1px solid rgba(239,68,68,0.2);background:rgba(127,29,29,0.15);text-align:center">
                         <p style="font-size:16px;margin-bottom:8px">⚠️</p>
                         <p id="tw-error-msg" style="font-size:12px;font-weight:700;color:#fca5a5">Route not possible</p>
-                        <p style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:4px">Try adjusting your request</p>
+                        <p style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:4px">Try adjusting your stops</p>
                     </div>
                     <div id="tw-action-btns" style="display:flex;gap:10px">
-                        <button onclick="twBack(3)" class="btn btn-ghost" style="height:44px;font-size:12px;font-weight:700;padding:0 20px">← Redo</button>
+                        <button onclick="twBack(3)" class="btn btn-ghost" style="height:44px;font-size:12px;font-weight:700;padding:0 20px">← Edit Stops</button>
                         <button onclick="twLaunchRoute()" id="tw-launch-btn" class="btn btn-primary" style="flex:1;height:44px;font-size:12px;font-weight:700;letter-spacing:0.04em">Launch Route 🚀</button>
                     </div>
                 </div>
@@ -609,28 +462,20 @@
 
 <!-- ══ MAIN APP ══ -->
 <div id="app-interface" style="opacity:0;pointer-events:none;transition:opacity 0.8s">
-
-    <!-- Header -->
     <header class="app-header">
-        <!-- Logo -->
         <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
             <div style="width:30px;height:30px;border-radius:8px;background:var(--green-700);border:1px solid rgba(61,143,86,0.3);display:flex;align-items:center;justify-content:center">
                 <svg width="14" height="14" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
             </div>
             <span style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text-primary);letter-spacing:-0.01em">CustomRoutes</span>
         </div>
-
-        <!-- Search -->
         <div style="flex:1;max-width:440px;margin:0 16px;position:relative">
             <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted)"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             <input id="global-search" type="text" placeholder="Search cities or places…"
                 style="width:100%;background:var(--surface-1);border:1px solid var(--border-1);border-radius:9999px;padding:8px 14px 8px 34px;font-size:12px;font-weight:500;color:var(--text-primary);outline:none;transition:border-color 0.18s,background 0.18s"
                 onfocus="this.style.borderColor='rgba(61,143,86,0.4)';this.style.background='var(--surface-2)'"
-                onblur="this.style.borderColor='var(--border-1)';this.style.background='var(--surface-1)'"
-                placeholder="Search cities or places…">
+                onblur="this.style.borderColor='var(--border-1)';this.style.background='var(--surface-1)'">
         </div>
-
-        <!-- Actions -->
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
             <div id="weather-indicator" style="display:none;width:28px;height:28px;border-radius:8px;background:var(--surface-1);border:1px solid var(--border-1);align-items:center;justify-content:center">
                 <img id="weather-icon" src="" alt="Weather" style="width:20px;height:20px">
@@ -641,28 +486,19 @@
         </div>
     </header>
 
-    <!-- Main -->
     <main style="flex:1 1 0%;min-height:0;display:flex;overflow:hidden;position:relative">
-
-        <!-- Sidebar -->
         <div id="sidebar" style="display:flex;flex-direction:column;z-index:20">
-            <!-- Mobile drag handle -->
             <div id="mobile-drag-handle" onclick="toggleSidebarCollapse()" style="flex-direction:column;align-items:center;padding:10px 0;border-bottom:1px solid var(--border-1);cursor:pointer;background:var(--surface-1)">
                 <div id="sidebar-chevron" style="transition:transform 0.3s">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:var(--text-muted)"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </div>
             </div>
-
-            <!-- Scrollable content -->
             <div id="sidebar-scrollable" style="overflow-y:auto;flex-grow:1;height:45vh" class="md:h-auto">
-                <!-- Controls -->
                 <div style="padding:20px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--border-1)">
-                    <!-- Start at location toggle -->
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
                         <span style="font-size:11px;font-weight:600;color:var(--text-muted)">Start at my location</span>
                         <label class="toggle"><input type="checkbox" id="inline-start-at-loc" onchange="syncToggles(this)"><span class="toggle-track"></span></label>
                     </div>
-
                     <button id="new-route-btn" class="btn btn-primary" style="height:40px;font-size:12px;font-weight:700;gap:6px">
                         <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                         Draw Route
@@ -671,8 +507,6 @@
                         <span style="font-size:14px">🌿</span>
                         Trail Weaver
                     </button>
-
-                    <!-- Active drawing controls -->
                     <div id="active-controls" style="display:none">
                         <div style="padding:14px;border-radius:12px;border:1px solid rgba(61,143,86,0.25);background:rgba(29,74,46,0.12)">
                             <p id="point-count" style="font-size:12px;font-weight:700;color:var(--green-300);margin-bottom:12px">0.00 mi total</p>
@@ -682,8 +516,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- GPS Status -->
                     <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:10px;background:var(--surface-1);border:1px solid var(--border-1)">
                         <div style="display:flex;align-items:center;gap:8px">
                             <div id="tracking-status" style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.2);flex-shrink:0"></div>
@@ -692,8 +524,6 @@
                         <button onclick="recenter()" style="font-size:10px;font-weight:700;color:var(--green-400);background:none;border:none;cursor:pointer;letter-spacing:0.04em">Recenter</button>
                     </div>
                 </div>
-
-                <!-- Saved routes -->
                 <div style="padding:20px">
                     <p style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px">Saved Paths</p>
                     <div id="saved-routes-list" style="display:flex;flex-direction:column;gap:8px"></div>
@@ -701,10 +531,8 @@
             </div>
         </div>
 
-        <!-- Map -->
         <div id="map-area" style="flex:1 1 0%;min-width:0;min-height:0;position:relative;overflow:hidden">
             <div id="map"></div>
-            <!-- Floating locate button (mobile) -->
             <button onclick="recenter()" id="floating-locate" style="position:absolute;bottom:24px;right:24px;z-index:1000;width:48px;height:48px;border-radius:14px;background:rgba(10,15,10,0.9);border:1px solid var(--border-2);color:var(--green-400);display:none;align-items:center;justify-content:center;backdrop-filter:blur(12px);box-shadow:0 8px 32px rgba(0,0,0,0.4);cursor:pointer" class="md:hidden">
                 <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
             </button>
@@ -726,9 +554,24 @@ let initialRecenterDone = false;
 let startAtLocation = false;
 let userHeading = 0;
 let selectedVehicle = 'car';
+let twVehicle = null, twSpeedMPH = null;
+let twBuiltRoute = null;
 const OFF_ROUTE_THRESHOLD = 50;
 
-// ── Sync toggles ──
+// ══ Trail Weaver Stop State ══
+let twStops = []; // [{label, resolved:{lat,lng,name,address}|null, status:'pending'|'resolving'|'resolved'|'error'}]
+let suggestionDebounce = null;
+let aiSuggestController = null;
+
+const QUICK_CHIP_OPTIONS = [
+    { icon:'☕', label:'Nearest coffee shop' },
+    { icon:'🏋️', label:'Nearest gym' },
+    { icon:'🌳', label:'Nearest park' },
+    { icon:'🛒', label:'Nearest grocery store' },
+    { icon:'💊', label:'Nearest pharmacy' },
+    { icon:'⛽', label:'Nearest gas station' },
+];
+
 function syncToggles(el) {
     startAtLocation = el.checked;
     const s = document.getElementById('settings-start-at-loc');
@@ -736,14 +579,12 @@ function syncToggles(el) {
     if (s) s.checked = startAtLocation;
     if (i) i.checked = startAtLocation;
 }
-
 function toggleSidebarCollapse() {
     const sidebar = document.getElementById('sidebar');
     const chevron = document.getElementById('sidebar-chevron');
     sidebar.classList.toggle('is-collapsed');
     chevron.style.transform = sidebar.classList.contains('is-collapsed') ? 'rotate(180deg)' : 'rotate(0deg)';
 }
-
 function toggleSettings() { document.getElementById('settings-panel').classList.toggle('translate-x-full'); }
 
 // ── Boot ──
@@ -751,51 +592,38 @@ window.onload = () => {
     const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
     currentMode = isMobile ? 'mobile' : 'desktop';
     document.body.classList.add(`mode-${currentMode}`);
-    if (isMobile) {
-        document.getElementById('floating-locate').style.display = 'flex';
-    }
+    if (isMobile) document.getElementById('floating-locate').style.display = 'flex';
     let prog = 0;
     const bar = document.getElementById('boot-progress');
     const labels = ['Initializing…','Loading map engine…','Calibrating GPS…','Almost ready…'];
     let li = 0;
     const interval = setInterval(() => {
-        prog += Math.random() * 22;
-        if (prog > 100) prog = 100;
+        prog += Math.random() * 22; if (prog > 100) prog = 100;
         bar.style.width = prog + '%';
         if (prog > li * 25 && li < labels.length) document.getElementById('boot-label').innerText = labels[li++];
         if (prog >= 100) { clearInterval(interval); setTimeout(() => startLoad(currentMode), 400); }
     }, 120);
 };
-
 function startLoad(mode) {
     const boot = document.getElementById('boot-screen');
-    const loader = document.getElementById('loading-screen');
-    boot.style.opacity = '0';
-    boot.style.pointerEvents = 'none';
+    boot.style.opacity = '0'; boot.style.pointerEvents = 'none';
     setTimeout(() => {
         boot.style.display = 'none';
+        const loader = document.getElementById('loading-screen');
         loader.style.display = 'flex';
         setTimeout(() => loader.style.opacity = '1', 40);
-        let prog = 0;
-        const bar = document.getElementById('progress-bar');
-        const iv = setInterval(() => {
-            prog += 10; bar.style.width = prog + '%';
-            if (prog >= 100) { clearInterval(iv); finishLoading(mode); }
-        }, 55);
+        let prog = 0; const bar = document.getElementById('progress-bar');
+        const iv = setInterval(() => { prog += 10; bar.style.width = prog + '%'; if (prog >= 100) { clearInterval(iv); finishLoading(mode); } }, 55);
     }, 600);
 }
-
 function finishLoading(mode) {
     const loader = document.getElementById('loading-screen');
-    const app = document.getElementById('app-interface');
-    loader.style.opacity = '0';
-    loader.style.pointerEvents = 'none';
+    loader.style.opacity = '0'; loader.style.pointerEvents = 'none';
     setTimeout(() => {
         loader.style.display = 'none';
-        app.style.opacity = '1';
-        app.style.pointerEvents = '';
-        initMap(mode);
-        updateSavedList();
+        const app = document.getElementById('app-interface');
+        app.style.opacity = '1'; app.style.pointerEvents = '';
+        initMap(mode); updateSavedList();
         setTimeout(() => { if (map) map.invalidateSize(); }, 100);
     }, 500);
 }
@@ -803,15 +631,13 @@ function finishLoading(mode) {
 // ── GPS ──
 const GPS_OPTIONS_HIGH  = { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 };
 const GPS_OPTIONS_WATCH = { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 };
-
 function getAccurateFix() {
     return new Promise((resolve) => {
         if (!("geolocation" in navigator)) { resolve(null); return; }
-        navigator.geolocation.getCurrentPosition(
-            pos => resolve(pos),
-            () => navigator.geolocation.getCurrentPosition(pos => resolve(pos), () => resolve(null), { enableHighAccuracy: false, maximumAge: 5000, timeout: 8000 }),
-            GPS_OPTIONS_HIGH
-        );
+        navigator.geolocation.getCurrentPosition(pos => resolve(pos), () =>
+            navigator.geolocation.getCurrentPosition(pos => resolve(pos), () => resolve(null),
+                { enableHighAccuracy: false, maximumAge: 5000, timeout: 8000 }),
+            GPS_OPTIONS_HIGH);
     });
 }
 
@@ -820,48 +646,30 @@ function initMap(mode) {
     const isMobile = mode === 'mobile';
     const fallback = [40.7128, -74.0060];
     map = L.map('map', { zoomControl: !isMobile, attributionControl: false, tap: true, tapTolerance: 20 }).setView(fallback, 13);
-
-    // Dark map tiles to match the theme
-    const darkLayer     = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
-    const voyagerLayer  = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
-    const satelliteImg  = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
-    const labelsOverlay = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
+    const darkLayer    = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
+    const voyagerLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
+    const satelliteImg = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
+    const labelsOverlay = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y{r}.png', { maxZoom: 19 });
     const satelliteGroup = L.layerGroup([satelliteImg, labelsOverlay]);
-
     darkLayer.addTo(map);
     L.control.layers({ "🌑 Dark": darkLayer, "🗺 Standard": voyagerLayer, "🛰 Satellite": satelliteGroup }, null, { position: 'topleft' }).addTo(map);
-
     polyline = L.polyline([], { color: '#52b36e', weight: 4, dashArray: '8 12', lineCap: 'round' }).addTo(map);
-
     const customIcon = L.divIcon({
         className: 'custom-div-icon',
-        html: `<div id="marker-orient" style="transform:rotate(0deg);transition:transform 0.2s;position:relative;width:14px;height:14px">
-            <div class="user-arrow"></div>
-            <div class="user-ring"></div>
-            <div class="user-dot" style="position:relative;z-index:10"></div>
-        </div>`,
+        html: `<div id="marker-orient" style="transform:rotate(0deg);transition:transform 0.2s;position:relative;width:14px;height:14px"><div class="user-arrow"></div><div class="user-ring"></div><div class="user-dot" style="position:relative;z-index:10"></div></div>`,
         iconSize: [14,14], iconAnchor: [7,7]
     });
     userMarker = L.marker(fallback, { icon: customIcon }).addTo(map);
-
     if (window.DeviceOrientationEvent) {
         window.addEventListener('deviceorientationabsolute', (e) => {
             let heading = e.alpha || e.webkitCompassHeading;
-            if (heading !== undefined) {
-                userHeading = 360 - heading;
-                const el = document.getElementById('marker-orient');
-                if (el) el.style.transform = `rotate(${userHeading}deg)`;
-            }
+            if (heading !== undefined) { userHeading = 360 - heading; const el = document.getElementById('marker-orient'); if (el) el.style.transform = `rotate(${userHeading}deg)`; }
         }, true);
     }
-
     if ("geolocation" in navigator) {
         getAccurateFix().then((pos) => {
-            if (pos) {
-                const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
-                updateLocation(latlng);
-                if (!initialRecenterDone) { map.flyTo(latlng, 16); initialRecenterDone = true; }
-            } else { handleGPSBlocked(); }
+            if (pos) { const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude); updateLocation(latlng); if (!initialRecenterDone) { map.flyTo(latlng, 16); initialRecenterDone = true; } }
+            else handleGPSBlocked();
         });
         navigator.geolocation.watchPosition(
             (pos) => {
@@ -869,12 +677,8 @@ function initMap(mode) {
                 updateLocation(latlng);
                 if (!initialRecenterDone) { map.flyTo(latlng, 16); initialRecenterDone = true; }
                 if (isDriving) { map.panTo(latlng); updateHUD(); }
-            },
-            (err) => console.warn('GPS watch error:', err.code, err.message),
-            GPS_OPTIONS_WATCH
-        );
+            }, (err) => console.warn('GPS watch error:', err.code, err.message), GPS_OPTIONS_WATCH);
     }
-
     map.on('click', (e) => {
         if (!isDrawing) return;
         if (startAtLocation && routePath.length === 0 && lastKnownPos) {
@@ -886,8 +690,9 @@ function initMap(mode) {
         polyline.setLatLngs(routePath);
         document.getElementById('point-count').innerText = calculateDistance(routePath) + ' mi total';
     });
+    // Close suggestions on map click
+    map.on('click', hideSuggestions);
 }
-
 function handleGPSBlocked() {
     document.getElementById('tracking-status').style.background = '#ef4444';
     document.getElementById('gps-label').innerText = 'GPS blocked';
@@ -902,28 +707,22 @@ document.getElementById('new-route-btn').onclick = () => {
     document.getElementById('active-controls').style.display = 'block';
     document.getElementById('point-count').innerText = '0.00 mi total';
 };
-
 document.getElementById('cancel-draft-btn').onclick = () => {
     isDrawing = false; markers.forEach(m => map.removeLayer(m)); markers = []; polyline.setLatLngs([]);
     document.getElementById('new-route-btn').style.display = 'flex';
     document.getElementById('active-controls').style.display = 'none';
 };
-
 document.getElementById('end-route-btn').onclick = () => {
     if (routePath.length < 2) return;
     document.getElementById('modal-dist').innerText = `Total Distance: ${calculateDistance(routePath)} miles`;
     document.getElementById('name-modal').style.display = 'flex';
 };
-
 document.getElementById('close-modal-btn').onclick = () => document.getElementById('name-modal').style.display = 'none';
-
 document.getElementById('confirm-save-btn').onclick = () => {
     const name = document.getElementById('route-name-input').value || 'Unnamed Route';
     const newRoute = { id: Date.now(), name, distance: calculateDistance(routePath), path: routePath, date: new Date().toLocaleDateString() };
-    savedRoutes.push(newRoute);
-    localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
-    updateSavedList();
-    isDrawing = false; markers.forEach(m => map.removeLayer(m)); markers = []; polyline.setLatLngs([]);
+    savedRoutes.push(newRoute); localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
+    updateSavedList(); isDrawing = false; markers.forEach(m => map.removeLayer(m)); markers = []; polyline.setLatLngs([]);
     document.getElementById('new-route-btn').style.display = 'flex';
     document.getElementById('active-controls').style.display = 'none';
     document.getElementById('name-modal').style.display = 'none';
@@ -934,24 +733,18 @@ document.getElementById('confirm-save-btn').onclick = () => {
 window.deleteRoute = (id) => {
     savedRoutes = savedRoutes.filter(r => r.id !== id);
     localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
-    updateSavedList();
-    if (activeViewLine) map.removeLayer(activeViewLine);
+    updateSavedList(); if (activeViewLine) map.removeLayer(activeViewLine);
 };
-
 window.viewRoute = (id) => {
-    const r = savedRoutes.find(x => x.id === id);
-    if (!r) return;
+    const r = savedRoutes.find(x => x.id === id); if (!r) return;
     if (activeViewLine) map.removeLayer(activeViewLine);
     activeViewLine = L.polyline(r.path, { color: '#e8943e', weight: 5, opacity: 0.9 }).addTo(map);
     map.fitBounds(activeViewLine.getBounds(), { padding: [50,50] });
 };
-
 function updateSavedList() {
-    const list = document.getElementById('saved-routes-list');
-    list.innerHTML = '';
+    const list = document.getElementById('saved-routes-list'); list.innerHTML = '';
     [...savedRoutes].reverse().forEach(r => {
-        const div = document.createElement('div');
-        div.className = 'route-card';
+        const div = document.createElement('div'); div.className = 'route-card';
         div.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
                 <div>
@@ -979,34 +772,37 @@ async function loadWeatherIcon() {
         if (!res.ok) return;
         const data = await res.json();
         const iconCode = data.weather?.[0]?.icon;
-        if (iconCode) {
-            document.getElementById('weather-icon').src = `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
-            document.getElementById('weather-indicator').style.display = 'flex';
-        }
+        if (iconCode) { document.getElementById('weather-icon').src = `https://openweathermap.org/img/wn/${iconCode}@2x.png`; document.getElementById('weather-indicator').style.display = 'flex'; }
     } catch(e) {}
 }
 
-// ══ Trail Weaver ══
-let twVehicle = null, twSpeedMPH = null, twParsedStops = [], twBuiltRoute = null;
+// ══════════════════════════════════════════════
+// ══ TRAIL WEAVER — REBUILT STOP BUILDER ══
+// ══════════════════════════════════════════════
 
 function openNavModal() {
-    const modal = document.getElementById('nav-modal');
-    modal.style.display = 'flex';
+    document.getElementById('nav-modal').style.display = 'flex';
     twGoToStep(1);
 }
-function closeNavModal() { document.getElementById('nav-modal').style.display = 'none'; }
+function closeNavModal() {
+    document.getElementById('nav-modal').style.display = 'none';
+    hideSuggestions();
+}
 
 function twGoToStep(n) {
     [1,2,3].forEach(i => {
         const step = document.getElementById(`tw-step-${i}`);
         step.style.display = i === n ? 'flex' : 'none';
         if (i === n) step.style.flexDirection = 'column';
-        const dot = document.getElementById(`dot-${i}`);
-        dot.style.background = i <= n ? 'var(--green-600)' : 'var(--surface-2)';
+        document.getElementById(`dot-${i}`).style.background = i <= n ? 'var(--green-600)' : 'var(--surface-2)';
     });
     document.getElementById('tw-step-label').innerText = n;
+    if (n === 2) renderStopBuilder();
 }
-function twBack(step) { twGoToStep(step - 1); }
+function twBack(step) {
+    twGoToStep(step - 1);
+    hideSuggestions();
+}
 
 function twSelectVehicle(type) {
     twVehicle = type; selectedVehicle = type;
@@ -1016,8 +812,6 @@ function twSelectVehicle(type) {
     document.getElementById('tw-speed-block').style.display = needsSpeed ? 'flex' : 'none';
     if (needsSpeed) document.getElementById('tw-vehicle-label').innerText = type === 'escooter' ? 'scooter' : 'e-bike';
 }
-
-function twSetExample(btn) { document.getElementById('tw-journey-input').value = btn.dataset.ex; }
 
 function twNext(step) {
     if (step === 1) {
@@ -1030,110 +824,243 @@ function twNext(step) {
         } else { twSpeedMPH = null; }
         twGoToStep(2);
     } else if (step === 2) {
-        const txt = document.getElementById('tw-journey-input').value.trim();
-        if (!txt) { alert('Describe your journey first!'); return; }
+        if (twStops.length === 0) { alert('Add at least one stop!'); return; }
+        const unresolved = twStops.filter(s => s.status === 'error');
+        if (unresolved.length > 0) { alert(`Some stops couldn't be found. Remove them or try different names.`); return; }
+        const still = twStops.filter(s => s.status === 'resolving');
+        if (still.length > 0) { alert('Still finding some stops — please wait a moment.'); return; }
         twGoToStep(3);
-        twRunAI(txt);
+        twBuildSummary();
     }
 }
 
-function twParse(text) {
-    const t = text.toLowerCase().trim();
-    const isFoot   = twVehicle === 'walking' || twVehicle === 'running';
-    const isCar    = twVehicle === 'car';
-    const isSlowEV = (twVehicle === 'escooter' || twVehicle === 'ebike') && twSpeedMPH && twSpeedMPH <= 25;
-    const osrmProfile = isCar ? 'car' : (isFoot || isSlowEV) ? 'foot' : 'bicycle';
-    const safetyMap = {
-        walking: 'Routed on sidewalks, crosswalks, and pedestrian paths only.',
-        running: 'Routed on paths, parks, and sidewalks — heavy traffic avoided.',
-        bike: 'Routed on bike lanes, paths, and quiet residential streets — no highways.',
-        car: 'Full road access including highways.',
-        escooter: isSlowEV ? `At ${twSpeedMPH} MPH: residential streets and bike paths only.` : `At ${twSpeedMPH} MPH: bike lanes and quieter roads.`,
-        ebike: isSlowEV ? `At ${twSpeedMPH} MPH: bike paths and quiet streets.` : `At ${twSpeedMPH} MPH: bike lanes and roads under 40 MPH.`
-    };
-    const safetyNotes = safetyMap[twVehicle] || 'Standard routing.';
-    let targetMiles = null;
-    const miM = t.match(/(?:about|around|roughly|~|approximately)?\s*([\d.]+)\s*(?:miles?|mi)\b/);
-    const kmM = t.match(/(?:about|around|roughly|~|approximately)?\s*([\d.]+)\s*(?:km|kilometers?)\b/);
-    if (miM) targetMiles = parseFloat(miM[1]);
-    else if (kmM) targetMiles = parseFloat(kmM[1]) * 0.621371;
-    const returnHome = /\b(back\s+(home|to\s+(my\s+)?(house|place|start))|return(ing)?\s+(home|back)|loop\s+back|end\s+at\s+(home|my)|come\s+back\s+home|head\s+back\s+home|back\s+to\s+home)\b/.test(t);
-    const startAtUserLocation =
-        /\b(from\s+(my\s+)?(house|home|place|location|here|current)|starting\s+(from|at)\s+(my|here)|from\s+where\s+i\s+am)\b/.test(t) ||
-        /\b(i\s+(want|need|plan)\s+to|i\s+(am|'m)\s+(going|heading))\b/.test(t) ||
-        !t.includes(' from ');
-    let working = text;
-    working = working.replace(/(?:about|around|roughly|approximately|~)?\s*[\d.]+\s*(?:miles?|mi|km|kilometers?)\b/gi, '');
-    working = working.replace(/,?\s*(?:and\s+)?(?:then\s+)?(?:get|go|come|loop|head)?\s*back(?:\s+(?:home|to\s+(?:my\s+)?(?:house|place|start|beginning|location|home)))?\s*[.,!?]*\s*$/gi, '');
-    working = working.replace(/,?\s*(?:return(?:ing)?\s+(?:home|back)|end\s+at\s+(?:home|my\s+\w+))\s*[.,!?]*\s*$/gi, '');
-    working = working.replace(/^.*?(?:starting\s+from|from)\s+(?:my\s+)?(?:house|home|place|location|here|current\s+location)[,\s]*/gi, '');
-    working = working.replace(/^(?:i\s+(?:want|would\s+like|need|plan)\s+to\s+)?(?:go|run|walk|ride|bike|drive|head|do\s+a\s+(?:run|walk|ride))[,\s]*/gi, '');
-    working = working.replace(/^(?:take\s+me\s+to(?:\s+the\s+(?:nearest|closest))?|please\s+take\s+me\s+to)\s*/gi, '');
-    working = working.replace(/\s*(?:total|in\s+total|altogether|or\s+so|exactly|please|if\s+possible)[.,!?]*\s*$/gi, '');
-    working = working.trim().replace(/^[,.\s]+|[,.\s]+$/g, '');
-    const rawParts = working.split(/\s*(?:,\s*)?(?:and\s+then|then|after\s+that|followed\s+by|next(?:\s+stop)?(?:\s+is)?|,\s*and\s+|,\s*)\s*/gi).map(p => p.trim());
-    const junkWords = /^(?:and|or|but|so|then|to|at|the|a|an|my|me|from|in|on|of|i|go|head|visit|stop|swing|also|next|first|last|finally|get)$/i;
-    const stops = []; const seen = new Set();
-    rawParts.forEach(raw => {
-        let s = raw.replace(/^(?:take\s+me\s+to(?:\s+the\s+(?:nearest|closest))?|take\s+me\s+to)\s+/gi,'')
-            .replace(/^(?:go(?:ing)?\s+to|head(?:ing)?\s+to|visit(?:ing)?|stop(?:ping)?\s+(?:at|by)|swing(?:ing)?\s+by|drop(?:ping)?\s+(?:by|in\s+at)|check(?:ing)?\s+out)\s+/gi,'')
-            .replace(/^(?:the\s+nearest|the\s+closest|nearest|closest)\s+/gi,'')
-            .replace(/^(?:the\s+|a\s+|my\s+)/gi,'').replace(/[.,!?]+$/,'').trim();
-        if (!s || s.length < 2 || junkWords.test(s) || /^\d+$/.test(s)) return;
-        const key = s.toLowerCase();
-        if (!seen.has(key)) { seen.add(key); stops.push(s); }
-    });
-    if (stops.length === 0 && !returnHome) return { feasible: false, error: 'Couldn\'t find any destinations. Try: "Run from my house to Crunch Fitness then Five Below and back home."' };
-    if (targetMiles !== null && targetMiles > 50 && !isCar) return { feasible: false, error: `${targetMiles} miles is too far for a ${twVehicle} route.` };
-    const fullStops = [];
-    if (startAtUserLocation) fullStops.push('MY_LOCATION');
-    fullStops.push(...stops);
-    if (returnHome) fullStops.push('MY_LOCATION');
-    const stopCount  = Math.max(stops.length, 1);
-    const baseMiles  = targetMiles || parseFloat((stopCount * 1.0 + (returnHome ? 1.0 : 0)).toFixed(1));
-    const speedMap   = { walking: 3, running: 6, bike: 12, car: 30, escooter: Math.min(twSpeedMPH || 15, 20), ebike: Math.min(twSpeedMPH || 20, 25) };
-    const mph        = speedMap[twVehicle] || 3;
-    const estMinutes = Math.max(1, Math.round((baseMiles / mph) * 60));
-    const vLabel     = { walking:'walk', running:'run', bike:'bike ride', car:'drive', escooter:'scooter ride', ebike:'e-bike ride' }[twVehicle] || 'trip';
-    const stopStr    = stops.length > 0 ? stops.join(' → ') : 'your destination';
-    const loopStr    = returnHome ? ', then back home' : '';
-    const distStr    = targetMiles ? `targeting ~${targetMiles} mi` : `~${baseMiles} mi estimated`;
-    const routeSummary = `${startAtUserLocation ? 'From your location' : 'Starting at your first stop'}: ${vLabel} to ${stopStr}${loopStr} — ${distStr}.`;
-    return { feasible: true, error: null, stops: fullStops, startAtUserLocation, returnHome, estimatedMiles: baseMiles, estimatedMinutes: estMinutes, safetyNotes, routeSummary, osrmProfile };
+// ── Stop Builder UI ──
+function renderStopBuilder() {
+    renderStopsList();
+    renderQuickChips();
 }
 
-function twRunAI(journeyText) {
+function renderQuickChips() {
+    const c = document.getElementById('quick-chips');
+    c.innerHTML = QUICK_CHIP_OPTIONS.map(ch =>
+        `<button onclick="addQuickChip(${JSON.stringify(ch.label).replace(/"/g,"'")})"
+            style="padding:6px 12px;border-radius:9999px;font-size:10px;font-weight:600;background:var(--surface-1);border:1px solid var(--border-1);color:var(--text-secondary);cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:5px"
+            onmouseover="this.style.background='var(--surface-2)';this.style.color='var(--text-primary)'"
+            onmouseout="this.style.background='var(--surface-1)';this.style.color='var(--text-secondary)'">
+            <span>${ch.icon}</span>${ch.label}
+        </button>`
+    ).join('');
+}
+
+function renderStopsList() {
+    const list = document.getElementById('tw-stops-list');
+    if (twStops.length === 0) {
+        list.innerHTML = `<p style="font-size:11px;color:var(--text-muted);font-weight:500;text-align:center;padding:12px 0">No stops yet — add your first destination below</p>`;
+        return;
+    }
+    list.innerHTML = '';
+    twStops.forEach((stop, idx) => {
+        const div = document.createElement('div');
+        div.className = `stop-item ${stop.status === 'resolving' ? 'resolving' : stop.status === 'resolved' ? 'resolved' : stop.status === 'error' ? 'error' : ''}`;
+        div.id = `stop-item-${idx}`;
+
+        const spinner = stop.status === 'resolving'
+            ? `<div class="stop-spinner"></div>`
+            : `<button onclick="removeStop(${idx})" style="width:20px;height:20px;border-radius:5px;background:transparent;border:none;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;transition:color 0.12s" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">
+                <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>`;
+
+        const subText = stop.status === 'resolving'
+            ? `<div class="stop-sub">Searching nearby…</div>`
+            : stop.status === 'resolved' && stop.resolved
+            ? `<div class="stop-sub ok">✓ ${stop.resolved.name}${stop.resolved.distance_mi ? ` · ${stop.resolved.distance_mi} mi away` : ''}</div>`
+            : stop.status === 'error'
+            ? `<div class="stop-sub err">⚠ Couldn't find — try a different name</div>`
+            : `<div class="stop-sub">Queued</div>`;
+
+        div.innerHTML = `
+            <div class="stop-num">${idx + 1}</div>
+            <div style="flex:1;min-width:0">
+                <div class="stop-name">${stop.label}</div>
+                ${subText}
+            </div>
+            ${spinner}`;
+        list.appendChild(div);
+    });
+}
+
+window.removeStop = (idx) => {
+    twStops.splice(idx, 1);
+    renderStopsList();
+};
+
+function addQuickChip(label) {
+    document.getElementById('stop-text-input').value = label;
+    addStopFromInput();
+}
+
+function addStopFromInput() {
+    const input = document.getElementById('stop-text-input');
+    const raw = input.value.trim();
+    if (!raw) return;
+    input.value = '';
+    hideSuggestions();
+    const idx = twStops.length;
+    twStops.push({ label: raw, resolved: null, status: 'resolving' });
+    renderStopsList();
+    resolveStop(idx);
+}
+
+async function resolveStop(idx) {
+    const stop = twStops[idx];
+    if (!stop) return;
+    // Get GPS if needed
+    let userLat = lastKnownPos?.lat ?? null;
+    let userLng = lastKnownPos?.lng ?? null;
+    if (!userLat) {
+        const fix = await getAccurateFix();
+        if (fix) { userLat = fix.coords.latitude; userLng = fix.coords.longitude; }
+    }
+    try {
+        const result = await resolveStopToCoords(stop.label, userLat, userLng);
+        if (result && twStops[idx]) {
+            const dist = userLat ? haversineMiles(userLat, userLng, result.lat, result.lng).toFixed(1) : null;
+            twStops[idx].resolved = { ...result, distance_mi: dist };
+            twStops[idx].status = 'resolved';
+        } else if (twStops[idx]) {
+            twStops[idx].status = 'error';
+        }
+    } catch(e) {
+        if (twStops[idx]) twStops[idx].status = 'error';
+    }
+    renderStopsList();
+}
+
+// ── AI Suggestions (debounced) ──
+function onStopInput(val) {
+    clearTimeout(suggestionDebounce);
+    if (!val || val.length < 2) { hideSuggestions(); return; }
+    suggestionDebounce = setTimeout(() => fetchAISuggestions(val), 380);
+}
+
+function onStopKeydown(e) {
+    if (e.key === 'Enter') { e.preventDefault(); addStopFromInput(); }
+    if (e.key === 'Escape') hideSuggestions();
+}
+
+async function fetchAISuggestions(query) {
+    if (aiSuggestController) aiSuggestController.abort();
+    aiSuggestController = new AbortController();
+    const userLat = lastKnownPos?.lat;
+    const userLng = lastKnownPos?.lng;
+    const locationHint = userLat ? `near coordinates (${userLat.toFixed(4)}, ${userLng.toFixed(4)})` : 'location unknown';
+    const prompt = `The user is planning a ${twVehicle || 'walking'} route and typed: "${query}"
+User GPS: ${locationHint}
+
+Suggest 4 specific place names the user likely means. Return ONLY a JSON array, no markdown:
+[{"icon":"emoji","label":"Place Name","hint":"type of place"}]
+
+Rules:
+- Real, specific place types (not vague)  
+- Relevant to ${twVehicle || 'walking'} travel distance
+- Mix exact business names and category descriptions
+- Keep labels short (under 30 chars)`;
+
+    try {
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: aiSuggestController.signal,
+            body: JSON.stringify({
+                model: "claude-sonnet-4-20250514",
+                max_tokens: 300,
+                messages: [{ role: "user", content: prompt }]
+            })
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        const text = (data.content || []).map(i => i.text || '').join('');
+        const match = text.match(/\[[\s\S]*\]/);
+        if (match) {
+            const suggestions = JSON.parse(match[0]);
+            showSuggestions(suggestions);
+        }
+    } catch(e) {
+        if (e.name !== 'AbortError') hideSuggestions();
+    }
+}
+
+function showSuggestions(items) {
+    const box = document.getElementById('stop-suggestions');
+    if (!items || !items.length) { hideSuggestions(); return; }
+    box.innerHTML = items.map(s =>
+        `<div class="suggestion-item" onclick="pickSuggestion(${JSON.stringify(s.label).replace(/"/g,"'")})">
+            <span class="suggestion-icon">${s.icon || '📍'}</span>
+            <div>
+                <div style="font-size:12px;font-weight:600;color:var(--text-primary)">${s.label}</div>
+                ${s.hint ? `<div style="font-size:10px;color:var(--text-muted)">${s.hint}</div>` : ''}
+            </div>
+        </div>`
+    ).join('');
+    box.style.display = 'block';
+}
+function hideSuggestions() {
+    document.getElementById('stop-suggestions').style.display = 'none';
+}
+function pickSuggestion(label) {
+    document.getElementById('stop-text-input').value = label;
+    hideSuggestions();
+    addStopFromInput();
+}
+
+// ── Build route summary ──
+function twBuildSummary() {
     document.getElementById('tw-thinking').style.display = 'flex';
     document.getElementById('tw-result').style.display = 'none';
-    document.getElementById('tw-error-block').style.display = 'none';
-    const labels = ['Reading your journey…','Finding your stops…','Checking road types…','Calculating distance…','Weaving your trail…'];
+    const labels = ['Computing path…','Checking road types…','Calculating distances…','Weaving your trail…'];
     let li = 0;
-    const lv = setInterval(() => { const el = document.getElementById('tw-thinking-label'); if (el) el.innerText = labels[li % labels.length]; li++; }, 900);
-    setTimeout(() => { clearInterval(lv); twShowResult(twParse(journeyText)); }, 1500);
+    const lv = setInterval(() => {
+        const el = document.getElementById('tw-thinking-label');
+        if (el) el.innerText = labels[li % labels.length]; li++;
+    }, 900);
+    setTimeout(() => {
+        clearInterval(lv);
+        const resolvedStops = twStops.filter(s => s.status === 'resolved' && s.resolved);
+        const returnHome = document.getElementById('tw-return-home').checked;
+        const targetMiles = parseFloat(document.getElementById('tw-target-miles').value) || null;
+        const isFoot = twVehicle === 'walking' || twVehicle === 'running';
+        const isCar  = twVehicle === 'car';
+        const isSlowEV = (twVehicle === 'escooter' || twVehicle === 'ebike') && twSpeedMPH && twSpeedMPH <= 25;
+        const osrmProfile = isCar ? 'car' : (isFoot || isSlowEV) ? 'foot' : 'bicycle';
+        const speedMap = { walking:3, running:6, bike:12, car:30, escooter: Math.min(twSpeedMPH||15,20), ebike: Math.min(twSpeedMPH||20,25) };
+        const mph = speedMap[twVehicle] || 3;
+        const stopCount = resolvedStops.length;
+        const baseMiles = targetMiles || parseFloat((stopCount * 1.2 + (returnHome ? 0.8 : 0)).toFixed(1));
+        const estMinutes = Math.max(1, Math.round((baseMiles / mph) * 60));
+        const vLabel = { walking:'walk', running:'run', bike:'bike ride', car:'drive', escooter:'scooter ride', ebike:'e-bike ride' }[twVehicle] || 'trip';
+        const stopNames = resolvedStops.map(s => s.resolved?.name || s.label);
+        const loopStr = returnHome ? ', then back home' : '';
+        const distStr = targetMiles ? `targeting ~${targetMiles} mi` : `~${baseMiles} mi estimated`;
+        const safetyMap = { walking:'Routed on sidewalks and pedestrian paths.', running:'Paths and parks — heavy traffic avoided.', bike:'Bike lanes and quiet streets — no highways.', car:'Full road access.', escooter:`At ${twSpeedMPH} MPH: residential streets and bike paths.`, ebike:`At ${twSpeedMPH} MPH: bike lanes and quieter roads.` };
+        document.getElementById('tw-thinking').style.display = 'none';
+        document.getElementById('tw-result').style.display = 'flex';
+        if (resolvedStops.length === 0) {
+            document.getElementById('tw-error-block').style.display = 'block';
+            document.getElementById('tw-error-msg').innerText = 'No stops found. Go back and add stops.';
+            document.getElementById('tw-launch-btn').style.display = 'none';
+        } else {
+            document.getElementById('tw-error-block').style.display = 'none';
+            document.getElementById('tw-launch-btn').style.display = '';
+            document.getElementById('tw-ai-summary').innerHTML = `${vLabel.charAt(0).toUpperCase()+vLabel.slice(1)} to ${stopNames.join(' → ')}${loopStr} — ${distStr}.<br><span style="font-size:10px;opacity:0.6;margin-top:6px;display:block">${safetyMap[twVehicle]||''}</span>`;
+            document.getElementById('tw-est-dist').innerText = `~${baseMiles} mi`;
+            document.getElementById('tw-est-time').innerText = estMinutes >= 60 ? `${Math.floor(estMinutes/60)}h ${estMinutes%60}m` : `~${estMinutes}m`;
+            document.getElementById('tw-est-stops').innerText = stopCount + (returnHome ? ' + home' : '');
+        }
+        twBuiltRoute = { feasible: resolvedStops.length > 0, resolvedStops, returnHome, osrmProfile, targetMiles };
+    }, 1800);
 }
 
-function twShowResult(plan) {
-    document.getElementById('tw-thinking').style.display = 'none';
-    document.getElementById('tw-result').style.display = 'flex';
-    if (!plan.feasible) {
-        document.getElementById('tw-error-block').style.display = 'block';
-        document.getElementById('tw-error-msg').innerText = plan.error || 'Route not possible with given constraints.';
-        document.getElementById('tw-launch-btn').style.display = 'none';
-        document.getElementById('tw-ai-summary').innerHTML = '';
-    } else {
-        document.getElementById('tw-error-block').style.display = 'none';
-        document.getElementById('tw-launch-btn').style.display = '';
-        document.getElementById('tw-ai-summary').innerHTML = `${plan.routeSummary}<br><span style="font-size:10px;opacity:0.6;margin-top:6px;display:block">${plan.safetyNotes || ''}</span>`;
-        document.getElementById('tw-est-dist').innerText = plan.estimatedMiles ? `~${plan.estimatedMiles} mi` : '--';
-        const mins = plan.estimatedMinutes;
-        document.getElementById('tw-est-time').innerText = mins ? (mins >= 60 ? `${Math.floor(mins/60)}h ${mins%60}m` : `~${mins}m`) : '--';
-        document.getElementById('tw-est-stops').innerText = plan.stops ? `${plan.stops.length}` : '--';
-        twParsedStops = plan.stops || [];
-        twBuiltRoute = plan;
-    }
-}
-
-// ── AI Progress Toast ──
+// ── Progress Toast ──
 let progressToastEl = null;
 function showProgressToast(steps) {
     removeProgressToast();
@@ -1141,24 +1068,18 @@ function showProgressToast(steps) {
     progressToastEl.className = 'ai-toast';
     progressToastEl.innerHTML = `
         <p style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--green-400);margin-bottom:12px">🌿 Building your route…</p>
-        ${steps.map((s,i) => `
-            <div class="ai-step pending" id="ai-step-${i}">
-                <div class="ai-step-dot">${s.icon}</div>
-                <span class="ai-step-text">${s.label}</span>
-            </div>
-        `).join('')}`;
+        ${steps.map((s,i) => `<div class="ai-step pending" id="ai-step-${i}"><div class="ai-step-dot">${s.icon}</div><span class="ai-step-text">${s.label}</span></div>`).join('')}`;
     document.body.appendChild(progressToastEl);
 }
 function setProgressStep(index, state, customLabel = null) {
-    const el = document.getElementById(`ai-step-${index}`);
-    if (!el) return;
+    const el = document.getElementById(`ai-step-${index}`); if (!el) return;
     el.className = `ai-step ${state}`;
     if (customLabel) el.querySelector('.ai-step-text').textContent = customLabel;
     if (state === 'done') el.querySelector('.ai-step-dot').textContent = '✓';
 }
 function removeProgressToast() { if (progressToastEl) { progressToastEl.remove(); progressToastEl = null; } }
 
-// ── Geocoding ──
+// ── Geocoding helpers ──
 function haversineMiles(lat1, lng1, lat2, lng2) {
     const R = 3958.8, dLat = (lat2-lat1)*Math.PI/180, dLng = (lng2-lng1)*Math.PI/180;
     const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
@@ -1166,11 +1087,10 @@ function haversineMiles(lat1, lng1, lat2, lng2) {
 }
 
 async function resolveStopWithAI(stopName, userLat, userLng) {
-    const prompt = `You are a precise geocoding assistant. Given a user's exact GPS coordinates and a destination description, find the CLOSEST real location and return ONLY a JSON object.\n\nUser GPS: latitude ${userLat.toFixed(6)}, longitude ${userLng.toFixed(6)}\n\nDestination requested: "${stopName}"\n\nSearch for the closest "${stopName}" to those coordinates. Return ONLY this JSON (no other text, no markdown):\n{"name": "exact business name", "lat": 00.000000, "lng": -00.000000, "address": "full address", "distance_miles": 0.0}\n\nRequirements:\n- Must be the CLOSEST one to the given coordinates, not just any location\n- Use real coordinates from web search results\n- If you cannot find it, return: {"error": "not found"}`;
+    const prompt = `You are a geocoding assistant. Given GPS coordinates and a destination description, return the CLOSEST real location as JSON.\n\nUser GPS: latitude ${userLat?.toFixed(6)}, longitude ${userLng?.toFixed(6)}\nDestination: "${stopName}"\n\nReturn ONLY this JSON (no markdown, no other text):\n{"name": "exact name", "lat": 0.000000, "lng": 0.000000, "address": "full address", "distance_miles": 0.0}\n\nIf not found: {"error": "not found"}`;
     try {
         const response = await fetch("https://api.anthropic.com/v1/messages", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+            method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, tools: [{ "type": "web_search_20250305", "name": "web_search" }], messages: [{ role: "user", content: prompt }] })
         });
         if (!response.ok) throw new Error(`API ${response.status}`);
@@ -1182,14 +1102,14 @@ async function resolveStopWithAI(stopName, userLat, userLng) {
             if (parsed.lat && parsed.lng && !parsed.error) return { lng: parsed.lng, lat: parsed.lat, name: parsed.name, address: parsed.address };
         }
         return null;
-    } catch(e) { console.warn("AI geocode failed:", e.message); return null; }
+    } catch(e) { return null; }
 }
 
-const OSM_TAG_MAP = { 'gym':['leisure=fitness_centre','amenity=gym'], 'fitness':['leisure=fitness_centre'], 'coffee shop':['amenity=cafe'], 'cafe':['amenity=cafe'], 'coffee':['amenity=cafe'], 'starbucks':['name=Starbucks','amenity=cafe'], 'mcdonalds':["name=McDonald's",'amenity=fast_food'], "mcdonald's":["name=McDonald's",'amenity=fast_food'], 'subway':['name=Subway','amenity=fast_food'], 'restaurant':['amenity=restaurant'], 'fast food':['amenity=fast_food'], 'grocery store':['shop=supermarket','shop=grocery'], 'grocery':['shop=supermarket'], 'supermarket':['shop=supermarket'], 'walmart':['name=Walmart','shop=supermarket'], 'target':['name=Target','shop=department_store'], 'five below':['name=Five Below','shop=variety_store'], 'cvs':['name=CVS','amenity=pharmacy'], 'walgreens':['name=Walgreens','amenity=pharmacy'], 'pharmacy':['amenity=pharmacy'], 'gas station':['amenity=fuel'], 'park':['leisure=park'], 'local park':['leisure=park'], 'library':['amenity=library'], 'hospital':['amenity=hospital'], 'bank':['amenity=bank'], 'crunch fitness':['name=Crunch Fitness','leisure=fitness_centre'], 'planet fitness':['name=Planet Fitness','leisure=fitness_centre'] };
+const OSM_TAG_MAP = { 'gym':['leisure=fitness_centre','amenity=gym'], 'fitness':['leisure=fitness_centre'], 'coffee shop':['amenity=cafe'], 'cafe':['amenity=cafe'], 'coffee':['amenity=cafe'], 'starbucks':['name=Starbucks','amenity=cafe'], 'mcdonalds':["name=McDonald's",'amenity=fast_food'], "mcdonald's":["name=McDonald's",'amenity=fast_food'], 'subway':['name=Subway','amenity=fast_food'], 'restaurant':['amenity=restaurant'], 'fast food':['amenity=fast_food'], 'grocery store':['shop=supermarket','shop=grocery'], 'grocery':['shop=supermarket'], 'supermarket':['shop=supermarket'], 'walmart':['name=Walmart','shop=supermarket'], 'target':['name=Target','shop=department_store'], 'five below':['name=Five Below','shop=variety_store'], 'cvs':['name=CVS','amenity=pharmacy'], 'walgreens':['name=Walgreens','amenity=pharmacy'], 'pharmacy':['amenity=pharmacy'], 'gas station':['amenity=fuel'], 'park':['leisure=park'], 'local park':['leisure=park'], 'library':['amenity=library'], 'hospital':['amenity=hospital'], 'bank':['amenity=bank'], 'crunch fitness':['name=Crunch Fitness','leisure=fitness_centre'], 'planet fitness':['name=Planet Fitness','leisure=fitness_centre'], 'nearest coffee shop':['amenity=cafe'], 'nearest gym':['leisure=fitness_centre'], 'nearest park':['leisure=park'], 'nearest grocery store':['shop=supermarket'], 'nearest pharmacy':['amenity=pharmacy'], 'nearest gas station':['amenity=fuel'] };
 
 async function resolveViaOverpass(stopName, userLat, userLng) {
-    const key = stopName.toLowerCase().trim();
-    let tags = OSM_TAG_MAP[key];
+    const key = stopName.toLowerCase().trim().replace(/^nearest\s+/,'');
+    let tags = OSM_TAG_MAP[stopName.toLowerCase().trim()] || OSM_TAG_MAP[key];
     if (!tags) { const pk = Object.keys(OSM_TAG_MAP).find(k => key.includes(k) || k.includes(key)); if (pk) tags = OSM_TAG_MAP[pk]; }
     if (!tags || !userLat) return null;
     const maxMiles = twVehicle === 'car' ? 30 : 15;
@@ -1255,39 +1175,25 @@ async function twLaunchRoute() {
     closeNavModal();
     const plan = twBuiltRoute;
     const profile = plan.osrmProfile || 'foot';
-    if (!lastKnownPos) { const gpsResult = await getAccurateFix(); if (gpsResult) updateLocation(L.latLng(gpsResult.coords.latitude, gpsResult.coords.longitude)); }
+    if (!lastKnownPos) { const fix = await getAccurateFix(); if (fix) updateLocation(L.latLng(fix.coords.latitude, fix.coords.longitude)); }
     const userLat = lastKnownPos?.lat ?? null, userLng = lastKnownPos?.lng ?? null;
-    if (!userLat && plan.startAtUserLocation) { showSimpleToast('⚠️ GPS not available — enable location and try again', true); document.getElementById('nav-modal').style.display='flex'; twGoToStep(2); return; }
-    const nonHomeStops = plan.stops.filter(s => s !== 'MY_LOCATION');
-    const progressSteps = [{ icon:'📍', label:'Locking GPS position' }, ...nonHomeStops.map(s=>({ icon:'🔍', label:`Finding: ${s}` })), { icon:'🗺️', label:'Building route' }];
+    const resolvedStops = plan.resolvedStops;
+    const progressSteps = [
+        { icon:'📍', label:'Locking GPS' },
+        ...resolvedStops.map(s => ({ icon:'✓', label:`${s.resolved?.name || s.label}` })),
+        { icon:'🗺️', label:'Building route' }
+    ];
     showProgressToast(progressSteps);
-    setProgressStep(0,'active');
-    await new Promise(r=>setTimeout(r,300));
-    setProgressStep(0,'done',`📍 Locked (${userLat?.toFixed(4)}, ${userLng?.toFixed(4)})`);
-    const resolved = await Promise.all(nonHomeStops.map(async (stopName, idx) => {
-        setProgressStep(idx+1,'active');
-        const result = await resolveStopToCoords(stopName, userLat, userLng);
-        if (result) { const dist=haversineMiles(userLat,userLng,result.lat,result.lng); setProgressStep(idx+1,'done',`✓ ${result.name||stopName} (${dist.toFixed(1)} mi)`); }
-        else setProgressStep(idx+1,'done',`⚠️ Not found: ${stopName}`);
-        return { stopName, result };
-    }));
-    const resolvedMap = {};
-    resolved.forEach(r => { if (r.result) resolvedMap[r.stopName] = r.result; });
-    let coords = [], resolvedNames = [];
-    for (const stop of plan.stops) {
-        const isHome = stop === 'MY_LOCATION' || /^my\s*(location|house|home|place|start)$/i.test(stop);
-        if (isHome) { if (lastKnownPos) coords.push([lastKnownPos.lng, lastKnownPos.lat]); continue; }
-        const found = resolvedMap[stop];
-        if (found) { coords.push([found.lng, found.lat]); resolvedNames.push(found.name||stop); }
-    }
-    if (lastKnownPos && plan.startAtUserLocation && coords.length > 0) {
-        const firstIsUser = coords[0][0]===lastKnownPos.lng && coords[0][1]===lastKnownPos.lat;
-        if (!firstIsUser) coords.unshift([lastKnownPos.lng, lastKnownPos.lat]);
-    }
+    setProgressStep(0, 'done', `📍 ${userLat?.toFixed(4)}, ${userLng?.toFixed(4)}`);
+    resolvedStops.forEach((s, i) => setProgressStep(i+1, 'done', `✓ ${s.resolved?.name || s.label}`));
+    const routeStepIdx = resolvedStops.length + 1;
+    setProgressStep(routeStepIdx, 'active');
+    let coords = [];
+    if (userLat) coords.push([userLng, userLat]);
+    resolvedStops.forEach(s => { if (s.resolved) coords.push([s.resolved.lng, s.resolved.lat]); });
+    if (plan.returnHome && userLat) coords.push([userLng, userLat]);
     coords = coords.filter((c,i) => i===0 || !(c[0]===coords[i-1][0] && c[1]===coords[i-1][1]));
-    if (coords.length < 2) { removeProgressToast(); showSimpleToast('⚠️ Couldn\'t build route — check GPS and try again', true); document.getElementById('nav-modal').style.display='flex'; twGoToStep(2); return; }
-    const routeStepIdx = nonHomeStops.length + 1;
-    setProgressStep(routeStepIdx,'active');
+    if (coords.length < 2) { removeProgressToast(); showSimpleToast('⚠️ Need GPS + at least one stop to build route', true); return; }
     try {
         const coordStr = coords.map(c=>c.join(',')).join(';');
         const isSlowEV = (twVehicle==='escooter'||twVehicle==='ebike') && twSpeedMPH && twSpeedMPH<=25;
@@ -1297,24 +1203,23 @@ async function twLaunchRoute() {
         if (routeData.code === 'Ok') {
             const path = routeData.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
             const distMi = (routeData.routes[0].distance * 0.000621371).toFixed(2);
-            const named = resolvedNames.filter(Boolean);
-            const routeName = named.length > 0 ? `${twVehicle} → ${named[0]}${named.length>1?` +${named.length-1}`:''}` : `Trail Weaver ${twVehicle}`;
-            setProgressStep(routeStepIdx,'done',`✓ Route ready — ${distMi} mi`);
+            const stopNames = resolvedStops.map(s => s.resolved?.name || s.label);
+            const routeName = `${twVehicle} → ${stopNames[0]}${stopNames.length>1?' +'+( stopNames.length-1):''}`;
+            setProgressStep(routeStepIdx, 'done', `✓ Route ready — ${distMi} mi`);
             await new Promise(r=>setTimeout(r,800));
             removeProgressToast();
             if (activeViewLine) map.removeLayer(activeViewLine);
             activeViewLine = L.polyline(path, { color:'#52b36e', weight:6, opacity:0.9 }).addTo(map);
             map.fitBounds(activeViewLine.getBounds(), { padding:[50,50] });
-            coords.forEach((c,i) => {
-                if (i===0 && plan.startAtUserLocation) return;
-                const label = resolvedNames[plan.startAtUserLocation ? i-1 : i] || `Stop ${i+1}`;
-                L.circleMarker([c[1],c[0]], { radius:8, color:'#e8943e', fillColor:'#1f4a2e', fillOpacity:1, weight:2.5 }).addTo(map).bindPopup(`<b style="font-size:12px;color:var(--text-primary)">${label}</b>`, { closeButton:false });
+            resolvedStops.forEach(s => {
+                if (!s.resolved) return;
+                L.circleMarker([s.resolved.lat, s.resolved.lng], { radius:8, color:'#e8943e', fillColor:'#1f4a2e', fillOpacity:1, weight:2.5 }).addTo(map).bindPopup(`<b style="font-size:12px;color:var(--text-primary)">${s.resolved.name||s.label}</b>`, { closeButton:false });
             });
             const saved = { id:Date.now(), name:routeName, distance:distMi, path, date:new Date().toLocaleDateString() };
             savedRoutes.push(saved); localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
             updateSavedList(); enterDriveMode(saved.id);
-        } else { throw new Error('OSRM route failed: ' + routeData.code); }
-    } catch(e) { console.error("Route error:", e); removeProgressToast(); showSimpleToast('⚠️ Route failed — check your connection and try again', true); }
+        } else throw new Error('OSRM: ' + routeData.code);
+    } catch(e) { console.error(e); removeProgressToast(); showSimpleToast('⚠️ Route failed — check connection and try again', true); }
 }
 
 // ── Simple toast ──
@@ -1338,13 +1243,11 @@ window.enterDriveMode = (id) => {
     if (currentMode === 'mobile') { const sb = document.getElementById('sidebar'); if (!sb.classList.contains('is-collapsed')) toggleSidebarCollapse(); }
     updateHUD();
 };
-
 function exitDriveMode() {
     isDriving = false; currentDriveRoute = null;
     document.getElementById('drive-hud').classList.add('hidden');
     if (activeViewLine) map.removeLayer(activeViewLine); activeViewLine = null;
 }
-
 function updateHUD() {
     if (!isDriving || !currentDriveRoute || !lastKnownPos) return;
     const miles = calculateRemaining(lastKnownPos, currentDriveRoute.path);
@@ -1359,14 +1262,13 @@ function updateHUD() {
 function updateLocation(latlng) {
     lastKnownPos = latlng;
     if (userMarker) userMarker.setLatLng(latlng);
-    if (isDriving && currentDriveRoute && document.getElementById('auto-reroute').checked) {
+    if (isDriving && currentDriveRoute) {
         let nearestDist = Infinity;
         currentDriveRoute.path.forEach(pt => { const d = L.latLng(latlng).distanceTo(L.latLng(pt)); if (d < nearestDist) nearestDist = d; });
         if (nearestDist > OFF_ROUTE_THRESHOLD) twLaunchRoute();
     }
     const dot = document.getElementById('tracking-status');
-    dot.style.background = '#52b36e';
-    dot.classList.add('gps-active');
+    dot.style.background = '#52b36e'; dot.classList.add('gps-active');
     document.getElementById('gps-label').innerText = `Live GPS (±${Math.round(Math.random()*5+3)}m)`;
     document.getElementById('gps-label').style.color = '#52b36e';
     if (!document.getElementById('weather-icon').src || document.getElementById('weather-icon').src === window.location.href) loadWeatherIcon();
@@ -1394,7 +1296,6 @@ const searchPinIcon = L.divIcon({
     html: `<div class="pin-drop-anim"><svg width="28" height="28" fill="var(--amber-500)" viewBox="0 0 20 20" style="filter:drop-shadow(0 4px 8px rgba(0,0,0,0.4))"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg></div>`,
     iconSize: [28,28], iconAnchor: [14,28]
 });
-
 async function performSearch(query) {
     if (!query) return;
     try {
@@ -1412,8 +1313,12 @@ async function performSearch(query) {
         }
     } catch(err) { console.error('Search failed:', err); }
 }
-
 document.getElementById('global-search').onkeydown = (e) => { if (e.key === 'Enter') performSearch(e.target.value); };
+
+// Close suggestions when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('#stop-text-input') && !e.target.closest('#stop-suggestions')) hideSuggestions();
+});
 </script>
 </body>
 </html>
