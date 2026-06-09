@@ -247,9 +247,53 @@
         /* Warning icons pulse too */
         @keyframes traffic-icon-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.18); } }
         .traffic-warn-icon > div { animation: traffic-icon-pulse 1s ease-in-out infinite; }
+
+        /* ── Navigator voice: chattiness segmented control ── */
+        .seg { display:flex; gap:6px; background:var(--surface-1); border:1px solid var(--border-1); border-radius:10px; padding:4px; }
+        .seg-btn { flex:1; height:30px; border:none; border-radius:7px; background:transparent; color:var(--text-secondary); font-size:11px; font-weight:700; letter-spacing:0.03em; cursor:pointer; transition:all 0.15s; }
+        .seg-btn:hover { color:var(--text-primary); }
+        .seg-btn.active { background:var(--green-700); color:var(--green-100); box-shadow:0 2px 8px rgba(0,0,0,0.3); }
+
+        /* ── Safety intro overlay (shown before a navigation session) ── */
+        #nav-intro { position:fixed; inset:0; z-index:3000; display:none; align-items:center; justify-content:center; padding:24px; background:rgba(0,0,0,0.78); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); }
+        #nav-intro.show { display:flex; }
+        .intro-card { width:100%; max-width:380px; background:var(--bg-2); border:1px solid rgba(61,143,86,0.3); border-radius:22px; padding:30px 26px 24px; box-shadow:0 30px 80px rgba(0,0,0,0.7); animation:slide-up 0.35s ease-out; position:relative; overflow:hidden; }
+        .intro-card::before { content:''; position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse 80% 60% at 50% -10%, rgba(61,143,86,0.22) 0%, transparent 60%); }
+        .intro-orb { width:62px; height:62px; margin:0 auto 18px; position:relative; }
+        .intro-orb-ring { position:absolute; inset:0; border-radius:50%; background:rgba(61,143,86,0.14); animation:user-pulse 2.2s ease-out infinite; }
+        .intro-orb-core { position:absolute; inset:6px; border-radius:18px; background:var(--green-700); display:flex; align-items:center; justify-content:center; box-shadow:0 0 30px rgba(82,179,110,0.45); }
+        @keyframes voice-wave { 0%,100% { transform:scaleY(0.4); } 50% { transform:scaleY(1); } }
+        .voice-bars { display:flex; align-items:center; gap:3px; height:22px; }
+        .voice-bars span { width:3px; height:100%; background:var(--green-200); border-radius:9999px; transform-origin:center; animation:voice-wave 0.9s ease-in-out infinite; }
+        .voice-bars span:nth-child(2){ animation-delay:0.15s } .voice-bars span:nth-child(3){ animation-delay:0.3s } .voice-bars span:nth-child(4){ animation-delay:0.45s } .voice-bars span:nth-child(5){ animation-delay:0.6s }
+        .intro-paused .voice-bars span { animation-play-state:paused; transform:scaleY(0.4); }
     </style>
 </head>
 <body class="noise">
+
+<!-- ══ NAVIGATOR SAFETY INTRO ══ -->
+<div id="nav-intro">
+    <div class="intro-card" id="nav-intro-card">
+        <div style="position:relative;z-index:1">
+            <div class="intro-orb">
+                <div class="intro-orb-ring"></div>
+                <div class="intro-orb-core">
+                    <div class="voice-bars" id="nav-intro-bars"><span></span><span></span><span></span><span></span><span></span></div>
+                </div>
+            </div>
+            <p style="text-align:center;font-size:9px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:var(--green-400);margin-bottom:8px">VEYA Navigator</p>
+            <h3 style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text-primary);text-align:center;letter-spacing:-0.01em;margin-bottom:14px">Before we begin</h3>
+            <p id="nav-intro-text" style="font-size:13px;line-height:1.6;color:var(--text-secondary);font-weight:500;text-align:center;margin-bottom:22px">
+                VEYA Innovations reminds you to stay on running lanes or sidewalks whenever you're on a bike, electric scooter, or on foot — walking or running. Stay safe out there, and enjoy an amazing journey.
+            </p>
+            <button id="nav-intro-go" class="btn btn-primary" style="width:100%;height:46px;font-size:13px;font-weight:800;letter-spacing:0.04em;gap:8px">
+                Start Navigation
+                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+            </button>
+            <p style="text-align:center;font-size:10px;color:var(--text-muted);font-weight:500;margin-top:12px">You can change the voice in Settings ⚙</p>
+        </div>
+    </div>
+</div>
 
 <!-- ══ DRIVE HUD ══ -->
 <div id="drive-hud" class="fixed top-16 right-4 z-[2000] hidden">
@@ -496,6 +540,33 @@
             </div>
         </div>
 
+        <!-- ══ NAVIGATOR VOICE ══ -->
+        <div>
+            <p style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Navigator Voice</p>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
+                <div style="min-width:0;padding-right:10px">
+                    <span style="font-size:12px;font-weight:600;color:var(--text-primary)">Voice guidance</span>
+                    <p style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:2px">Energetic, live turn-by-turn callouts</p>
+                </div>
+                <label class="toggle"><input type="checkbox" id="settings-voice" onchange="Navigator.setEnabled(this.checked)"><span class="toggle-track"></span></label>
+            </div>
+
+            <!-- Chattiness -->
+            <div id="voice-detail-wrap" style="margin-top:10px;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
+                <p style="font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">How much should it talk?</p>
+                <div class="seg" id="voice-level-seg">
+                    <button class="seg-btn" data-level="low"    onclick="Navigator.setLevel('low')">Low</button>
+                    <button class="seg-btn" data-level="medium" onclick="Navigator.setLevel('medium')">Medium</button>
+                    <button class="seg-btn" data-level="high"   onclick="Navigator.setLevel('high')">High</button>
+                </div>
+                <p id="voice-level-hint" style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:10px;line-height:1.45"></p>
+                <button id="voice-test-btn" onclick="Navigator.test()" class="btn btn-ghost" style="width:100%;height:36px;font-size:11px;font-weight:700;margin-top:12px;gap:6px">
+                    <svg width="13" height="13" fill="currentColor" viewBox="0 0 20 20"><path d="M6 4l10 6-10 6V4z"/></svg>
+                    Test voice
+                </button>
+            </div>
+        </div>
+
         <!-- ══ LIVE TRAFFIC ══ -->
         <div>
             <p style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Highway Traffic</p>
@@ -726,6 +797,311 @@ function toggleSidebarCollapse() {
 function toggleSettings() { document.getElementById('settings-panel').classList.toggle('translate-x-full'); }
 
 // ── Boot ──
+// ══════════════════════════════════════════════════════════════
+//  NAVIGATOR VOICE  — energetic, live turn-by-turn guidance
+// ══════════════════════════════════════════════════════════════
+const Navigator = {
+    enabled: localStorage.getItem('nav_voice_enabled') !== 'false', // default ON
+    level: localStorage.getItem('nav_voice_level') || 'medium',     // low | medium | high
+    voice: null,
+    steps: [],            // [{lat,lng,type,modifier,name,preview:false,now:false}]
+    active: false,        // true once intro dismissed & guidance running
+    arrived: false,
+    lastFlavorAt: 0,      // throttle high-mode flavor lines
+    lastStreetSpoken: '',
+    pendingRoute: null,
+
+    LEVEL_HINTS: {
+        low:    'Just the essentials — only the turns you need, kept short.',
+        medium: 'A friendly balance — a heads-up before turns, then the turn itself.',
+        high:   'Chatty co-pilot — early heads-up, the turn, plus the street you\u2019re on and the occasional sightseeing tip.'
+    },
+
+    init() {
+        // reflect saved settings into the UI
+        const t = document.getElementById('settings-voice');
+        if (t) t.checked = this.enabled;
+        this.paintLevel();
+        this.refreshDetailVisibility();
+        this.loadVoice();
+        if (window.speechSynthesis) {
+            window.speechSynthesis.onvoiceschanged = () => this.loadVoice();
+        }
+        const introGo = document.getElementById('nav-intro-go');
+        if (introGo) introGo.onclick = () => this.dismissIntro();
+    },
+
+    // Pick the most lively-sounding English voice available
+    loadVoice() {
+        if (!window.speechSynthesis) return;
+        const voices = window.speechSynthesis.getVoices();
+        if (!voices.length) return;
+        const en = voices.filter(v => /en[-_]/i.test(v.lang) || /english/i.test(v.name));
+        const pool = en.length ? en : voices;
+        // Prefer warmer / more natural voices, in rough order of liveliness
+        const prefs = ['Google US English','Samantha','Microsoft Aria','Microsoft Jenny','Google UK English Female','Karen','Moira','Microsoft Zira','Nicky','Allison'];
+        for (const name of prefs) {
+            const hit = pool.find(v => v.name.toLowerCase().includes(name.toLowerCase()));
+            if (hit) { this.voice = hit; return; }
+        }
+        this.voice = pool.find(v => /female|aria|jenny|samantha|zira|karen/i.test(v.name)) || pool[0];
+    },
+
+    setEnabled(on) {
+        this.enabled = on;
+        localStorage.setItem('nav_voice_enabled', on ? 'true' : 'false');
+        this.refreshDetailVisibility();
+        if (!on && window.speechSynthesis) window.speechSynthesis.cancel();
+        if (on) this.speak('Navigator voice on. Let\u2019s find the road!', { force:true });
+    },
+
+    setLevel(lvl) {
+        this.level = lvl;
+        localStorage.setItem('nav_voice_level', lvl);
+        this.paintLevel();
+        const samples = {
+            low: 'Low. I\u2019ll keep it short.',
+            medium: 'Medium. I\u2019ll give you a heads-up, then the turn.',
+            high: 'High! I\u2019ll talk you through everything and point out the good spots.'
+        };
+        this.speak(samples[lvl], { force:true });
+    },
+
+    paintLevel() {
+        document.querySelectorAll('#voice-level-seg .seg-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.level === this.level);
+        });
+        const hint = document.getElementById('voice-level-hint');
+        if (hint) hint.textContent = this.LEVEL_HINTS[this.level];
+    },
+
+    refreshDetailVisibility() {
+        const wrap = document.getElementById('voice-detail-wrap');
+        if (wrap) wrap.style.opacity = this.enabled ? '1' : '0.4';
+        if (wrap) wrap.style.pointerEvents = this.enabled ? 'auto' : 'none';
+    },
+
+    test() {
+        // also unlocks audio for the session
+        const lines = [
+            'Alright! Test drive. In about two hundred feet, take a left on Ocean Avenue — and hey, this stretch has some great views, so take a peek!',
+            'Okay, you\u2019re all set. I\u2019ll be right here calling out your turns.',
+            'Nice — voice check complete. Let\u2019s get you on the road!'
+        ];
+        this.speak(lines[Math.floor(Math.random()*lines.length)], { force:true });
+    },
+
+    // Core speak — energetic delivery
+    speak(text, opts={}) {
+        if (!text) return;
+        if (!this.enabled && !opts.force) return;
+        if (!window.speechSynthesis) return;
+        if (opts.interrupt) window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        if (this.voice) u.voice = this.voice;
+        u.rate   = 1.07;   // a touch brisk = energetic
+        u.pitch  = 1.12;   // lifted = more alive
+        u.volume = 1.0;
+        u.onstart = () => this.setBars(true);
+        u.onend   = () => this.setBars(false);
+        window.speechSynthesis.speak(u);
+    },
+
+    setBars(on) {
+        const card = document.getElementById('nav-intro-card');
+        if (card) card.classList.toggle('intro-paused', !on);
+    },
+
+    // ── Build a step list from OSRM turn-by-turn data ──
+    buildStepsFromOSRM(osrmRoute) {
+        const steps = [];
+        (osrmRoute.legs || []).forEach(leg => {
+            (leg.steps || []).forEach(st => {
+                const m = st.maneuver || {};
+                if (!m.location) return;
+                steps.push({
+                    lat: m.location[1], lng: m.location[0],
+                    type: m.type || 'turn',
+                    modifier: m.modifier || '',
+                    name: (st.name && st.name.trim()) ? st.name.trim() : '',
+                    preview:false, now:false
+                });
+            });
+        });
+        return steps;
+    },
+
+    // ── Synthesize steps from a raw drawn path (no street names) ──
+    buildStepsFromPath(path) {
+        if (!path || path.length < 2) return [];
+        const steps = [{ lat:path[0][0], lng:path[0][1], type:'depart', modifier:'', name:'', preview:false, now:false }];
+        const bearing = (a,b) => {
+            const toR = d => d*Math.PI/180, toD = r => r*180/Math.PI;
+            const y = Math.sin(toR(b[1]-a[1]))*Math.cos(toR(b[0]));
+            const x = Math.cos(toR(a[0]))*Math.sin(toR(b[0])) - Math.sin(toR(a[0]))*Math.cos(toR(b[0]))*Math.cos(toR(b[1]-a[1]));
+            return (toD(Math.atan2(y,x))+360)%360;
+        };
+        for (let i=1; i<path.length-1; i++) {
+            const b1 = bearing(path[i-1], path[i]);
+            const b2 = bearing(path[i], path[i+1]);
+            let diff = ((b2-b1+540)%360)-180; // -180..180, +right -left
+            const a = Math.abs(diff);
+            if (a < 22) continue; // basically straight, skip
+            let modifier;
+            if (a < 45)       modifier = diff>0 ? 'slight right' : 'slight left';
+            else if (a < 120) modifier = diff>0 ? 'right' : 'left';
+            else              modifier = diff>0 ? 'sharp right' : 'sharp left';
+            steps.push({ lat:path[i][0], lng:path[i][1], type:'turn', modifier, name:'', preview:false, now:false });
+        }
+        const end = path[path.length-1];
+        steps.push({ lat:end[0], lng:end[1], type:'arrive', modifier:'', name:'', preview:false, now:false });
+        return steps;
+    },
+
+    // Convert a maneuver into an energetic phrase
+    maneuverPhrase(step, energetic) {
+        const onStreet = step.name ? ` on ${step.name}` : '';
+        const ontoStreet = step.name ? ` onto ${step.name}` : '';
+        const lead = energetic ? this.pick(['Alright,','Okay,','Nice —','Heads up —','Coming up,']) + ' ' : '';
+        switch (step.type) {
+            case 'depart': return `${lead}head out and we\u2019re on our way${ontoStreet}.`;
+            case 'arrive': return `You\u2019ve arrived${onStreet}. Nice work — enjoy!`;
+            case 'roundabout':
+            case 'rotary': return `${lead}take the roundabout${ontoStreet}.`;
+            case 'merge':  return `${lead}merge${ontoStreet}.`;
+            case 'fork':   return `${lead}keep ${/right/.test(step.modifier)?'right':'left'} at the fork${ontoStreet}.`;
+            case 'on ramp':
+            case 'off ramp': return `${lead}take the ramp${ontoStreet}.`;
+            default: {
+                const dirMap = {
+                    'left':'take a left','right':'take a right',
+                    'slight left':'bear slightly left','slight right':'bear slightly right',
+                    'sharp left':'make a sharp left','sharp right':'make a sharp right',
+                    'straight':'continue straight','uturn':'make a U-turn'
+                };
+                const dir = dirMap[step.modifier] || (step.name ? `continue` : 'keep going');
+                return `${lead}${dir}${dir.includes('continue')?'':' '}${ontoStreet}.`.replace('  ',' ');
+            }
+        }
+    },
+
+    distPhrase(feet) {
+        if (feet >= 1000) {
+            const mi = feet/5280;
+            return `${mi < 1.2 ? mi.toFixed(1) : Math.round(mi*10)/10} mile${mi>=2?'s':''}`;
+        }
+        const r = Math.max(10, Math.round(feet/10)*10);
+        return `${r} feet`;
+    },
+
+    pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; },
+
+    flavor() {
+        return this.pick([
+            'This stretch can have some great views — take a peek!',
+            'Lovely bit of road right here.',
+            'You\u2019re doing great.',
+            'Nice and easy through here.',
+            'Keep enjoying the ride.'
+        ]);
+    },
+
+    // ── Start a navigation session for a route ──
+    startGuidance(route) {
+        this.stopSpeech();
+        this.active = false; this.arrived = false; this.lastStreetSpoken = ''; this.lastFlavorAt = 0;
+        // pick the best available step list
+        if (route && route.navSteps && route.navSteps.length) this.steps = route.navSteps.map(s => ({...s, preview:false, now:false}));
+        else if (route && route.path)                         this.steps = this.buildStepsFromPath(route.path);
+        else this.steps = [];
+        this.pendingRoute = route;
+        this.showIntro();
+    },
+
+    showIntro() {
+        const el = document.getElementById('nav-intro');
+        if (!el) { this.dismissIntro(); return; }
+        el.classList.add('show');
+        this.setBars(true);
+        // Speak the safety message right away (rides on the launch tap gesture)
+        const introText = document.getElementById('nav-intro-text')?.textContent?.trim();
+        if (introText) this.speak(introText, { interrupt:true });
+    },
+
+    dismissIntro() {
+        const el = document.getElementById('nav-intro');
+        if (el) el.classList.remove('show');
+        this.active = true;
+        // Kick-off line
+        if (this.steps.length) {
+            const opener = this.level === 'low'
+                ? 'Navigation started.'
+                : this.pick(['Alright, let\u2019s get going!','Okay — route\u2019s ready. Let\u2019s roll!','Here we go!']);
+            this.speak(opener, { interrupt:true });
+        }
+    },
+
+    stop() { this.active = false; this.stopSpeech(); const el=document.getElementById('nav-intro'); if(el) el.classList.remove('show'); },
+    stopSpeech() { if (window.speechSynthesis) window.speechSynthesis.cancel(); this.setBars(false); },
+
+    // ── Called on every GPS update while driving ──
+    onLocation(latlng) {
+        if (!this.enabled || !this.active || !this.steps.length) return;
+        const lat = latlng.lat, lng = latlng.lng;
+
+        // distance thresholds (feet) by chattiness
+        const PREVIEW = { low:0, medium:500, high:800 }[this.level];
+        const NOW = 140;     // imminent "coming up" callout
+        const HIT = 45;      // considered passed
+
+        // find the next un-passed maneuver
+        let idx = this.steps.findIndex(s => !s.now);
+        if (idx === -1) return;
+        const step = this.steps[idx];
+        if (step.type === 'depart') { step.now = true; return; } // depart handled by opener
+        const feet = haversineMiles(lat, lng, step.lat, step.lng) * 5280;
+
+        // arrival
+        if (step.type === 'arrive') {
+            if (feet < 90 && !this.arrived) {
+                this.arrived = true; step.now = true;
+                this.speak(this.maneuverPhrase(step, false), { interrupt:true });
+            }
+            return;
+        }
+
+        // Stage 1 — early heads-up (medium & high only)
+        if (PREVIEW && !step.preview && feet <= PREVIEW && feet > NOW) {
+            step.preview = true;
+            const phrase = this.maneuverPhrase(step, false);
+            this.speak(`In about ${this.distPhrase(feet)}, ${this.lowerFirst(phrase)}`);
+            return;
+        }
+
+        // Stage 2 — imminent turn (all levels)
+        if (!step.now && feet <= NOW) {
+            step.now = true; step.preview = true;
+            let line = `Coming up in about ${this.distPhrase(feet)}, ${this.lowerFirst(this.maneuverPhrase(step, false))}`;
+            if (this.level === 'high' && step.name && Date.now()-this.lastFlavorAt > 25000 && Math.random()<0.6) {
+                line += ' ' + this.flavor();
+                this.lastFlavorAt = Date.now();
+            }
+            this.speak(line, { interrupt:true });
+            return;
+        }
+
+        // High mode: occasional "you're on X" reassurance between turns
+        if (this.level === 'high' && step.name && step.name !== this.lastStreetSpoken
+            && feet > PREVIEW && Date.now()-this.lastFlavorAt > 30000) {
+            this.lastStreetSpoken = step.name;
+            this.lastFlavorAt = Date.now();
+            this.speak(`Stay on this road for now — next up is ${step.name}.`);
+        }
+    },
+
+    lowerFirst(s){ return s ? s.charAt(0).toLowerCase()+s.slice(1) : s; }
+};
+
 window.onload = () => {
     const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
     currentMode = isMobile ? 'mobile' : 'desktop';
@@ -762,6 +1138,7 @@ function finishLoading(mode) {
         const app = document.getElementById('app-interface');
         app.style.opacity = '1'; app.style.pointerEvents = '';
         initMap(mode); updateSavedList();
+        Navigator.init();
         setTimeout(() => { if (map) map.invalidateSize(); }, 100);
     }, 500);
 }
@@ -852,7 +1229,7 @@ function initMap(mode) {
                 }
                 updateLocation(latlng);
                 if (!initialRecenterDone) { map.flyTo(latlng, 16); initialRecenterDone = true; }
-                if (isDriving) { map.panTo(latlng); updateHUD(); advanceDissolve(latlng); }
+                if (isDriving) { map.panTo(latlng); updateHUD(); advanceDissolve(latlng); Navigator.onLocation(latlng); }
             }, (err) => console.warn('GPS watch error:', err.code, err.message), GPS_OPTIONS_WATCH);
     }
     map.on('click', (e) => {
@@ -1714,7 +2091,7 @@ async function twLaunchRoute() {
         const coordStr = coords.map(c=>c.join(',')).join(';');
         const isSlowEV = (twVehicle==='escooter'||twVehicle==='ebike') && twSpeedMPH && twSpeedMPH<=25;
         const exclude = isSlowEV ? '&exclude=motorway,trunk' : '';
-        const routeRes = await fetch(`https://router.project-osrm.org/route/v1/${profile}/${coordStr}?overview=full&geometries=geojson${exclude}`);
+        const routeRes = await fetch(`https://router.project-osrm.org/route/v1/${profile}/${coordStr}?overview=full&geometries=geojson&steps=true${exclude}`);
         const routeData = await routeRes.json();
 
         if (routeData.code === 'Ok') {
@@ -1761,7 +2138,8 @@ async function twLaunchRoute() {
             });
 
             // Save and enter drive mode
-            const saved = { id: Date.now(), name: routeName, distance: distMi, path: fullPath, date: new Date().toLocaleDateString() };
+            const navSteps = Navigator.buildStepsFromOSRM(routeData.routes[0]);
+            const saved = { id: Date.now(), name: routeName, distance: distMi, path: fullPath, navSteps, date: new Date().toLocaleDateString() };
             savedRoutes.push(saved);
             localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
             updateSavedList();
@@ -1794,6 +2172,7 @@ window.enterDriveMode = (id) => {
     if (lastKnownPos) map.flyTo(lastKnownPos, 18);
     if (currentMode === 'mobile') { const sb = document.getElementById('sidebar'); if (!sb.classList.contains('is-collapsed')) toggleSidebarCollapse(); }
     updateHUD();
+    Navigator.startGuidance(r);
 };
 
 // Drive mode for trail weaver routes (uses colored legs already on map)
@@ -1804,10 +2183,12 @@ function enterDriveModeWithLegs(id) {
     if (lastKnownPos) map.flyTo(lastKnownPos, 18);
     if (currentMode === 'mobile') { const sb = document.getElementById('sidebar'); if (!sb.classList.contains('is-collapsed')) toggleSidebarCollapse(); }
     updateHUD();
+    Navigator.startGuidance(r);
 }
 
 function exitDriveMode() {
     isDriving = false; currentDriveRoute = null;
+    Navigator.stop();
     document.getElementById('drive-hud').classList.add('hidden');
     if (activeViewLine) { map.removeLayer(activeViewLine); activeViewLine = null; }
     clearActiveLegs();
