@@ -223,37 +223,82 @@
 
         /* Route legend chips */
         .leg-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 9999px; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+
+        /* ── Weather Widget ── */
+        #weather-widget {
+            position: fixed;
+            z-index: 2500;
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+        }
+        #weather-widget:active { cursor: grabbing; }
+        #weather-widget.hidden-widget { display: none !important; }
+
+        .wx-pill {
+            background: rgba(10,15,10,0.92);
+            border: 1px solid rgba(61,143,86,0.3);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 9999px;
+            padding: 6px 14px 6px 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+            min-width: 96px;
+            overflow: hidden;
+            position: relative;
+        }
+        .wx-icon-wrap {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: rgba(61,143,86,0.18);
+            border: 1px solid rgba(61,143,86,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+        }
+        .wx-value {
+            font-family: 'Syne', sans-serif;
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-primary);
+            white-space: nowrap;
+            transition: opacity 0.35s ease, transform 0.35s ease;
+        }
+        .wx-label {
+            font-size: 8px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            white-space: nowrap;
+            transition: opacity 0.35s ease, transform 0.35s ease;
+        }
+        .wx-text-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            overflow: hidden;
+        }
+        .wx-fade-out .wx-value,
+        .wx-fade-out .wx-label { opacity: 0; transform: translateY(-6px); }
+        .wx-fade-in .wx-value,
+        .wx-fade-in .wx-label { opacity: 0; transform: translateY(6px); }
+        .wx-fade-in.wx-animate .wx-value,
+        .wx-fade-in.wx-animate .wx-label { opacity: 1; transform: translateY(0); transition: opacity 0.35s ease 0.05s, transform 0.35s ease 0.05s; }
+
+        /* progress dots */
+        .wx-dots { display: flex; gap: 3px; position: absolute; bottom: 5px; right: 10px; }
+        .wx-dot { width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.15); transition: background 0.3s; }
+        .wx-dot.active { background: var(--green-400); }
     </style>
 </head>
 <body class="noise">
-
-<!-- ══ WEATHER WIDGET ══ -->
-<div id="weather-widget" style="position:fixed;bottom:80px;right:20px;z-index:2500;touch-action:none;user-select:none;display:none">
-    <div id="weather-widget-inner" style="
-        width:90px;height:90px;border-radius:20px;
-        background:rgba(10,15,10,0.92);
-        border:1px solid rgba(61,143,86,0.3);
-        backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-        box-shadow:0 8px 32px rgba(0,0,0,0.5);
-        display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-        cursor:grab;overflow:hidden;position:relative;
-    ">
-        <!-- Slide container -->
-        <div id="wx-slide-container" style="width:100%;text-align:center;padding:0 6px;position:relative">
-            <div id="wx-slide" style="transition:opacity 0.4s,transform 0.4s;will-change:transform,opacity">
-                <div id="wx-icon" style="font-size:26px;line-height:1;margin-bottom:2px">⏳</div>
-                <div id="wx-value" style="font-family:'Syne',sans-serif;font-size:19px;font-weight:800;color:var(--text-primary);letter-spacing:-0.02em;line-height:1">--</div>
-                <div id="wx-label" style="font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-top:2px">LOADING</div>
-            </div>
-        </div>
-        <!-- Dots indicator -->
-        <div style="display:flex;gap:4px;margin-top:4px">
-            <div class="wx-dot" id="wx-dot-0" style="width:5px;height:5px;border-radius:50%;background:rgba(61,143,86,0.8);transition:background 0.3s"></div>
-            <div class="wx-dot" id="wx-dot-1" style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.18);transition:background 0.3s"></div>
-            <div class="wx-dot" id="wx-dot-2" style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.18);transition:background 0.3s"></div>
-        </div>
-    </div>
-</div>
 
 <!-- ══ DRIVE HUD ══ -->
 <div id="drive-hud" class="fixed top-16 right-4 z-[2000] hidden">
@@ -494,24 +539,41 @@
     <div style="padding:24px;display:flex;flex-direction:column;gap:24px;flex:1">
         <div>
             <p style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Preferences</p>
-            <div style="display:flex;flex-direction:column;gap:8px">
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
-                    <span style="font-size:12px;font-weight:600;color:var(--text-primary)">Start at my location</span>
-                    <label class="toggle"><input type="checkbox" id="settings-start-at-loc" onchange="syncToggles(this)"><span class="toggle-track"></span></label>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
+                <span style="font-size:12px;font-weight:600;color:var(--text-primary)">Start at my location</span>
+                <label class="toggle"><input type="checkbox" id="settings-start-at-loc" onchange="syncToggles(this)"><span class="toggle-track"></span></label>
+            </div>
+        </div>
+        <div>
+            <p style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Widgets</p>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
+                <div>
+                    <span style="font-size:12px;font-weight:600;color:var(--text-primary)">Weather Widget</span>
+                    <p style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:2px">Temp · Rain · Wind</p>
                 </div>
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
-                    <div>
-                        <span style="font-size:12px;font-weight:600;color:var(--text-primary)">Weather widget</span>
-                        <p style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:2px">Temp · Rain · Wind</p>
-                    </div>
-                    <label class="toggle"><input type="checkbox" id="settings-weather-widget" onchange="toggleWeatherWidget(this.checked)" checked><span class="toggle-track"></span></label>
-                </div>
+                <label class="toggle"><input type="checkbox" id="settings-weather-widget" checked onchange="toggleWeatherWidget(this.checked)"><span class="toggle-track"></span></label>
             </div>
         </div>
     </div>
     <!-- veya 2026 footer -->
     <div style="padding:16px 20px;border-top:1px solid var(--border-1);text-align:center">
         <span style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);opacity:0.6">veya 2026</span>
+    </div>
+</div>
+
+<!-- ══ WEATHER WIDGET ══ -->
+<div id="weather-widget" style="bottom:88px;right:20px">
+    <div class="wx-pill">
+        <div class="wx-icon-wrap" id="wx-icon">🌡️</div>
+        <div class="wx-text-wrap">
+            <span class="wx-value" id="wx-value">--°F</span>
+            <span class="wx-label" id="wx-label">TEMPERATURE</span>
+        </div>
+        <div class="wx-dots">
+            <div class="wx-dot active" id="wx-dot-0"></div>
+            <div class="wx-dot" id="wx-dot-1"></div>
+            <div class="wx-dot" id="wx-dot-2"></div>
+        </div>
     </div>
 </div>
 
@@ -1596,179 +1658,178 @@ async function performSearch(query) {
 }
 document.getElementById('global-search').onkeydown = (e) => { if (e.key === 'Enter') performSearch(e.target.value); };
 
-
-// ══════════════════════════════════════════════
-// ══ WEATHER WIDGET ══
-// ══════════════════════════════════════════════
-
-const WX_API_KEY = '150ba377c3ca4474889150133260503';
-let wxData = { temp: null, rain: null, wind: null };
-let wxSlide = 0;
-let wxCycleTimer = null;
-let wxEnabled = true;
-let wxFetched = false;
-let wxDragActive = false;
-
-const wxSlides = [
-    { key: 'temp',  icon: () => getTempIcon(wxData.temp), getValue: () => wxData.temp !== null ? Math.round(wxData.temp) + '°F' : '--', label: 'TEMP' },
-    { key: 'rain',  icon: () => '🌧️',  getValue: () => wxData.rain !== null ? wxData.rain + '%' : '--', label: 'RAIN' },
-    { key: 'wind',  icon: () => '💨',  getValue: () => wxData.wind !== null ? wxData.wind + ' mph' : '--', label: 'WIND' },
-];
-
-function getTempIcon(f) {
-    if (f === null) return '🌡️';
-    if (f >= 90) return '🔥';
-    if (f >= 75) return '☀️';
-    if (f >= 60) return '⛅';
-    if (f >= 45) return '🌥️';
-    return '🥶';
-}
-
-async function fetchWeatherData() {
-    if (!lastKnownPos) return;
-    try {
-        const { lat, lng } = lastKnownPos;
-        const [curRes, fRes] = await Promise.all([
-            fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${WX_API_KEY}&units=imperial`),
-            fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lng}&appid=${WX_API_KEY}&units=imperial&cnt=2`)
-        ]);
-        if (curRes.ok) {
-            const d = await curRes.json();
-            wxData.temp = d.main?.temp ?? null;
-            wxData.wind = d.wind?.speed != null ? Math.round(d.wind.speed) : null;
-            // also feed the existing weather icon
-            const iconCode = d.weather?.[0]?.icon;
-            if (iconCode) { const el = document.getElementById('weather-icon'); if(el){el.src=`https://openweathermap.org/img/wn/${iconCode}@2x.png`; document.getElementById('weather-indicator').style.display='flex';} }
-        }
-        if (fRes.ok) {
-            const fd = await fRes.json();
-            const pop = fd.list?.[0]?.pop;
-            wxData.rain = pop != null ? Math.round(pop * 100) : 0;
-        }
-        wxFetched = true;
-        updateWxSlide(false);
-    } catch(e) { console.warn('wx fetch err', e); }
-}
-
-function updateWxSlide(animate = true) {
-    const s = wxSlides[wxSlide];
-    const slide = document.getElementById('wx-slide');
-    if (!slide) return;
-    if (animate) {
-        slide.style.opacity = '0'; slide.style.transform = 'translateY(8px)';
-        setTimeout(() => {
-            document.getElementById('wx-icon').textContent = s.icon();
-            document.getElementById('wx-value').textContent = s.getValue();
-            document.getElementById('wx-label').textContent = s.label;
-            slide.style.opacity = '1'; slide.style.transform = 'translateY(0)';
-        }, 350);
-    } else {
-        document.getElementById('wx-icon').textContent = s.icon();
-        document.getElementById('wx-value').textContent = s.getValue();
-        document.getElementById('wx-label').textContent = s.label;
-    }
-    // dots
-    for (let i = 0; i < 3; i++) {
-        const dot = document.getElementById(`wx-dot-${i}`);
-        if (dot) dot.style.background = i === wxSlide ? 'rgba(61,143,86,0.9)' : 'rgba(255,255,255,0.18)';
-    }
-}
-
-function startWxCycle() {
-    if (wxCycleTimer) clearInterval(wxCycleTimer);
-    wxCycleTimer = setInterval(() => {
-        wxSlide = (wxSlide + 1) % 3;
-        updateWxSlide(true);
-    }, 3500);
-}
-
-function toggleWeatherWidget(on) {
-    wxEnabled = on;
-    const w = document.getElementById('weather-widget');
-    if (!w) return;
-    if (on) {
-        w.style.display = 'block';
-        if (!wxFetched && lastKnownPos) fetchWeatherData();
-        startWxCycle();
-    } else {
-        w.style.display = 'none';
-        if (wxCycleTimer) { clearInterval(wxCycleTimer); wxCycleTimer = null; }
-    }
-    localStorage.setItem('wx_widget_enabled', on ? '1' : '0');
-}
-
-// ── Draggable ──
-function initWeatherWidgetDrag() {
-    const widget = document.getElementById('weather-widget');
-    if (!widget) return;
-    let startX, startY, origX, origY, isDragging = false;
-
-    function onStart(e) {
-        if (e.target.closest('.wx-dot')) return;
-        isDragging = true; wxDragActive = false;
-        const touch = e.touches ? e.touches[0] : e;
-        startX = touch.clientX; startY = touch.clientY;
-        const rect = widget.getBoundingClientRect();
-        origX = rect.left; origY = rect.top;
-        widget.querySelector('#weather-widget-inner').style.cursor = 'grabbing';
-        e.preventDefault();
-    }
-    function onMove(e) {
-        if (!isDragging) return;
-        const touch = e.touches ? e.touches[0] : e;
-        const dx = touch.clientX - startX, dy = touch.clientY - startY;
-        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) wxDragActive = true;
-        const newX = Math.max(0, Math.min(window.innerWidth - 90, origX + dx));
-        const newY = Math.max(0, Math.min(window.innerHeight - 90, origY + dy));
-        widget.style.left = newX + 'px'; widget.style.top = newY + 'px';
-        widget.style.right = 'auto'; widget.style.bottom = 'auto';
-        e.preventDefault();
-    }
-    function onEnd() {
-        if (!isDragging) return;
-        isDragging = false;
-        widget.querySelector('#weather-widget-inner').style.cursor = 'grab';
-        const pos = { left: widget.style.left, top: widget.style.top };
-        localStorage.setItem('wx_widget_pos', JSON.stringify(pos));
-    }
-    widget.addEventListener('mousedown', onStart);
-    widget.addEventListener('touchstart', onStart, { passive: false });
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('touchmove', onMove, { passive: false });
-    document.addEventListener('mouseup', onEnd);
-    document.addEventListener('touchend', onEnd);
-}
-
-// ── Init after app loads ──
-const _origFinish = finishLoading;
-function finishLoading(mode) {
-    _origFinish(mode);
-    setTimeout(() => {
-        const savedOn = localStorage.getItem('wx_widget_enabled');
-        const on = savedOn === null ? true : savedOn === '1';
-        document.getElementById('settings-weather-widget').checked = on;
-        wxEnabled = on;
-        const widget = document.getElementById('weather-widget');
-        if (on) { widget.style.display = 'block'; startWxCycle(); }
-        // restore position
-        try {
-            const pos = JSON.parse(localStorage.getItem('wx_widget_pos') || 'null');
-            if (pos?.left && pos?.top) { widget.style.left = pos.left; widget.style.top = pos.top; widget.style.right = 'auto'; widget.style.bottom = 'auto'; }
-        } catch(e) {}
-        initWeatherWidgetDrag();
-    }, 300);
-}
-
-// ── Hook into GPS to trigger first fetch ──
-const _origUpdateLoc = updateLocation;
-function updateLocation(latlng) {
-    _origUpdateLoc(latlng);
-    if (wxEnabled && !wxFetched) fetchWeatherData();
-}
-
 document.addEventListener('click', (e) => {
     if (!e.target.closest('#stop-text-input') && !e.target.closest('#stop-suggestions')) hideSuggestions();
 });
+
+// ── Weather Widget ──
+(function() {
+    const widget = document.getElementById('weather-widget');
+    let wxData = { temp: null, rain: null, wind: null };
+    let wxIndex = 0;
+    let wxInterval = null;
+    let isDragging = false, dragStartX = 0, dragStartY = 0, originX = 0, originY = 0;
+
+    const slides = [
+        { key: 'temp',  icon: '🌡️', label: 'TEMPERATURE', fmt: v => v !== null ? Math.round(v) + '°F' : '--°F' },
+        { key: 'rain',  icon: '🌧️', label: 'RAIN CHANCE',  fmt: v => v !== null ? Math.round(v) + '%'  : '--%'  },
+        { key: 'wind',  icon: '💨', label: 'WIND SPEED',   fmt: v => v !== null ? Math.round(v) + ' mph' : '-- mph' },
+    ];
+
+    // Position from localStorage
+    const savedPos = JSON.parse(localStorage.getItem('wx_widget_pos') || 'null');
+    if (savedPos) {
+        widget.style.left = savedPos.x + 'px';
+        widget.style.top  = savedPos.y + 'px';
+        widget.style.bottom = 'auto';
+        widget.style.right  = 'auto';
+    }
+
+    // Hidden state from localStorage
+    const wxHidden = localStorage.getItem('wx_widget_hidden') === 'true';
+    if (wxHidden) {
+        widget.classList.add('hidden-widget');
+        const toggle = document.getElementById('settings-weather-widget');
+        if (toggle) toggle.checked = false;
+    }
+
+    window.toggleWeatherWidget = function(on) {
+        if (on) {
+            widget.classList.remove('hidden-widget');
+            localStorage.setItem('wx_widget_hidden', 'false');
+        } else {
+            widget.classList.add('hidden-widget');
+            localStorage.setItem('wx_widget_hidden', 'true');
+        }
+    };
+
+    function setSlide(idx, animate) {
+        const slide = slides[idx];
+        const iconEl  = document.getElementById('wx-icon');
+        const valEl   = document.getElementById('wx-value');
+        const lblEl   = document.getElementById('wx-label');
+        const pill    = widget.querySelector('.wx-pill');
+
+        // Update dots
+        slides.forEach((_, i) => {
+            document.getElementById('wx-dot-' + i).classList.toggle('active', i === idx);
+        });
+
+        if (!animate) {
+            iconEl.textContent  = slide.icon;
+            valEl.textContent   = slide.fmt(wxData[slide.key]);
+            lblEl.textContent   = slide.label;
+            return;
+        }
+
+        // Fade out
+        pill.classList.add('wx-fade-out');
+        setTimeout(() => {
+            iconEl.textContent = slide.icon;
+            pill.classList.remove('wx-fade-out');
+            pill.classList.add('wx-fade-in');
+            valEl.textContent  = slide.fmt(wxData[slide.key]);
+            lblEl.textContent  = slide.label;
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                pill.classList.add('wx-animate');
+            }));
+            setTimeout(() => { pill.classList.remove('wx-fade-in', 'wx-animate'); }, 400);
+        }, 350);
+    }
+
+    function startRotation() {
+        if (wxInterval) clearInterval(wxInterval);
+        wxInterval = setInterval(() => {
+            wxIndex = (wxIndex + 1) % slides.length;
+            setSlide(wxIndex, true);
+        }, 3500);
+    }
+
+    setSlide(0, false);
+    startRotation();
+
+    // Fetch weather via Open-Meteo (no key needed)
+    async function fetchWeather(lat, lon) {
+        try {
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation_probability,wind_speed_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto`;
+            const res = await fetch(url);
+            const data = await res.json();
+            if (data?.current) {
+                wxData.temp = data.current.temperature_2m;
+                wxData.rain = data.current.precipitation_probability;
+                wxData.wind = data.current.wind_speed_10m;
+                setSlide(wxIndex, false);
+            }
+        } catch(e) { /* silent fail */ }
+    }
+
+    // Try to grab location when GPS fires or use watchPosition
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            p => fetchWeather(p.coords.latitude, p.coords.longitude),
+            () => {} // silent
+        );
+    }
+
+    // Also refresh when app gets GPS fix (hook into updateLocation)
+    const _origUpdateLocation = window.updateLocation;
+    window.updateLocation = function(latlng) {
+        if (_origUpdateLocation) _origUpdateLocation(latlng);
+        if (wxData.temp === null) fetchWeather(latlng.lat, latlng.lng);
+    };
+
+    // Refresh weather every 10 minutes
+    setInterval(() => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                p => fetchWeather(p.coords.latitude, p.coords.longitude),
+                () => {}
+            );
+        }
+    }, 600000);
+
+    // ── Drag ──
+    function startDrag(clientX, clientY) {
+        isDragging = false;
+        dragStartX = clientX;
+        dragStartY = clientY;
+        const rect = widget.getBoundingClientRect();
+        originX = rect.left;
+        originY = rect.top;
+        widget.style.left   = originX + 'px';
+        widget.style.top    = originY + 'px';
+        widget.style.bottom = 'auto';
+        widget.style.right  = 'auto';
+    }
+
+    function moveDrag(clientX, clientY) {
+        const dx = clientX - dragStartX;
+        const dy = clientY - dragStartY;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) isDragging = true;
+        if (!isDragging) return;
+        const newX = Math.max(0, Math.min(window.innerWidth  - widget.offsetWidth,  originX + dx));
+        const newY = Math.max(0, Math.min(window.innerHeight - widget.offsetHeight, originY + dy));
+        widget.style.left = newX + 'px';
+        widget.style.top  = newY + 'px';
+    }
+
+    function endDrag() {
+        if (isDragging) {
+            localStorage.setItem('wx_widget_pos', JSON.stringify({ x: parseFloat(widget.style.left), y: parseFloat(widget.style.top) }));
+        }
+        isDragging = false;
+    }
+
+    // Mouse
+    widget.addEventListener('mousedown',  e => { e.preventDefault(); startDrag(e.clientX, e.clientY); });
+    document.addEventListener('mousemove', e => { if (dragStartX !== undefined) moveDrag(e.clientX, e.clientY); });
+    document.addEventListener('mouseup',   endDrag);
+
+    // Touch
+    widget.addEventListener('touchstart', e => { const t = e.touches[0]; startDrag(t.clientX, t.clientY); }, { passive: true });
+    widget.addEventListener('touchmove',  e => { const t = e.touches[0]; moveDrag(t.clientX, t.clientY); e.preventDefault(); }, { passive: false });
+    widget.addEventListener('touchend',   endDrag);
+})();
 </script>
 </body>
 </html>
