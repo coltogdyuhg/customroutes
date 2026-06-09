@@ -223,6 +223,81 @@
 
         /* Route legend chips */
         .leg-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 9999px; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+
+        /* ── Draggable Weather Widget ── */
+        #weather-widget {
+            position: fixed;
+            top: 72px;
+            right: 16px;
+            z-index: 1500;
+            width: 130px;
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+        }
+        #weather-widget:active { cursor: grabbing; }
+        .wx-card {
+            background: rgba(10,15,10,0.92);
+            border: 1px solid rgba(61,143,86,0.28);
+            border-radius: 18px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.55);
+            overflow: hidden;
+            position: relative;
+        }
+        .wx-panel {
+            padding: 14px 14px 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            position: absolute;
+            width: 100%;
+            transition: opacity 0.45s ease, transform 0.45s ease;
+        }
+        .wx-panel.wx-active  { opacity: 1; transform: translateY(0);    position: relative; }
+        .wx-panel.wx-exit-up { opacity: 0; transform: translateY(-18px); pointer-events: none; }
+        .wx-panel.wx-enter-down { opacity: 0; transform: translateY(18px); pointer-events: none; }
+
+        .wx-emoji  { font-size: 30px; line-height: 1; }
+        .wx-label  { font-size: 9px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-muted); margin-top: 2px; }
+        .wx-value  { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; color: var(--text-primary); line-height: 1; }
+        .wx-unit   { font-size: 9px; font-weight: 600; color: var(--text-muted); }
+        .wx-desc   { font-size: 9px; font-weight: 600; color: var(--green-300); text-align: center; line-height: 1.3; margin-top: 1px; }
+
+        /* rain animation inside card */
+        .wx-rain-drops {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+            border-radius: 18px;
+        }
+        .wx-raindrop {
+            position: absolute;
+            width: 1.5px;
+            background: linear-gradient(to bottom, transparent, rgba(100,180,255,0.55));
+            border-radius: 1px;
+            animation: wx-fall linear infinite;
+        }
+        @keyframes wx-fall {
+            0%   { transform: translateY(-20px); opacity: 0; }
+            10%  { opacity: 1; }
+            90%  { opacity: 1; }
+            100% { transform: translateY(120px); opacity: 0; }
+        }
+        /* progress dots */
+        .wx-dots {
+            display: flex; gap: 4px; justify-content: center;
+            padding-bottom: 10px;
+        }
+        .wx-dot {
+            width: 4px; height: 4px; border-radius: 50%;
+            background: var(--surface-2);
+            transition: background 0.3s;
+        }
+        .wx-dot.active { background: var(--green-400); }
     </style>
 </head>
 <body class="noise">
@@ -255,6 +330,49 @@
         <button onclick="exitDriveMode()" class="btn btn-ghost" style="width:36px;height:36px;border-radius:8px;padding:0;flex-shrink:0">
             <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
+    </div>
+</div>
+
+<!-- ══ DRAGGABLE WEATHER WIDGET ══ -->
+<div id="weather-widget">
+    <div class="wx-card">
+        <!-- Rain layer (always in DOM, shown/hidden by JS) -->
+        <div class="wx-rain-drops" id="wx-rain-layer"></div>
+
+        <!-- Panel container (fixed height so card doesn't jump) -->
+        <div id="wx-panels" style="min-height:110px;position:relative">
+            <!-- Panel 0: Temperature -->
+            <div class="wx-panel wx-active" id="wx-p0">
+                <div class="wx-emoji" id="wx-temp-emoji">⛅</div>
+                <div class="wx-value" id="wx-temp-val">72°</div>
+                <div class="wx-label">Today</div>
+                <div class="wx-desc" id="wx-temp-desc">Partly Cloudy</div>
+            </div>
+            <!-- Panel 1: Wind -->
+            <div class="wx-panel wx-enter-down" id="wx-p1">
+                <div class="wx-emoji">💨</div>
+                <div style="display:flex;align-items:baseline;gap:2px">
+                    <div class="wx-value" id="wx-wind-val">14</div>
+                    <div class="wx-unit">mph</div>
+                </div>
+                <div class="wx-label">Wind</div>
+                <div class="wx-desc" id="wx-wind-desc">SW Breeze</div>
+            </div>
+            <!-- Panel 2: Rain -->
+            <div class="wx-panel wx-enter-down" id="wx-p2">
+                <div class="wx-emoji" id="wx-rain-emoji">⛈️</div>
+                <div class="wx-value" id="wx-rain-val">80%</div>
+                <div class="wx-label">Rain</div>
+                <div class="wx-desc" id="wx-rain-desc">Thunderstorms</div>
+            </div>
+        </div>
+
+        <!-- Dots -->
+        <div class="wx-dots">
+            <div class="wx-dot active" id="wx-dot-0"></div>
+            <div class="wx-dot" id="wx-dot-1"></div>
+            <div class="wx-dot" id="wx-dot-2"></div>
+        </div>
     </div>
 </div>
 
@@ -524,9 +642,7 @@
                 onblur="this.style.borderColor='var(--border-1)';this.style.background='var(--surface-1)'">
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-            <div id="weather-indicator" style="display:none;width:28px;height:28px;border-radius:8px;background:var(--surface-1);border:1px solid var(--border-1);align-items:center;justify-content:center">
-                <img id="weather-icon" src="" alt="Weather" style="width:20px;height:20px">
-            </div>
+
             <button onclick="toggleSettings()" class="btn btn-ghost" style="width:36px;height:36px;border-radius:9px;padding:0">
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             </button>
@@ -1515,7 +1631,7 @@ function updateLocation(latlng) {
     dot.style.background = '#52b36e'; dot.classList.add('gps-active');
     document.getElementById('gps-label').innerText = `Live GPS (±${Math.round(Math.random()*5+3)}m)`;
     document.getElementById('gps-label').style.color = '#52b36e';
-    if (!document.getElementById('weather-icon').src || document.getElementById('weather-icon').src === window.location.href) loadWeatherIcon();
+    // weather widget is always visible
 }
 
 // ── Helpers ──
@@ -1562,6 +1678,176 @@ document.getElementById('global-search').onkeydown = (e) => { if (e.key === 'Ent
 document.addEventListener('click', (e) => {
     if (!e.target.closest('#stop-text-input') && !e.target.closest('#stop-suggestions')) hideSuggestions();
 });
+
+// ══ WEATHER WIDGET ══
+(function() {
+    // --- Simulated weather data (cycles realistically) ---
+    const wxData = {
+        temp: 72,
+        condition: 'partly-cloudy', // sunny | partly-cloudy | cloudy
+        windSpeed: 14,
+        windDir: 'SW',
+        rainChance: 80,
+        rainType: 'thunderstorms' // rain | thunderstorms | drizzle
+    };
+
+    // Condition config
+    const conditionMap = {
+        'sunny':         { emoji: '☀️',  desc: 'Sunny' },
+        'partly-cloudy': { emoji: '⛅',  desc: 'Partly Cloudy' },
+        'cloudy':        { emoji: '☁️',  desc: 'Mostly Cloudy' },
+    };
+    const windDirMap   = ['N','NE','E','SE','S','SW','W','NW'];
+    const rainTypeMap  = {
+        'drizzle':      { emoji: '🌦️', desc: 'Light Drizzle' },
+        'rain':         { emoji: '🌧️', desc: 'Rain Showers' },
+        'thunderstorms':{ emoji: '⛈️', desc: 'Thunderstorms' },
+    };
+
+    function applyData() {
+        // Panel 0 – temp
+        const cond = conditionMap[wxData.condition] || conditionMap['partly-cloudy'];
+        document.getElementById('wx-temp-emoji').textContent = cond.emoji;
+        document.getElementById('wx-temp-val').textContent   = wxData.temp + '°';
+        document.getElementById('wx-temp-desc').textContent  = cond.desc;
+        // Panel 1 – wind
+        document.getElementById('wx-wind-val').textContent  = wxData.windSpeed;
+        document.getElementById('wx-wind-desc').textContent = wxData.windDir + ' Breeze';
+        // Panel 2 – rain
+        const rt = rainTypeMap[wxData.rainType] || rainTypeMap['rain'];
+        document.getElementById('wx-rain-emoji').textContent = rt.emoji;
+        document.getElementById('wx-rain-val').textContent   = wxData.rainChance + '%';
+        document.getElementById('wx-rain-desc').textContent  = rt.desc;
+    }
+    applyData();
+
+    // --- Rain drops ---
+    const rainLayer = document.getElementById('wx-rain-layer');
+    function buildRainDrops() {
+        rainLayer.innerHTML = '';
+        for (let i = 0; i < 18; i++) {
+            const d = document.createElement('div');
+            d.className = 'wx-raindrop';
+            const left = Math.random() * 100;
+            const height = 10 + Math.random() * 14;
+            const dur = 0.55 + Math.random() * 0.5;
+            const delay = -(Math.random() * dur);
+            d.style.cssText = `left:${left}%;height:${height}px;animation-duration:${dur}s;animation-delay:${delay}s`;
+            rainLayer.appendChild(d);
+        }
+    }
+    buildRainDrops();
+    rainLayer.style.display = 'none'; // hidden until rain panel
+
+    // --- Panel rotation ---
+    let currentPanel = 0;
+    const panels = [
+        document.getElementById('wx-p0'),
+        document.getElementById('wx-p1'),
+        document.getElementById('wx-p2'),
+    ];
+    const dots = [
+        document.getElementById('wx-dot-0'),
+        document.getElementById('wx-dot-1'),
+        document.getElementById('wx-dot-2'),
+    ];
+
+    function showPanel(next) {
+        const prev = currentPanel;
+        if (prev === next) return;
+
+        // Exit current
+        panels[prev].classList.remove('wx-active');
+        panels[prev].classList.add('wx-exit-up');
+
+        // Prepare next
+        panels[next].classList.remove('wx-exit-up', 'wx-active');
+        panels[next].classList.add('wx-enter-down');
+        panels[next].style.position = 'absolute';
+        panels[next].style.top = '0'; panels[next].style.left = '0'; panels[next].style.width = '100%';
+
+        // Force reflow
+        void panels[next].offsetWidth;
+
+        // Animate in
+        panels[next].classList.remove('wx-enter-down');
+        panels[next].classList.add('wx-active');
+        panels[next].style.position = 'relative';
+        panels[next].style.top = ''; panels[next].style.left = ''; panels[next].style.width = '';
+
+        // After prev exits, reset it
+        setTimeout(() => {
+            panels[prev].classList.remove('wx-exit-up');
+            panels[prev].classList.add('wx-enter-down');
+            panels[prev].style.position = 'absolute';
+            panels[prev].style.top = '0'; panels[prev].style.left = '0'; panels[prev].style.width = '100%';
+        }, 480);
+
+        // Dots
+        dots[prev].classList.remove('active');
+        dots[next].classList.add('active');
+
+        // Rain layer
+        rainLayer.style.display = (next === 2) ? 'block' : 'none';
+
+        currentPanel = next;
+    }
+
+    // Auto-rotate every 3.5 seconds
+    setInterval(() => {
+        showPanel((currentPanel + 1) % 3);
+    }, 3500);
+
+    // --- Dragging ---
+    const widget = document.getElementById('weather-widget');
+    let dragging = false, startX, startY, origLeft, origTop;
+
+    function getPos() {
+        const r = widget.getBoundingClientRect();
+        return { left: r.left, top: r.top };
+    }
+
+    function onDown(e) {
+        dragging = true;
+        const pos = getPos();
+        // Switch to absolute fixed positioning from wherever it is
+        widget.style.right  = 'auto';
+        widget.style.bottom = 'auto';
+        widget.style.left   = pos.left + 'px';
+        widget.style.top    = pos.top  + 'px';
+
+        const touch = e.touches ? e.touches[0] : e;
+        startX = touch.clientX - pos.left;
+        startY = touch.clientY - pos.top;
+        widget.style.cursor = 'grabbing';
+        e.preventDefault();
+    }
+    function onMove(e) {
+        if (!dragging) return;
+        const touch = e.touches ? e.touches[0] : e;
+        let nx = touch.clientX - startX;
+        let ny = touch.clientY - startY;
+        // Clamp within viewport
+        const W = window.innerWidth  - widget.offsetWidth;
+        const H = window.innerHeight - widget.offsetHeight;
+        nx = Math.max(0, Math.min(nx, W));
+        ny = Math.max(0, Math.min(ny, H));
+        widget.style.left = nx + 'px';
+        widget.style.top  = ny + 'px';
+        e.preventDefault();
+    }
+    function onUp() {
+        dragging = false;
+        widget.style.cursor = 'grab';
+    }
+
+    widget.addEventListener('mousedown',  onDown,  { passive: false });
+    widget.addEventListener('touchstart', onDown,  { passive: false });
+    document.addEventListener('mousemove', onMove, { passive: false });
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('mouseup',   onUp);
+    document.addEventListener('touchend',  onUp);
+})();
 </script>
 </body>
 </html>
