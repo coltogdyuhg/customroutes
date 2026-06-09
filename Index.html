@@ -226,6 +226,27 @@
 
         /* Traffic warning icon — strip Leaflet's default white box */
         .traffic-warn-icon { background: transparent !important; border: none !important; }
+
+        /* Pulsing/blinking traffic lines so they read as live traffic.
+           Animates stroke-opacity, so the dark casing underneath stays solid
+           and the color blinks in & out. Worse congestion throbs faster, dimmer
+           and wider — so problem roads grab the eye. */
+        @keyframes traffic-blink {
+            0%, 100% { stroke-opacity: 1; }
+            50%      { stroke-opacity: var(--tl-min, 0.4); }
+        }
+        @keyframes traffic-blink-wide {
+            0%, 100% { stroke-opacity: 1;                  stroke-width: 4px; }
+            50%      { stroke-opacity: var(--tl-min, 0.3); stroke-width: 6.5px; }
+        }
+        .traffic-line        { --tl-min: 0.50; animation: traffic-blink 2.6s ease-in-out infinite; }
+        .traffic-line-heavy  { --tl-min: 0.32; animation: traffic-blink-wide 1.2s ease-in-out infinite; }
+        .traffic-line-severe { --tl-min: 0.20; animation: traffic-blink-wide 0.75s ease-in-out infinite; }
+        .traffic-line, .traffic-line-heavy, .traffic-line-severe { will-change: stroke-opacity; }
+
+        /* Warning icons pulse too */
+        @keyframes traffic-icon-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+        .traffic-warn-icon > div { animation: traffic-icon-pulse 1s ease-in-out infinite; }
     </style>
 </head>
 <body class="noise">
@@ -1132,7 +1153,10 @@ function renderTraffic(elements) {
 
         // Casing for contrast, then the colored line on top
         L.polyline(latlngs, { color: 'rgba(0,0,0,0.55)', weight: 7, opacity: 0.5, lineCap: 'round' }).addTo(trafficRoadLayer);
-        L.polyline(latlngs, { color: level.color, weight: 4, opacity: 0.95, lineCap: 'round' }).addTo(trafficRoadLayer);
+        const pulseClass = level.id >= 3 ? 'traffic-line-severe'
+                         : level.id === 2 ? 'traffic-line-heavy'
+                         : 'traffic-line';
+        L.polyline(latlngs, { color: level.color, weight: 4, opacity: 0.95, lineCap: 'round', className: pulseClass }).addTo(trafficRoadLayer);
 
         // Warning icon for bad roads (heavy/severe), if the segment is long enough
         if (level.flag && flagged < MAX_ICONS && pathMeters(latlngs) > 250) {
