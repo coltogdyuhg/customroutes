@@ -223,6 +223,19 @@
 
         /* Route legend chips */
         .leg-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 9999px; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+
+        /* ── Traffic system ── */
+        @keyframes traffic-pulse-red    { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.6)}  50%{box-shadow:0 0 0 6px rgba(239,68,68,0)} }
+        @keyframes traffic-pulse-amber  { 0%,100%{box-shadow:0 0 0 0 rgba(212,117,42,0.6)} 50%{box-shadow:0 0 0 6px rgba(212,117,42,0)} }
+        .traffic-btn-red   { background:rgba(239,68,68,0.15)!important; border-color:rgba(239,68,68,0.35)!important; color:#fca5a5!important; animation:traffic-pulse-red   2s ease-in-out infinite; }
+        .traffic-btn-amber { background:rgba(212,117,42,0.18)!important; border-color:rgba(212,117,42,0.35)!important; color:var(--amber-300)!important; animation:traffic-pulse-amber 2.5s ease-in-out infinite; }
+        .traffic-btn-green { background:rgba(29,74,46,0.25)!important;   border-color:rgba(61,143,86,0.35)!important;  color:var(--green-300)!important; }
+
+        #traffic-popup { background:rgba(10,15,10,0.96); border:1px solid var(--border-2); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-radius:18px; box-shadow:0 24px 60px rgba(0,0,0,0.7); min-width:260px; }
+        .traffic-bar-track { background:var(--surface-2); border-radius:9999px; height:10px; overflow:hidden; }
+        .traffic-bar-fill  { height:100%; border-radius:9999px; transition:width 0.6s cubic-bezier(0.4,0,0.2,1); }
+        .traffic-row { display:flex; align-items:center; gap:10px; padding:6px 0; }
+        .traffic-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
     </style>
 </head>
 <body class="noise">
@@ -471,6 +484,16 @@
                 <label class="toggle"><input type="checkbox" id="settings-start-at-loc" onchange="syncToggles(this)"><span class="toggle-track"></span></label>
             </div>
         </div>
+        <div>
+            <p style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Map Overlays</p>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
+                <div>
+                    <span style="font-size:12px;font-weight:600;color:var(--text-primary)">Traffic Monitor</span>
+                    <p style="font-size:10px;font-weight:500;color:var(--text-muted);margin-top:2px">Show traffic icon &amp; conditions</p>
+                </div>
+                <label class="toggle"><input type="checkbox" id="settings-traffic" onchange="toggleTrafficFeature(this.checked)"><span class="toggle-track"></span></label>
+            </div>
+        </div>
     </div>
     <!-- veya 2026 footer -->
     <div style="padding:16px 20px;border-top:1px solid var(--border-1);text-align:center">
@@ -526,6 +549,71 @@
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
             <div id="weather-indicator" style="display:none;width:28px;height:28px;border-radius:8px;background:var(--surface-1);border:1px solid var(--border-1);align-items:center;justify-content:center">
                 <img id="weather-icon" src="" alt="Weather" style="width:20px;height:20px">
+            </div>
+            <!-- Traffic indicator -->
+            <div id="traffic-indicator" style="display:none;position:relative">
+                <button id="traffic-btn" onclick="toggleTrafficPopup()" class="btn btn-ghost traffic-btn-green" style="width:36px;height:36px;border-radius:9px;padding:0;position:relative" title="Traffic conditions">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="6" y="2" width="12" height="20" rx="3"/>
+                        <circle cx="12" cy="7"  r="2" fill="currentColor" stroke="none" id="tlight-red"   opacity="0.3"/>
+                        <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" id="tlight-amber" opacity="0.3"/>
+                        <circle cx="12" cy="17" r="2" fill="currentColor" stroke="none" id="tlight-green" opacity="1"/>
+                    </svg>
+                </button>
+                <!-- Traffic popup -->
+                <div id="traffic-popup" class="fixed z-[3000] p-5" style="top:60px;right:12px;display:none">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+                        <span style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">Traffic Conditions</span>
+                        <button onclick="toggleTrafficPopup()" style="width:24px;height:24px;border-radius:6px;background:var(--surface-1);border:1px solid var(--border-1);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px">✕</button>
+                    </div>
+                    <!-- Big severity label -->
+                    <div style="text-align:center;margin-bottom:16px">
+                        <div id="traffic-emoji" style="font-size:32px;margin-bottom:4px">🟢</div>
+                        <div id="traffic-label" style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--green-300)">Clear</div>
+                        <div id="traffic-sublabel" style="font-size:10px;font-weight:600;color:var(--text-muted);margin-top:2px">No delays detected</div>
+                    </div>
+                    <!-- Severity scale bar -->
+                    <div style="margin-bottom:16px">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                            <span style="font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-muted)">Severity</span>
+                            <span id="traffic-pct-label" style="font-size:9px;font-weight:700;color:var(--text-secondary)">0%</span>
+                        </div>
+                        <div class="traffic-bar-track">
+                            <div id="traffic-bar-fill" class="traffic-bar-fill" style="width:0%;background:var(--green-400)"></div>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-top:4px">
+                            <span style="font-size:8px;font-weight:600;color:var(--text-muted)">Free flow</span>
+                            <span style="font-size:8px;font-weight:600;color:var(--text-muted)">Standstill</span>
+                        </div>
+                    </div>
+                    <!-- Breakdown rows -->
+                    <div style="border-top:1px solid var(--border-1);padding-top:12px;display:flex;flex-direction:column;gap:2px">
+                        <div class="traffic-row">
+                            <div class="traffic-dot" style="background:#52b36e"></div>
+                            <span style="font-size:11px;font-weight:600;color:var(--text-secondary);flex:1">Free flow</span>
+                            <span id="tc-free" style="font-size:11px;font-weight:700;color:var(--text-primary)">--</span>
+                        </div>
+                        <div class="traffic-row">
+                            <div class="traffic-dot" style="background:#d4b93e"></div>
+                            <span style="font-size:11px;font-weight:600;color:var(--text-secondary);flex:1">Slow</span>
+                            <span id="tc-slow" style="font-size:11px;font-weight:700;color:var(--text-primary)">--</span>
+                        </div>
+                        <div class="traffic-row">
+                            <div class="traffic-dot" style="background:var(--amber-400)"></div>
+                            <span style="font-size:11px;font-weight:600;color:var(--text-secondary);flex:1">Congested</span>
+                            <span id="tc-cong" style="font-size:11px;font-weight:700;color:var(--text-primary)">--</span>
+                        </div>
+                        <div class="traffic-row">
+                            <div class="traffic-dot" style="background:#ef4444"></div>
+                            <span style="font-size:11px;font-weight:600;color:var(--text-secondary);flex:1">Standstill</span>
+                            <span id="tc-stop" style="font-size:11px;font-weight:700;color:var(--text-primary)">--</span>
+                        </div>
+                    </div>
+                    <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border-1);display:flex;align-items:center;gap:6px">
+                        <div id="traffic-update-dot" style="width:6px;height:6px;border-radius:50%;background:var(--green-400);flex-shrink:0"></div>
+                        <span id="traffic-update-label" style="font-size:9px;font-weight:600;color:var(--text-muted)">Updating…</span>
+                    </div>
+                </div>
             </div>
             <button onclick="toggleSettings()" class="btn btn-ghost" style="width:36px;height:36px;border-radius:9px;padding:0">
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -1561,7 +1649,125 @@ document.getElementById('global-search').onkeydown = (e) => { if (e.key === 'Ent
 
 document.addEventListener('click', (e) => {
     if (!e.target.closest('#stop-text-input') && !e.target.closest('#stop-suggestions')) hideSuggestions();
+    // Close traffic popup on outside click
+    if (!e.target.closest('#traffic-indicator')) {
+        const popup = document.getElementById('traffic-popup');
+        if (popup) popup.style.display = 'none';
+    }
 });
+
+// ── Traffic System ──
+let trafficEnabled = false;
+let trafficInterval = null;
+let trafficPopupOpen = false;
+
+const TRAFFIC_LEVELS = [
+    { label: 'Clear',     emoji: '🟢', sublabel: 'No delays detected',         pct: [0,18],   btnClass: 'traffic-btn-green', barColor: '#52b36e', redOp: 0.15, ambOp: 0.15, grnOp: 1.0 },
+    { label: 'Light',     emoji: '🟡', sublabel: 'Minor slowdowns ahead',       pct: [19,38],  btnClass: 'traffic-btn-green', barColor: '#d4b93e', redOp: 0.15, ambOp: 0.15, grnOp: 1.0 },
+    { label: 'Moderate',  emoji: '🟠', sublabel: 'Expect some delays',          pct: [39,60],  btnClass: 'traffic-btn-amber', barColor: 'var(--amber-400)', redOp: 0.15, ambOp: 1.0,  grnOp: 0.2 },
+    { label: 'Heavy',     emoji: '🔴', sublabel: 'Significant congestion',      pct: [61,78],  btnClass: 'traffic-btn-red',   barColor: '#ef4444', redOp: 1.0,  ambOp: 0.2,  grnOp: 0.15 },
+    { label: 'Standstill',emoji: '🚨', sublabel: 'Severe gridlock — avoid area',pct: [79,100], btnClass: 'traffic-btn-red',   barColor: '#ef4444', redOp: 1.0,  ambOp: 0.2,  grnOp: 0.15 },
+];
+
+function getSimulatedTraffic() {
+    // Simulate realistic traffic based on time-of-day
+    const h = new Date().getHours();
+    let basePct;
+    if      (h >= 7  && h <= 9)  basePct = 55 + Math.random() * 35; // morning rush
+    else if (h >= 16 && h <= 19) basePct = 60 + Math.random() * 38; // evening rush
+    else if (h >= 0  && h <= 5)  basePct = Math.random() * 15;      // overnight
+    else                          basePct = 15 + Math.random() * 35; // normal hours
+    basePct = Math.min(100, Math.max(0, basePct + (Math.random() * 10 - 5)));
+    return Math.round(basePct);
+}
+
+function pctToLevel(pct) {
+    return TRAFFIC_LEVELS.find(l => pct >= l.pct[0] && pct <= l.pct[1]) || TRAFFIC_LEVELS[0];
+}
+
+function updateTrafficUI(pct) {
+    const level = pctToLevel(pct);
+    const btn   = document.getElementById('traffic-btn');
+    if (!btn) return;
+
+    // Update button appearance
+    btn.className = `btn btn-ghost ${level.btnClass}`;
+    document.getElementById('tlight-red').setAttribute('opacity',   level.redOp);
+    document.getElementById('tlight-amber').setAttribute('opacity', level.ambOp);
+    document.getElementById('tlight-green').setAttribute('opacity', level.grnOp);
+
+    // Only show the button if traffic is moderate or worse
+    const indicator = document.getElementById('traffic-indicator');
+    indicator.style.display = (pct >= 39) ? 'block' : 'none';
+
+    // Update popup content
+    document.getElementById('traffic-emoji').textContent    = level.emoji;
+    document.getElementById('traffic-label').textContent    = level.label;
+    document.getElementById('traffic-label').style.color   = level.barColor;
+    document.getElementById('traffic-sublabel').textContent = level.sublabel;
+    document.getElementById('traffic-pct-label').textContent = pct + '%';
+    const fill = document.getElementById('traffic-bar-fill');
+    fill.style.width      = pct + '%';
+    fill.style.background = level.barColor;
+
+    // Breakdown estimates
+    const free = Math.max(0, 100 - pct);
+    const slow = Math.min(pct, 30);
+    const cong = pct > 30 ? Math.min(pct - 30, 40) : 0;
+    const stop = pct > 70 ? pct - 70 : 0;
+    document.getElementById('tc-free').textContent = free + '%';
+    document.getElementById('tc-slow').textContent = slow + '%';
+    document.getElementById('tc-cong').textContent = cong + '%';
+    document.getElementById('tc-stop').textContent = stop + '%';
+
+    // Last updated
+    const now = new Date();
+    document.getElementById('traffic-update-label').textContent =
+        `Updated ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+    document.getElementById('traffic-update-dot').style.background = '#52b36e';
+}
+
+function runTrafficUpdate() {
+    document.getElementById('traffic-update-dot').style.background = 'var(--amber-400)';
+    setTimeout(() => {
+        const pct = getSimulatedTraffic();
+        updateTrafficUI(pct);
+    }, 600);
+}
+
+function toggleTrafficFeature(enabled) {
+    trafficEnabled = enabled;
+    localStorage.setItem('traffic_enabled', enabled ? '1' : '0');
+    const indicator = document.getElementById('traffic-indicator');
+    if (enabled) {
+        runTrafficUpdate();
+        trafficInterval = setInterval(runTrafficUpdate, 90000); // refresh every 90s
+    } else {
+        clearInterval(trafficInterval);
+        trafficInterval = null;
+        indicator.style.display = 'none';
+        // Close popup if open
+        document.getElementById('traffic-popup').style.display = 'none';
+        trafficPopupOpen = false;
+    }
+}
+
+function toggleTrafficPopup() {
+    const popup = document.getElementById('traffic-popup');
+    trafficPopupOpen = !trafficPopupOpen;
+    popup.style.display = trafficPopupOpen ? 'block' : 'none';
+    if (trafficPopupOpen) popup.classList.add('fade-in');
+}
+
+// Restore traffic preference on load
+(function restoreTrafficPref() {
+    const saved = localStorage.getItem('traffic_enabled');
+    if (saved === '1') {
+        const toggle = document.getElementById('settings-traffic');
+        if (toggle) toggle.checked = true;
+        toggleTrafficFeature(true);
+    }
+})();
 </script>
 </body>
 </html>
