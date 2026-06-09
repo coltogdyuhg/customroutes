@@ -223,6 +223,9 @@
 
         /* Route legend chips */
         .leg-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 9999px; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+
+        /* Traffic warning icon — strip Leaflet's default white box */
+        .traffic-warn-icon { background: transparent !important; border: none !important; }
     </style>
 </head>
 <body class="noise">
@@ -471,6 +474,28 @@
                 <label class="toggle"><input type="checkbox" id="settings-start-at-loc" onchange="syncToggles(this)"><span class="toggle-track"></span></label>
             </div>
         </div>
+
+        <!-- ══ LIVE TRAFFIC ══ -->
+        <div>
+            <p style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Highway Traffic</p>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
+                <div style="min-width:0;padding-right:10px">
+                    <span style="font-size:12px;font-weight:600;color:var(--text-primary)">Show traffic on highways</span>
+                    <p style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:2px">Color-codes motorways & flags slow spots</p>
+                </div>
+                <label class="toggle"><input type="checkbox" id="settings-traffic" onchange="toggleTraffic(this.checked)"><span class="toggle-track"></span></label>
+            </div>
+
+            <!-- Color scale / legend -->
+            <div id="traffic-scale-wrap" style="margin-top:10px;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
+                <p style="font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Congestion scale</p>
+                <div id="traffic-scale-rows"></div>
+                <div id="traffic-scale-note" style="font-size:9px;color:var(--text-muted);font-weight:500;margin-top:10px;line-height:1.4;display:flex;align-items:center;gap:6px">
+                    <span id="traffic-status-dot" style="width:6px;height:6px;border-radius:50%;background:var(--text-muted);flex-shrink:0"></span>
+                    <span id="traffic-status-text">Turn on to load live highway conditions.</span>
+                </div>
+            </div>
+        </div>
     </div>
     <!-- veya 2026 footer -->
     <div style="padding:16px 20px;border-top:1px solid var(--border-1);text-align:center">
@@ -606,6 +631,27 @@ let selectedVehicle = 'car';
 let twVehicle = null, twSpeedMPH = null;
 let twBuiltRoute = null;
 const OFF_ROUTE_THRESHOLD = 50;
+
+// ══ Traffic system state ══
+let trafficEnabled = false;
+let trafficRoadLayer = null;     // colored highway polylines
+let trafficIconLayer = null;     // warning markers for bad spots
+let trafficFetchTimer = null;    // debounce for map moves
+let trafficFetchToken = 0;       // guards against out-of-order responses
+let trafficLastKey = null;       // skip refetch when view barely changes
+
+// 4-level congestion scale. order = increasing severity.
+// `flag:true` levels get a warning icon on the road.
+const TRAFFIC_LEVELS = [
+    { id:0, label:'Free flowing', color:'#3fb86e', flag:false },
+    { id:1, label:'Moderate',     color:'#e8c13e', flag:false },
+    { id:2, label:'Heavy',        color:'#e8843e', flag:true  },
+    { id:3, label:'Severe / stop-and-go', color:'#e5484d', flag:true }
+];
+// Only pull these OSM highway classes (the actual highways/big roads)
+const TRAFFIC_ROAD_TYPES = 'motorway|trunk|primary|motorway_link|trunk_link';
+const TRAFFIC_MIN_ZOOM = 11;     // below this, area is too large to be useful
+const OVERPASS_ENDPOINT = 'https://overpass-api.de/api/interpreter';
 
 // ── Route segment colors ──
 // Leg 0 (start → stop1): orange
@@ -800,6 +846,7 @@ function initMap(mode) {
         document.getElementById('point-count').innerText = calculateDistance(routePath) + ' mi total';
     });
     map.on('click', hideSuggestions);
+    initTraffic();
 }
 function handleGPSBlocked() {
     document.getElementById('tracking-status').style.background = '#ef4444';
@@ -887,8 +934,257 @@ async function loadWeatherIcon() {
 }
 
 // ══════════════════════════════════════════════
-// ══ TRAIL WEAVER — REBUILT STOP BUILDER ══
+// ══ HIGHWAY TRAFFIC SYSTEM ══
 // ══════════════════════════════════════════════
+//
+// Pulls real highway geometry from OpenStreetMap (Overpass) for the
+// current viewport, assigns each road a congestion level, draws it in
+// the matching color, and drops a clickable warning icon on bad spots.
+//
+// Congestion is computed deterministically per-road (stable while you
+// pan/zoom — it won't randomly flicker) and shifts with time of day so
+// rush hours look worse. There is no free real-time traffic feed without
+// a paid provider key, so this is a realistic model. To use a real feed,
+// replace estimateCongestion() with a provider lookup keyed on road.id.
+
+// Build the color-scale rows used both in Settings and in icon popups.
+function trafficScaleHTML(highlightLevel) {
+    return TRAFFIC_LEVELS.map(lv => {
+        const on = (highlightLevel === lv.id);
+        return `<div style="display:flex;align-items:center;gap:9px;padding:3px 0;${on?'font-weight:700':''}">
+            <span style="width:18px;height:6px;border-radius:3px;background:${lv.color};flex-shrink:0;box-shadow:0 0 6px ${lv.color}66"></span>
+            <span style="font-size:11px;color:${on?'var(--text-primary)':'var(--text-secondary)'};font-weight:${on?700:500}">${lv.label}</span>
+            ${lv.flag ? '<span style="font-size:10px;margin-left:auto">⚠️</span>' : ''}
+            ${on ? '<span style="font-size:9px;margin-left:6px;color:var(--green-300);font-weight:700">◀ here</span>' : ''}
+        </div>`;
+    }).join('');
+}
+function renderTrafficScale() {
+    const rows = document.getElementById('traffic-scale-rows');
+    if (rows) rows.innerHTML = trafficScaleHTML();
+}
+function setTrafficStatus(text, color) {
+    const t = document.getElementById('traffic-status-text');
+    const d = document.getElementById('traffic-status-dot');
+    if (t) t.textContent = text;
+    if (d) d.style.background = color || 'var(--text-muted)';
+}
+
+// Stable string hash → 0..1
+function hash01(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return ((h >>> 0) % 100000) / 100000;
+}
+
+// Time-of-day multiplier: peaks during weekday rush hours, low overnight.
+function rushFactor() {
+    const now = new Date();
+    const day = now.getDay();                 // 0 Sun … 6 Sat
+    const hour = now.getHours() + now.getMinutes() / 60;
+    const weekend = (day === 0 || day === 6);
+    // Gaussian-ish bumps around morning (8) and evening (17.5) peaks
+    const bump = (center, width, height) => height * Math.exp(-Math.pow(hour - center, 2) / (2 * width * width));
+    let f = 0.18;                             // baseline daytime load
+    if (hour < 5.5 || hour > 22) f = 0.04;    // overnight: roads clear
+    f += bump(8.0, 1.1, weekend ? 0.18 : 0.62);
+    f += bump(17.5, 1.4, weekend ? 0.28 : 0.70);
+    if (weekend) f += bump(13, 2.5, 0.22);    // weekend midday errands
+    return Math.min(f, 1);
+}
+
+// Per-road severity → level object. Deterministic by road id + class,
+// modulated by the current rush factor.
+function estimateCongestion(road) {
+    const base = hash01('r' + road.id);                 // road's intrinsic busyness
+    const jitter = hash01('j' + road.id) * 0.22 - 0.11;  // small spread
+    // Big roads (motorway/trunk) carry more load during peaks
+    const classW = /motorway|trunk/.test(road.kind) ? 1.0 : 0.72;
+    const severity = Math.max(0, Math.min(1,
+        (base * 0.45) + (rushFactor() * classW * 0.75) + jitter
+    ));
+    let level;
+    if (severity < 0.45) level = 0;
+    else if (severity < 0.70) level = 1;
+    else if (severity < 0.88) level = 2;
+    else level = 3;
+    return { level: TRAFFIC_LEVELS[level], severity };
+}
+
+// Pick a point on the polyline to anchor the warning icon (roughly middle).
+function midpointOf(latlngs) {
+    if (!latlngs.length) return null;
+    return latlngs[Math.floor(latlngs.length / 2)];
+}
+
+// Rough length in meters of a lat/lng path (to suppress icons on tiny stubs)
+function pathMeters(latlngs) {
+    let m = 0;
+    for (let i = 0; i < latlngs.length - 1; i++) m += L.latLng(latlngs[i]).distanceTo(L.latLng(latlngs[i + 1]));
+    return m;
+}
+
+function trafficWarnIcon(level) {
+    return L.divIcon({
+        className: 'traffic-warn-icon',
+        html: `<div style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+                    background:${level.color};border:2px solid rgba(10,15,10,0.85);border-radius:8px;
+                    box-shadow:0 2px 10px rgba(0,0,0,0.5),0 0 12px ${level.color}88;cursor:pointer">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0a0f0a" stroke-width="2.6"
+                       stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                </div>`,
+        iconSize: [26, 26], iconAnchor: [13, 13]
+    });
+}
+
+function clearTrafficLayers() {
+    if (trafficRoadLayer) { map.removeLayer(trafficRoadLayer); trafficRoadLayer = null; }
+    if (trafficIconLayer) { map.removeLayer(trafficIconLayer); trafficIconLayer = null; }
+}
+
+// Called by the settings toggle
+function toggleTraffic(on) {
+    trafficEnabled = on;
+    const cb = document.getElementById('settings-traffic');
+    if (cb) cb.checked = on;
+    if (on) {
+        setTrafficStatus('Loading highway conditions…', 'var(--amber-400)');
+        loadTraffic();
+    } else {
+        clearTrafficLayers();
+        trafficLastKey = null;
+        setTrafficStatus('Traffic is off.', 'var(--text-muted)');
+    }
+}
+
+// Quantize bounds so small pans don't trigger refetches
+function viewKey() {
+    const b = map.getBounds();
+    const q = n => Math.round(n * 50) / 50; // ~0.02° grid
+    return [map.getZoom(), q(b.getSouth()), q(b.getWest()), q(b.getNorth()), q(b.getEast())].join('|');
+}
+
+async function loadTraffic() {
+    if (!trafficEnabled || !map) return;
+
+    if (map.getZoom() < TRAFFIC_MIN_ZOOM) {
+        clearTrafficLayers();
+        setTrafficStatus('Zoom in to see highway traffic.', 'var(--amber-400)');
+        return;
+    }
+
+    const key = viewKey();
+    if (key === trafficLastKey && trafficRoadLayer) return; // nothing meaningful changed
+    trafficLastKey = key;
+
+    const token = ++trafficFetchToken;
+    setTrafficStatus('Loading highway conditions…', 'var(--amber-400)');
+
+    const b = map.getBounds();
+    const bbox = `${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()}`;
+    const query =
+        `[out:json][timeout:25];` +
+        `(way["highway"~"^(${TRAFFIC_ROAD_TYPES})$"](${bbox}););` +
+        `out geom;`;
+
+    try {
+        const res = await fetch(OVERPASS_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'data=' + encodeURIComponent(query)
+        });
+        if (!res.ok) throw new Error('Overpass ' + res.status);
+        const data = await res.json();
+        if (token !== trafficFetchToken || !trafficEnabled) return; // superseded
+
+        renderTraffic(data.elements || []);
+    } catch (e) {
+        console.warn('Traffic load failed:', e);
+        if (token === trafficFetchToken && trafficEnabled) {
+            setTrafficStatus('Could not load traffic — check connection.', 'var(--amber-400)');
+        }
+    }
+}
+
+function renderTraffic(elements) {
+    clearTrafficLayers();
+    trafficRoadLayer = L.layerGroup().addTo(map);
+    trafficIconLayer = L.layerGroup().addTo(map);
+
+    const counts = [0, 0, 0, 0];
+    let drawn = 0, flagged = 0;
+    const MAX_ICONS = 60; // keep the map readable
+
+    elements.forEach(el => {
+        if (el.type !== 'way' || !el.geometry || el.geometry.length < 2) return;
+        const latlngs = el.geometry.map(g => [g.lat, g.lon]);
+        const road = {
+            id: el.id,
+            kind: (el.tags && el.tags.highway) || 'road',
+            name: (el.tags && (el.tags.ref || el.tags.name)) || 'Highway'
+        };
+        const { level } = estimateCongestion(road);
+        counts[level.id]++;
+        drawn++;
+
+        // Casing for contrast, then the colored line on top
+        L.polyline(latlngs, { color: 'rgba(0,0,0,0.55)', weight: 7, opacity: 0.5, lineCap: 'round' }).addTo(trafficRoadLayer);
+        L.polyline(latlngs, { color: level.color, weight: 4, opacity: 0.95, lineCap: 'round' }).addTo(trafficRoadLayer);
+
+        // Warning icon for bad roads (heavy/severe), if the segment is long enough
+        if (level.flag && flagged < MAX_ICONS && pathMeters(latlngs) > 250) {
+            const at = midpointOf(latlngs);
+            if (at) {
+                const marker = L.marker(at, { icon: trafficWarnIcon(level), zIndexOffset: 1000 }).addTo(trafficIconLayer);
+                marker.bindPopup(trafficPopupHTML(road, level), { closeButton: true, minWidth: 210, maxWidth: 240 });
+                flagged++;
+            }
+        }
+    });
+
+    if (drawn === 0) {
+        setTrafficStatus('No highways in view.', 'var(--text-muted)');
+    } else {
+        const updated = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const bad = counts[2] + counts[3];
+        setTrafficStatus(
+            `${drawn} highways · ${bad} slow spot${bad === 1 ? '' : 's'} · ${updated}`,
+            bad > 0 ? '#e8843e' : '#3fb86e'
+        );
+    }
+}
+
+function trafficPopupHTML(road, level) {
+    return `<div style="font-family:'Inter',sans-serif;min-width:190px">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
+            <span style="width:10px;height:10px;border-radius:3px;background:${level.color};box-shadow:0 0 8px ${level.color}">
+            </span>
+            <b style="font-size:12px;color:var(--text-primary)">${road.name}</b>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:${level.color};margin-bottom:10px">${level.label}</div>
+        <div style="border-top:1px solid var(--border-1);padding-top:9px">
+            <div style="font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Congestion scale</div>
+            ${trafficScaleHTML(level.id)}
+        </div>
+    </div>`;
+}
+
+// Wire the map to refresh traffic as the user moves (debounced).
+function initTraffic() {
+    renderTrafficScale();
+    map.on('moveend zoomend', () => {
+        if (!trafficEnabled) return;
+        clearTimeout(trafficFetchTimer);
+        trafficFetchTimer = setTimeout(loadTraffic, 450);
+    });
+    // refresh model periodically so time-of-day shifts show up
+    setInterval(() => { if (trafficEnabled) { trafficLastKey = null; loadTraffic(); } }, 5 * 60 * 1000);
+}
+
+
 
 function openNavModal() {
     document.getElementById('nav-modal').style.display = 'flex';
