@@ -1,1 +1,1887 @@
-h
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CustomRoutes – Navigator Pro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['"Syne"', 'sans-serif'],
+                        body: ['"Inter"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --bg-0:      #0a0f0a;
+            --bg-1:      #0f160f;
+            --bg-2:      #141e13;
+            --surface-1: rgba(255,255,255,0.04);
+            --surface-2: rgba(255,255,255,0.07);
+            --border-1:  rgba(255,255,255,0.07);
+            --border-2:  rgba(255,255,255,0.12);
+            --green-900: #0d2211;
+            --green-800: #163320;
+            --green-700: #1f4a2e;
+            --green-600: #2d6b41;
+            --green-500: #3d8f56;
+            --green-400: #52b36e;
+            --green-300: #7cce94;
+            --green-200: #b2e4c0;
+            --green-100: #dff3e5;
+            --amber-600: #b05d1a;
+            --amber-500: #d4752a;
+            --amber-400: #e8943e;
+            --amber-300: #f0b070;
+            --text-primary:   rgba(255,255,255,0.92);
+            --text-secondary: rgba(255,255,255,0.50);
+            --text-muted:     rgba(255,255,255,0.28);
+        }
+
+        * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
+        html, body { background: var(--bg-0); color: var(--text-primary); overflow: hidden; }
+        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        .boot-bg { background: var(--bg-0); position: relative; overflow: hidden; }
+        .boot-bg::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 70% 50% at 20% 70%, rgba(61,143,86,0.18) 0%, transparent 60%), radial-gradient(ellipse 50% 70% at 80% 20%, rgba(29,74,46,0.15) 0%, transparent 60%); }
+        .noise::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9999; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E"); background-repeat: repeat; background-size: 200px 200px; opacity: 0.4; }
+        .progress-bar-fill { background: linear-gradient(90deg, var(--green-700), var(--green-400), var(--green-300)); height: 100%; border-radius: 9999px; transition: width 0.2s ease-out; }
+
+        #app-interface { height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
+        .app-header { height: 56px; background: var(--bg-1); border-bottom: 1px solid var(--border-1); display: flex; align-items: center; padding: 0 20px; gap: 16px; flex-shrink: 0; z-index: 30; }
+        #sidebar { background: var(--bg-1); border-right: 1px solid var(--border-1); flex-shrink: 0; }
+        #map { height: 100%; width: 100%; z-index: 1; display: block; }
+        #map-area { flex: 1 1 0%; min-width: 0; min-height: 0; position: relative; overflow: hidden; }
+        .leaflet-container { background: #0d1208 !important; }
+
+        .btn { display: flex; align-items: center; justify-content: center; font-weight: 600; letter-spacing: 0.02em; border-radius: 10px; transition: all 0.18s ease; cursor: pointer; border: none; outline: none; }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary { background: var(--green-700); color: var(--green-100); border: 1px solid rgba(61,143,86,0.4); }
+        .btn-primary:hover { background: var(--green-600); }
+        .btn-accent { background: rgba(176,93,26,0.25); color: var(--amber-300); border: 1px solid rgba(212,117,42,0.25); }
+        .btn-accent:hover { background: rgba(176,93,26,0.4); }
+        .btn-ghost { background: var(--surface-1); color: var(--text-secondary); border: 1px solid var(--border-1); }
+        .btn-ghost:hover { background: var(--surface-2); color: var(--text-primary); }
+
+        .field { background: var(--surface-1); border: 1px solid var(--border-1); border-radius: 10px; color: var(--text-primary); font-size: 13px; font-weight: 500; padding: 10px 14px; outline: none; transition: border-color 0.18s, background 0.18s; width: 100%; }
+        .field::placeholder { color: var(--text-muted); }
+        .field:focus { border-color: rgba(61,143,86,0.5); background: var(--surface-2); }
+
+        .toggle { position: relative; display: inline-flex; width: 36px; height: 20px; flex-shrink: 0; }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .toggle-track { position: absolute; inset: 0; background: var(--surface-2); border: 1px solid var(--border-2); border-radius: 9999px; cursor: pointer; transition: background 0.2s; }
+        .toggle-track::before { content: ''; position: absolute; left: 3px; top: 2px; width: 14px; height: 14px; background: rgba(255,255,255,0.4); border-radius: 50%; transition: transform 0.2s, background 0.2s; }
+        .toggle input:checked + .toggle-track { background: var(--green-700); border-color: rgba(61,143,86,0.4); }
+        .toggle input:checked + .toggle-track::before { transform: translateX(16px); background: white; }
+
+        .route-card { background: var(--surface-1); border: 1px solid var(--border-1); border-radius: 12px; padding: 14px; transition: all 0.15s; }
+        .route-card:hover { background: var(--surface-2); border-color: var(--border-2); }
+
+        @keyframes gps-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(61,143,86,0.5); } 50% { box-shadow: 0 0 0 6px rgba(61,143,86,0); } }
+        .gps-active { animation: gps-pulse 2s ease-in-out infinite; }
+
+        .hud-glass { background: rgba(10,15,10,0.92); border: 1px solid rgba(61,143,86,0.25); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+        .modal-backdrop { background: rgba(0,0,0,0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .modal-sheet { background: var(--bg-2); border: 1px solid var(--border-1); }
+
+        .veh-btn { background: var(--surface-1); border: 1px solid var(--border-1); border-radius: 12px; padding: 16px 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; transition: all 0.15s; color: var(--text-secondary); }
+        .veh-btn:hover { background: var(--surface-2); border-color: var(--border-2); color: var(--text-primary); }
+        .veh-btn.active { background: rgba(29,74,46,0.4); border-color: rgba(61,143,86,0.5); color: var(--green-200); }
+
+        .leaflet-control-layers { background: var(--bg-2) !important; border: 1px solid var(--border-2) !important; border-radius: 10px !important; box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important; color: var(--text-secondary) !important; font-family: 'Inter', sans-serif !important; font-size: 11px !important; font-weight: 600 !important; }
+
+        /* GPS marker — arrow always visible, rotates with heading */
+        .user-marker-wrap {
+            position: relative;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .user-ring {
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            background: rgba(82,179,110,0.30);
+            animation: user-pulse 2.5s ease-out infinite;
+        }
+        .user-dot {
+            width: 14px;
+            height: 14px;
+            background: var(--green-400);
+            border: 2.5px solid white;
+            border-radius: 50%;
+            box-shadow: 0 0 16px rgba(82,179,110,0.6);
+            position: relative;
+            z-index: 2;
+        }
+        /* Arrow sits outside the dot, at the top, rotates with parent */
+        .user-arrow-outer {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 9px solid var(--green-400);
+            filter: drop-shadow(0 0 4px rgba(82,179,110,0.8));
+            z-index: 3;
+        }
+
+        @keyframes user-pulse { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(3.5); opacity: 0; } }
+
+        @keyframes pin-drop { 0% { transform: translateY(-30px); opacity: 0; } 80% { transform: translateY(3px); } 100% { transform: translateY(0); opacity: 1; } }
+        .pin-drop-anim { animation: pin-drop 0.4s cubic-bezier(0.2, 1, 0.4, 1); }
+
+        .ai-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 9999; background: var(--bg-2); border: 1px solid var(--border-2); border-radius: 16px; padding: 16px 20px; min-width: 280px; max-width: 360px; box-shadow: 0 24px 64px rgba(0,0,0,0.6); }
+        .ai-step { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+        .ai-step-dot { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; font-weight: 700; }
+        .ai-step.pending .ai-step-dot { background: var(--surface-1); color: var(--text-muted); }
+        .ai-step.active  .ai-step-dot { background: rgba(29,74,46,0.5); color: var(--green-300); animation: gps-pulse 1.2s ease-in-out infinite; }
+        .ai-step.done    .ai-step-dot { background: rgba(29,74,46,0.6); color: var(--green-300); }
+        .ai-step-text { font-size: 11px; font-weight: 600; }
+        .ai-step.pending .ai-step-text { color: var(--text-muted); }
+        .ai-step.active  .ai-step-text { color: var(--text-primary); }
+        .ai-step.done    .ai-step-text { color: var(--text-secondary); }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin-rev { to { transform: rotate(-360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.25s ease-out; }
+
+        .step-dot { height: 3px; flex-grow: 1; border-radius: 9999px; transition: background 0.4s; }
+
+        .mode-mobile #sidebar { position: fixed; bottom: 0; left: 0; width: 100% !important; height: auto !important; z-index: 50; transition: transform 0.35s cubic-bezier(0.4,0,0.2,1); border-radius: 20px 20px 0 0; border-right: none; border-top: 1px solid var(--border-1); }
+        .mode-mobile #sidebar.is-collapsed { transform: translateY(calc(100% - 64px)); }
+        .mode-desktop #sidebar { width: 320px; height: 100%; }
+        #mobile-drag-handle { display: none; }
+        .mode-mobile #mobile-drag-handle { display: flex; }
+
+        .divider { height: 1px; background: var(--border-1); margin: 0 -20px; }
+
+        @keyframes slide-up { 0% { opacity: 0; transform: translateY(16px); } 100% { opacity: 1; transform: translateY(0); } }
+        .slide-up { animation: slide-up 0.3s ease-out; }
+
+        #settings-panel { background: var(--bg-2); border-left: 1px solid var(--border-1); }
+
+        .leaflet-popup-content-wrapper { background: var(--bg-2) !important; border: 1px solid var(--border-2) !important; border-radius: 12px !important; box-shadow: 0 16px 48px rgba(0,0,0,0.5) !important; color: var(--text-primary) !important; font-family: 'Inter', sans-serif !important; }
+        .leaflet-popup-tip { background: var(--bg-2) !important; }
+        .leaflet-popup-close-button { color: var(--text-muted) !important; }
+
+        /* ── Stop builder ── */
+        .stop-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px; border-radius: 10px;
+            background: var(--surface-1); border: 1px solid var(--border-1);
+            transition: all 0.15s;
+            animation: fadeIn 0.2s ease-out;
+        }
+        .stop-item.resolving { border-color: rgba(61,143,86,0.3); background: rgba(29,74,46,0.1); }
+        .stop-item.resolved  { border-color: rgba(61,143,86,0.45); background: rgba(29,74,46,0.18); }
+        .stop-item.error     { border-color: rgba(239,68,68,0.25); background: rgba(127,29,29,0.12); }
+        .stop-num { width: 22px; height: 22px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--border-2); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: var(--text-muted); flex-shrink: 0; }
+        .stop-item.resolved .stop-num { background: rgba(29,74,46,0.5); border-color: rgba(61,143,86,0.4); color: var(--green-300); }
+        .stop-name { font-size: 12px; font-weight: 600; color: var(--text-primary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .stop-sub { font-size: 9px; font-weight: 500; color: var(--text-muted); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .stop-sub.ok { color: var(--green-400); }
+        .stop-sub.err { color: #fca5a5; }
+        .stop-spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(61,143,86,0.2); border-top-color: var(--green-400); animation: spin 0.8s linear infinite; flex-shrink: 0; }
+
+        /* Stop input area */
+        .stop-input-row { display: flex; gap: 8px; align-items: center; }
+        #stop-text-input { flex: 1; }
+
+        /* suggestions */
+        .suggestions-box { background: var(--bg-2); border: 1px solid var(--border-2); border-radius: 12px; overflow: hidden; box-shadow: 0 16px 40px rgba(0,0,0,0.5); }
+        .suggestion-item { padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text-secondary); cursor: pointer; transition: all 0.12s; display: flex; align-items: center; gap: 8px; }
+        .suggestion-item:hover { background: var(--surface-2); color: var(--text-primary); }
+        .suggestion-icon { font-size: 14px; flex-shrink: 0; }
+
+        /* return home chip */
+        .return-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 9999px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.15s; user-select: none; }
+        .return-chip.off { background: var(--surface-1); border: 1px solid var(--border-1); color: var(--text-muted); }
+        .return-chip.on  { background: rgba(29,74,46,0.35); border: 1px solid rgba(61,143,86,0.4); color: var(--green-200); }
+
+        /* Route legend chips */
+        .leg-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 9999px; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+
+        /* Traffic warning icon — strip Leaflet's default white box */
+        .traffic-warn-icon { background: transparent !important; border: none !important; }
+
+        /* Pulsing/blinking traffic lines so they read as live traffic.
+           Animates stroke-opacity, so the dark casing underneath stays solid
+           and the color blinks in & out. Worse congestion throbs faster, dimmer
+           and wider — so problem roads grab the eye. */
+        @keyframes traffic-blink {
+            0%, 100% { stroke-opacity: 1; }
+            50%      { stroke-opacity: var(--tl-min, 0.4); }
+        }
+        @keyframes traffic-blink-wide {
+            0%, 100% { stroke-opacity: 1;                  stroke-width: 4px; }
+            50%      { stroke-opacity: var(--tl-min, 0.3); stroke-width: 6.5px; }
+        }
+        .traffic-line        { --tl-min: 0.50; animation: traffic-blink 2.6s ease-in-out infinite; }
+        .traffic-line-heavy  { --tl-min: 0.32; animation: traffic-blink-wide 1.2s ease-in-out infinite; }
+        .traffic-line-severe { --tl-min: 0.20; animation: traffic-blink-wide 0.75s ease-in-out infinite; }
+        .traffic-line, .traffic-line-heavy, .traffic-line-severe { will-change: stroke-opacity; }
+
+        /* Warning icons pulse too */
+        @keyframes traffic-icon-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+        .traffic-warn-icon > div { animation: traffic-icon-pulse 1s ease-in-out infinite; }
+    </style>
+</head>
+<body class="noise">
+
+<!-- ══ DRIVE HUD ══ -->
+<div id="drive-hud" class="fixed top-16 right-4 z-[2000] hidden">
+    <div class="hud-glass rounded-2xl px-5 py-3 flex items-center gap-5 shadow-2xl">
+        <div class="flex flex-col">
+            <span style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted)">Heading</span>
+            <span id="hud-heading" style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--text-primary)">--</span>
+        </div>
+        <div class="flex flex-col" style="border-left:1px solid var(--border-1);padding-left:20px">
+            <span style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted)">Remaining</span>
+            <span id="hud-miles" style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--green-300)">0.00 mi</span>
+        </div>
+        <div class="flex gap-4" style="border-left:1px solid var(--border-1);padding-left:20px">
+            <div class="flex flex-col items-center gap-1">
+                <span style="font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted)">Drive</span>
+                <span id="hud-time-car" style="font-size:13px;font-weight:700;color:var(--text-primary)">--</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+                <span style="font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--green-400)">Bike</span>
+                <span id="hud-time-bike" style="font-size:13px;font-weight:700;color:var(--text-primary)">--</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+                <span style="font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--amber-400)">Walk</span>
+                <span id="hud-time-walk" style="font-size:13px;font-weight:700;color:var(--text-primary)">--</span>
+            </div>
+        </div>
+        <button onclick="exitDriveMode()" class="btn btn-ghost" style="width:36px;height:36px;border-radius:8px;padding:0;flex-shrink:0">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+    </div>
+</div>
+
+<!-- ══ TRAIL WEAVER MODAL ══ -->
+<div id="nav-modal" class="fixed inset-0 z-[2000] hidden items-end sm:items-center justify-center sm:p-6 modal-backdrop" style="display:none">
+    <div class="modal-sheet w-full max-w-lg rounded-t-[24px] sm:rounded-[24px] overflow-hidden shadow-2xl" style="max-height:92vh">
+        <!-- Header -->
+        <div style="padding:24px 24px 16px;border-bottom:1px solid var(--border-1)">
+            <div class="flex items-center gap-3">
+                <div style="width:36px;height:36px;border-radius:10px;background:var(--green-700);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
+                <div>
+                    <h3 style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--text-primary);letter-spacing:-0.01em">Trail Weaver</h3>
+                    <p style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">AI Path Maker · Step <span id="tw-step-label">1</span> of 3</p>
+                </div>
+            </div>
+            <div class="flex gap-2" style="margin-top:16px">
+                <div class="step-dot" id="dot-1" style="background:var(--green-600)"></div>
+                <div class="step-dot" id="dot-2" style="background:var(--surface-2)"></div>
+                <div class="step-dot" id="dot-3" style="background:var(--surface-2)"></div>
+            </div>
+        </div>
+
+        <div style="overflow-y:auto;max-height:calc(92vh - 110px)">
+
+            <!-- ══ Step 1: Vehicle ══ -->
+            <div id="tw-step-1" style="padding:24px;display:flex;flex-direction:column;gap:20px">
+                <div>
+                    <h4 style="font-size:15px;font-weight:700;color:var(--text-primary)">How are you getting around?</h4>
+                    <p style="font-size:11px;color:var(--text-muted);margin-top:4px;font-weight:500">Pick your mode and we'll plan the right roads</p>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                    <button onclick="twSelectVehicle('walking')" id="tw-v-walking" class="veh-btn">
+                        <span style="font-size:24px">🚶</span>
+                        <span style="font-size:11px;font-weight:700">Walking</span>
+                        <span style="font-size:9px;font-weight:600;color:var(--text-muted)">Paths &amp; sidewalks</span>
+                    </button>
+                    <button onclick="twSelectVehicle('running')" id="tw-v-running" class="veh-btn">
+                        <span style="font-size:24px">🏃</span>
+                        <span style="font-size:11px;font-weight:700">Running</span>
+                        <span style="font-size:9px;font-weight:600;color:var(--text-muted)">Jogging routes</span>
+                    </button>
+                    <button onclick="twSelectVehicle('bike')" id="tw-v-bike" class="veh-btn">
+                        <span style="font-size:24px">🚲</span>
+                        <span style="font-size:11px;font-weight:700">Bicycle</span>
+                        <span style="font-size:9px;font-weight:600;color:var(--text-muted)">Bike lanes &amp; paths</span>
+                    </button>
+                    <button onclick="twSelectVehicle('car')" id="tw-v-car" class="veh-btn">
+                        <span style="font-size:24px">🚗</span>
+                        <span style="font-size:11px;font-weight:700">Car</span>
+                        <span style="font-size:9px;font-weight:600;color:var(--text-muted)">All roads</span>
+                    </button>
+                    <button onclick="twSelectVehicle('escooter')" id="tw-v-escooter" class="veh-btn">
+                        <span style="font-size:24px">🛴</span>
+                        <span style="font-size:11px;font-weight:700">E-Scooter</span>
+                        <span style="font-size:9px;font-weight:600;color:var(--amber-400)">Speed required ↓</span>
+                    </button>
+                    <button onclick="twSelectVehicle('ebike')" id="tw-v-ebike" class="veh-btn">
+                        <span style="font-size:24px">⚡</span>
+                        <span style="font-size:11px;font-weight:700">E-Bike</span>
+                        <span style="font-size:9px;font-weight:600;color:var(--amber-400)">Speed required ↓</span>
+                    </button>
+                </div>
+                <div id="tw-speed-block" style="display:none;padding:16px;border-radius:12px;border:1px solid rgba(212,117,42,0.2);background:rgba(176,93,26,0.08);gap:12px;flex-direction:column">
+                    <p style="font-size:11px;font-weight:600;color:var(--text-secondary)">What's the top speed of your <span id="tw-vehicle-label">device</span> (MPH)?</p>
+                    <input id="tw-speed-input" type="number" min="1" max="60" placeholder="e.g. 20" class="field" style="width:100px;text-align:center">
+                </div>
+                <button onclick="twNext(1)" class="btn btn-primary" style="height:44px;font-size:12px;font-weight:700;letter-spacing:0.04em">Continue →</button>
+            </div>
+
+            <!-- ══ Step 2: Stop Builder ══ -->
+            <div id="tw-step-2" style="display:none;padding:24px;flex-direction:column;gap:18px">
+                <div>
+                    <h4 style="font-size:15px;font-weight:700;color:var(--text-primary)">Where do you want to go?</h4>
+                    <p style="font-size:11px;color:var(--text-muted);margin-top:4px;font-weight:500">Just type a name — AI finds the closest real place to you</p>
+                </div>
+
+                <!-- Stops list -->
+                <div id="tw-stops-list" style="display:flex;flex-direction:column;gap:7px;min-height:40px"></div>
+
+                <!-- Add stop input -->
+                <div style="position:relative">
+                    <div class="stop-input-row">
+                        <div style="position:relative;flex:1">
+                            <input id="stop-text-input" type="text" class="field"
+                                placeholder="e.g. Starbucks, nearest park, Crunch Fitness…"
+                                autocomplete="off"
+                                oninput="onStopInput(this.value)"
+                                onkeydown="onStopKeydown(event)">
+                        </div>
+                        <button onclick="addStopFromInput()" class="btn btn-primary" style="height:40px;padding:0 16px;font-size:12px;font-weight:700;white-space:nowrap;flex-shrink:0">
+                            Add Stop
+                        </button>
+                    </div>
+                    <!-- AI suggestions dropdown -->
+                    <div id="stop-suggestions" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:100" class="suggestions-box"></div>
+                </div>
+
+                <!-- Quick chips -->
+                <div>
+                    <p style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">Quick adds</p>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px" id="quick-chips"></div>
+                </div>
+
+                <!-- Return home toggle -->
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
+                    <div>
+                        <p style="font-size:12px;font-weight:600;color:var(--text-primary)">Return home at end</p>
+                        <p style="font-size:10px;color:var(--text-muted);font-weight:500">Loop back to your starting point</p>
+                    </div>
+                    <label class="toggle"><input type="checkbox" id="tw-return-home" checked><span class="toggle-track"></span></label>
+                </div>
+
+                <!-- Distance hint -->
+                <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:var(--surface-1);border:1px solid var(--border-1)">
+                    <svg width="14" height="14" fill="none" stroke="var(--text-muted)" viewBox="0 0 24 24" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <div style="flex:1">
+                        <span style="font-size:11px;font-weight:500;color:var(--text-secondary)">Target distance </span>
+                        <span style="font-size:10px;color:var(--text-muted);font-weight:500">(optional)</span>
+                    </div>
+                    <input id="tw-target-miles" type="number" min="0.1" max="100" step="0.5" placeholder="miles"
+                        class="field" style="width:72px;height:32px;padding:4px 10px;font-size:12px;text-align:center">
+                </div>
+
+                <div style="display:flex;gap:10px">
+                    <button onclick="twBack(2)" class="btn btn-ghost" style="height:44px;font-size:12px;font-weight:700;padding:0 20px">← Back</button>
+                    <button onclick="twNext(2)" class="btn btn-primary" style="flex:1;height:44px;font-size:12px;font-weight:700;letter-spacing:0.04em" id="tw-weave-btn">Weave My Path ✦</button>
+                </div>
+            </div>
+
+            <!-- ══ Step 3: Result ══ -->
+            <div id="tw-step-3" style="display:none;padding:24px;flex-direction:column;gap:20px">
+                <div id="tw-thinking" style="display:flex;flex-direction:column;align-items:center;gap:20px;padding:32px 0">
+                    <div style="position:relative;width:56px;height:56px">
+                        <div style="position:absolute;inset:0;border-radius:50%;border:2px solid rgba(61,143,86,0.15);border-top-color:var(--green-500);animation:spin 1.1s linear infinite"></div>
+                        <div style="position:absolute;inset:8px;border-radius:50%;border:1.5px solid rgba(61,143,86,0.08);border-bottom-color:var(--green-400);animation:spin-rev 0.75s linear infinite"></div>
+                        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px">🌿</div>
+                    </div>
+                    <div style="text-align:center">
+                        <p id="tw-thinking-label" style="font-size:13px;font-weight:700;color:var(--text-primary)">Weaving your path…</p>
+                        <p style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:4px">Trail Weaver AI is building your route</p>
+                    </div>
+                </div>
+                <div id="tw-result" style="display:none;flex-direction:column;gap:16px">
+                    <div style="padding:16px;border-radius:12px;border:1px solid rgba(61,143,86,0.2);background:rgba(29,74,46,0.15)">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                            <span style="font-size:14px">🌿</span>
+                            <span style="font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--green-200)">Route Plan</span>
+                        </div>
+                        <p id="tw-ai-summary" style="font-size:12px;color:var(--text-secondary);line-height:1.6;font-weight:500"></p>
+                        <!-- Color legend -->
+                        <div id="tw-color-legend" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px"></div>
+                        <div style="display:flex;gap:20px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-1)">
+                            <div>
+                                <p style="font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">Distance</p>
+                                <p id="tw-est-dist" style="font-size:14px;font-weight:700;color:var(--text-primary);margin-top:2px">--</p>
+                            </div>
+                            <div>
+                                <p style="font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">Est. Time</p>
+                                <p id="tw-est-time" style="font-size:14px;font-weight:700;color:var(--text-primary);margin-top:2px">--</p>
+                            </div>
+                            <div>
+                                <p style="font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">Stops</p>
+                                <p id="tw-est-stops" style="font-size:14px;font-weight:700;color:var(--text-primary);margin-top:2px">--</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="tw-error-block" style="display:none;padding:16px;border-radius:12px;border:1px solid rgba(239,68,68,0.2);background:rgba(127,29,29,0.15);text-align:center">
+                        <p style="font-size:16px;margin-bottom:8px">⚠️</p>
+                        <p id="tw-error-msg" style="font-size:12px;font-weight:700;color:#fca5a5">Route not possible</p>
+                        <p style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:4px">Try adjusting your stops</p>
+                    </div>
+                    <div id="tw-action-btns" style="display:flex;gap:10px">
+                        <button onclick="twBack(3)" class="btn btn-ghost" style="height:44px;font-size:12px;font-weight:700;padding:0 20px">← Edit Stops</button>
+                        <button onclick="twLaunchRoute()" id="tw-launch-btn" class="btn btn-primary" style="flex:1;height:44px;font-size:12px;font-weight:700;letter-spacing:0.04em">Launch Route 🚀</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button onclick="closeNavModal()" style="position:absolute;top:20px;right:20px;width:32px;height:32px;border-radius:8px;background:var(--surface-1);border:1px solid var(--border-1);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+    </div>
+</div>
+
+<!-- ══ NAME ROUTE MODAL ══ -->
+<div id="name-modal" class="fixed inset-0 z-[1000] hidden items-center justify-center p-6 modal-backdrop" style="display:none">
+    <div class="modal-sheet rounded-[20px] p-6 shadow-2xl w-full" style="max-width:400px">
+        <h3 style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--text-primary);margin-bottom:4px">Name your route</h3>
+        <p id="modal-dist" style="font-size:11px;color:var(--text-muted);font-weight:500;margin-bottom:20px">Total Distance: 0.00 miles</p>
+        <input id="route-name-input" type="text" placeholder="e.g. Morning Trail Run" class="field" style="margin-bottom:16px">
+        <div style="display:flex;gap:10px">
+            <button id="confirm-save-btn" class="btn btn-primary" style="flex:1;height:44px;font-size:12px;font-weight:700">Save Route</button>
+            <button id="close-modal-btn" class="btn btn-ghost" style="height:44px;font-size:12px;font-weight:700;padding:0 20px">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══ SETTINGS PANEL ══ -->
+<div id="settings-panel" class="fixed inset-y-0 right-0 w-full z-[1100] translate-x-full transition-transform duration-300 shadow-2xl" style="max-width:300px;display:flex;flex-direction:column">
+    <div style="height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid var(--border-1)">
+        <span style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-secondary)">Settings</span>
+        <button onclick="toggleSettings()" style="width:32px;height:32px;border-radius:8px;background:var(--surface-1);border:1px solid var(--border-1);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+    </div>
+    <div style="padding:24px;display:flex;flex-direction:column;gap:24px;flex:1">
+        <div>
+            <p style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Preferences</p>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
+                <span style="font-size:12px;font-weight:600;color:var(--text-primary)">Start at my location</span>
+                <label class="toggle"><input type="checkbox" id="settings-start-at-loc" onchange="syncToggles(this)"><span class="toggle-track"></span></label>
+            </div>
+        </div>
+
+        <!-- ══ LIVE TRAFFIC ══ -->
+        <div>
+            <p style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Highway Traffic</p>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
+                <div style="min-width:0;padding-right:10px">
+                    <span style="font-size:12px;font-weight:600;color:var(--text-primary)">Show traffic on highways</span>
+                    <p style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:2px">Color-codes motorways & flags slow spots</p>
+                </div>
+                <label class="toggle"><input type="checkbox" id="settings-traffic" onchange="toggleTraffic(this.checked)"><span class="toggle-track"></span></label>
+            </div>
+
+            <!-- Color scale / legend -->
+            <div id="traffic-scale-wrap" style="margin-top:10px;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
+                <p style="font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Congestion scale</p>
+                <div id="traffic-scale-rows"></div>
+                <div id="traffic-scale-note" style="font-size:9px;color:var(--text-muted);font-weight:500;margin-top:10px;line-height:1.4;display:flex;align-items:center;gap:6px">
+                    <span id="traffic-status-dot" style="width:6px;height:6px;border-radius:50%;background:var(--text-muted);flex-shrink:0"></span>
+                    <span id="traffic-status-text">Turn on to load live highway conditions.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- veya 2026 footer -->
+    <div style="padding:16px 20px;border-top:1px solid var(--border-1);text-align:center">
+        <span style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);opacity:0.6">veya 2026</span>
+    </div>
+</div>
+
+<!-- ══ BOOT SCREEN ══ -->
+<div id="boot-screen" class="fixed inset-0 z-[300] flex flex-col items-center justify-center p-6 text-center boot-bg" style="transition:opacity 0.6s">
+    <div style="position:relative;z-index:10;max-width:320px;width:100%">
+        <div style="width:64px;height:64px;margin:0 auto 24px;position:relative">
+            <div style="position:absolute;inset:0;border-radius:50%;background:rgba(61,143,86,0.12);animation:user-pulse 2s ease-out infinite"></div>
+            <div style="width:56px;height:56px;border-radius:16px;background:var(--green-700);display:flex;align-items:center;justify-content:center;position:relative;z-index:1;margin:4px">
+                <svg width="24" height="24" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+            </div>
+        </div>
+        <h2 style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--text-primary);letter-spacing:-0.02em;margin-bottom:8px">CustomRoutes</h2>
+        <p id="boot-label" style="font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:32px">Initializing…</p>
+        <div style="height:2px;background:var(--surface-2);border-radius:9999px;overflow:hidden">
+            <div id="boot-progress" class="progress-bar-fill" style="width:0"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ LOADING SCREEN ══ -->
+<div id="loading-screen" class="fixed inset-0 z-[100] hidden flex-col items-center justify-center p-6 text-center boot-bg" style="display:none;opacity:0;transition:opacity 0.4s">
+    <div style="position:relative;z-index:10;max-width:320px;width:100%">
+        <div style="width:32px;height:32px;border-radius:50%;border:2px solid rgba(61,143,86,0.2);border-top-color:var(--green-500);animation:spin 1s linear infinite;margin:0 auto 20px"></div>
+        <h2 style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text-primary);letter-spacing:-0.01em;margin-bottom:6px">Syncing satellites</h2>
+        <p id="status-label" style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:28px">Acquiring GPS…</p>
+        <div style="height:2px;background:var(--surface-2);border-radius:9999px;overflow:hidden">
+            <div id="progress-bar" class="progress-bar-fill" style="width:0"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+<div id="app-interface" style="opacity:0;pointer-events:none;transition:opacity 0.8s">
+    <header class="app-header">
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+            <div style="width:30px;height:30px;border-radius:8px;background:var(--green-700);border:1px solid rgba(61,143,86,0.3);display:flex;align-items:center;justify-content:center">
+                <svg width="14" height="14" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+            </div>
+            <span style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text-primary);letter-spacing:-0.01em">CustomRoutes</span>
+        </div>
+        <div style="flex:1;max-width:440px;margin:0 16px;position:relative">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted)"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input id="global-search" type="text" placeholder="Search cities or places…"
+                style="width:100%;background:var(--surface-1);border:1px solid var(--border-1);border-radius:9999px;padding:8px 14px 8px 34px;font-size:12px;font-weight:500;color:var(--text-primary);outline:none;transition:border-color 0.18s,background 0.18s"
+                onfocus="this.style.borderColor='rgba(61,143,86,0.4)';this.style.background='var(--surface-2)'"
+                onblur="this.style.borderColor='var(--border-1)';this.style.background='var(--surface-1)'">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+            <div id="weather-indicator" style="display:none;width:28px;height:28px;border-radius:8px;background:var(--surface-1);border:1px solid var(--border-1);align-items:center;justify-content:center">
+                <img id="weather-icon" src="" alt="Weather" style="width:20px;height:20px">
+            </div>
+            <button onclick="toggleSettings()" class="btn btn-ghost" style="width:36px;height:36px;border-radius:9px;padding:0">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </button>
+        </div>
+    </header>
+
+    <main style="flex:1 1 0%;min-height:0;display:flex;overflow:hidden;position:relative">
+        <div id="sidebar" style="display:flex;flex-direction:column;z-index:20">
+            <div id="mobile-drag-handle" onclick="toggleSidebarCollapse()" style="flex-direction:column;align-items:center;padding:10px 0;border-bottom:1px solid var(--border-1);cursor:pointer;background:var(--surface-1)">
+                <div id="sidebar-chevron" style="transition:transform 0.3s">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:var(--text-muted)"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+            </div>
+            <div id="sidebar-scrollable" style="overflow-y:auto;flex-grow:1;height:45vh" class="md:h-auto">
+                <div style="padding:20px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--border-1)">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+                        <span style="font-size:11px;font-weight:600;color:var(--text-muted)">Start at my location</span>
+                        <label class="toggle"><input type="checkbox" id="inline-start-at-loc" onchange="syncToggles(this)"><span class="toggle-track"></span></label>
+                    </div>
+                    <button id="new-route-btn" class="btn btn-primary" style="height:40px;font-size:12px;font-weight:700;gap:6px">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Draw Route
+                    </button>
+                    <button onclick="openNavModal()" class="btn btn-accent" style="height:40px;font-size:12px;font-weight:700;gap:6px">
+                        <span style="font-size:14px">🌿</span>
+                        Trail Weaver
+                    </button>
+                    <div id="active-controls" style="display:none">
+                        <div style="padding:14px;border-radius:12px;border:1px solid rgba(61,143,86,0.25);background:rgba(29,74,46,0.12)">
+                            <p id="point-count" style="font-size:12px;font-weight:700;color:var(--green-300);margin-bottom:12px">0.00 mi total</p>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                                <button id="end-route-btn" class="btn btn-primary" style="height:36px;font-size:11px;font-weight:700">Save</button>
+                                <button id="cancel-draft-btn" class="btn" style="height:36px;font-size:11px;font-weight:700;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#fca5a5">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:10px;background:var(--surface-1);border:1px solid var(--border-1)">
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <div id="tracking-status" style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.2);flex-shrink:0"></div>
+                            <span id="gps-label" style="font-size:10px;font-weight:600;color:var(--text-muted)">Acquiring GPS…</span>
+                        </div>
+                        <button onclick="recenter()" style="font-size:10px;font-weight:700;color:var(--green-400);background:none;border:none;cursor:pointer;letter-spacing:0.04em">Recenter</button>
+                    </div>
+                </div>
+                <div style="padding:20px">
+                    <p style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px">Saved Paths</p>
+                    <div id="saved-routes-list" style="display:flex;flex-direction:column;gap:8px"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="map-area" style="flex:1 1 0%;min-width:0;min-height:0;position:relative;overflow:hidden">
+            <div id="map"></div>
+            <button onclick="recenter()" id="floating-locate" style="position:absolute;bottom:24px;right:24px;z-index:1000;width:48px;height:48px;border-radius:14px;background:rgba(10,15,10,0.9);border:1px solid var(--border-2);color:var(--green-400);display:none;align-items:center;justify-content:center;backdrop-filter:blur(12px);box-shadow:0 8px 32px rgba(0,0,0,0.4);cursor:pointer" class="md:hidden">
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
+            </button>
+        </div>
+    </main>
+</div>
+
+<script>
+// ── State ──
+let map, polyline, markers = [], routePath = [];
+let isDrawing = false, userMarker = null, searchMarker = null;
+let savedRoutes = JSON.parse(localStorage.getItem('saved_routes')) || [];
+let lastKnownPos = null;
+let activeViewLine = null;
+let activeLegs = [];          // multi-color leg polylines
+let dissolveLegs = [];        // per-leg dissolve state [{polyline, fullPath, dissolvedIdx}]
+let isDriving = false;
+let currentDriveRoute = null;
+let currentMode = 'desktop';
+let initialRecenterDone = false;
+let startAtLocation = false;
+let userHeading = 0;
+let selectedVehicle = 'car';
+let twVehicle = null, twSpeedMPH = null;
+let twBuiltRoute = null;
+const OFF_ROUTE_THRESHOLD = 50;
+
+// ══ Traffic system state ══
+let trafficEnabled = false;
+let trafficRoadLayer = null;     // colored highway polylines
+let trafficIconLayer = null;     // warning markers for bad spots
+let trafficFetchTimer = null;    // debounce for map moves
+let trafficFetchToken = 0;       // guards against out-of-order responses
+let trafficLastKey = null;       // skip refetch when view barely changes
+
+// 4-level congestion scale. order = increasing severity.
+// `flag:true` levels get a warning icon on the road.
+const TRAFFIC_LEVELS = [
+    { id:0, label:'Free flowing', color:'#3fb86e', flag:false },
+    { id:1, label:'Moderate',     color:'#e8c13e', flag:false },
+    { id:2, label:'Heavy',        color:'#e8843e', flag:true  },
+    { id:3, label:'Severe / stop-and-go', color:'#e5484d', flag:true }
+];
+// Only pull these OSM highway classes (the actual highways/big roads)
+const TRAFFIC_ROAD_TYPES = 'motorway|trunk|primary|motorway_link|trunk_link';
+const TRAFFIC_MIN_ZOOM = 11;     // below this, area is too large to be useful
+const OVERPASS_ENDPOINT = 'https://overpass-api.de/api/interpreter';
+
+// ── Route segment colors ──
+// Leg 0 (start → stop1): orange
+// Leg N-1 (last stop → home): purple
+// Middle legs: cycle through these
+const LEG_COLORS = {
+    first:  '#e8943e',   // orange
+    return: '#9b6dce',   // purple
+    mid: ['#3fb8d4', '#e85e5e', '#52b36e', '#d4b93e', '#5eaae8']
+};
+function getLegColor(legIdx, totalLegs) {
+    if (totalLegs === 1) return LEG_COLORS.first;
+    if (legIdx === 0) return LEG_COLORS.first;
+    if (legIdx === totalLegs - 1) return LEG_COLORS.return;
+    return LEG_COLORS.mid[(legIdx - 1) % LEG_COLORS.mid.length];
+}
+function getLegLabel(legIdx, totalLegs, stopNames) {
+    if (totalLegs === 1) return `To ${stopNames[0] || 'Stop 1'}`;
+    if (legIdx === 0) return `Start → ${stopNames[0] || 'Stop 1'}`;
+    if (legIdx === totalLegs - 1) return 'Return home';
+    return `→ ${stopNames[legIdx] || `Stop ${legIdx+1}`}`;
+}
+
+// ══ Trail Weaver Stop State ══
+let twStops = [];
+let suggestionDebounce = null;
+let aiSuggestController = null;
+
+const QUICK_CHIP_OPTIONS = [
+    { icon:'☕', label:'Nearest coffee shop' },
+    { icon:'🏋️', label:'Nearest gym' },
+    { icon:'🌳', label:'Nearest park' },
+    { icon:'🛒', label:'Nearest grocery store' },
+    { icon:'💊', label:'Nearest pharmacy' },
+    { icon:'⛽', label:'Nearest gas station' },
+];
+
+function syncToggles(el) {
+    startAtLocation = el.checked;
+    const s = document.getElementById('settings-start-at-loc');
+    const i = document.getElementById('inline-start-at-loc');
+    if (s) s.checked = startAtLocation;
+    if (i) i.checked = startAtLocation;
+}
+function toggleSidebarCollapse() {
+    const sidebar = document.getElementById('sidebar');
+    const chevron = document.getElementById('sidebar-chevron');
+    sidebar.classList.toggle('is-collapsed');
+    chevron.style.transform = sidebar.classList.contains('is-collapsed') ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+function toggleSettings() { document.getElementById('settings-panel').classList.toggle('translate-x-full'); }
+
+// ── Boot ──
+window.onload = () => {
+    const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+    currentMode = isMobile ? 'mobile' : 'desktop';
+    document.body.classList.add(`mode-${currentMode}`);
+    if (isMobile) document.getElementById('floating-locate').style.display = 'flex';
+    let prog = 0;
+    const bar = document.getElementById('boot-progress');
+    const labels = ['Initializing…','Loading map engine…','Calibrating GPS…','Almost ready…'];
+    let li = 0;
+    const interval = setInterval(() => {
+        prog += Math.random() * 22; if (prog > 100) prog = 100;
+        bar.style.width = prog + '%';
+        if (prog > li * 25 && li < labels.length) document.getElementById('boot-label').innerText = labels[li++];
+        if (prog >= 100) { clearInterval(interval); setTimeout(() => startLoad(currentMode), 400); }
+    }, 120);
+};
+function startLoad(mode) {
+    const boot = document.getElementById('boot-screen');
+    boot.style.opacity = '0'; boot.style.pointerEvents = 'none';
+    setTimeout(() => {
+        boot.style.display = 'none';
+        const loader = document.getElementById('loading-screen');
+        loader.style.display = 'flex';
+        setTimeout(() => loader.style.opacity = '1', 40);
+        let prog = 0; const bar = document.getElementById('progress-bar');
+        const iv = setInterval(() => { prog += 10; bar.style.width = prog + '%'; if (prog >= 100) { clearInterval(iv); finishLoading(mode); } }, 55);
+    }, 600);
+}
+function finishLoading(mode) {
+    const loader = document.getElementById('loading-screen');
+    loader.style.opacity = '0'; loader.style.pointerEvents = 'none';
+    setTimeout(() => {
+        loader.style.display = 'none';
+        const app = document.getElementById('app-interface');
+        app.style.opacity = '1'; app.style.pointerEvents = '';
+        initMap(mode); updateSavedList();
+        setTimeout(() => { if (map) map.invalidateSize(); }, 100);
+    }, 500);
+}
+
+// ── GPS ──
+const GPS_OPTIONS_HIGH  = { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 };
+const GPS_OPTIONS_WATCH = { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 };
+function getAccurateFix() {
+    return new Promise((resolve) => {
+        if (!("geolocation" in navigator)) { resolve(null); return; }
+        navigator.geolocation.getCurrentPosition(pos => resolve(pos), () =>
+            navigator.geolocation.getCurrentPosition(pos => resolve(pos), () => resolve(null),
+                { enableHighAccuracy: false, maximumAge: 5000, timeout: 8000 }),
+            GPS_OPTIONS_HIGH);
+    });
+}
+
+// ── Map init ──
+function initMap(mode) {
+    const isMobile = mode === 'mobile';
+    const fallback = [40.7128, -74.0060];
+    map = L.map('map', { zoomControl: !isMobile, attributionControl: false, tap: true, tapTolerance: 20 }).setView(fallback, 13);
+    const darkLayer    = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
+    const voyagerLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
+    const satelliteImg = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
+    const labelsOverlay = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
+    const satelliteGroup = L.layerGroup([satelliteImg, labelsOverlay]);
+    darkLayer.addTo(map);
+    L.control.layers({ "🌑 Dark": darkLayer, "🗺 Standard": voyagerLayer, "🛰 Satellite": satelliteGroup }, null, { position: 'topleft' }).addTo(map);
+    polyline = L.polyline([], { color: '#52b36e', weight: 4, dashArray: '8 12', lineCap: 'round' }).addTo(map);
+
+    // GPS marker: arrow + dot in a container that rotates as a whole
+    const customIcon = L.divIcon({
+        className: '',
+        html: `<div id="user-marker-container" style="width:24px;height:24px;position:relative;transform:rotate(0deg);transition:transform 0.3s ease-out">
+                 <div class="user-ring"></div>
+                 <div class="user-arrow-outer" id="user-arrow"></div>
+                 <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:14px;height:14px;background:var(--green-400);border:2.5px solid white;border-radius:50%;box-shadow:0 0 16px rgba(82,179,110,0.6);z-index:2"></div>
+               </div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+    });
+    userMarker = L.marker(fallback, { icon: customIcon }).addTo(map);
+
+    // Device orientation — rotate the entire marker container
+    function applyHeading(deg) {
+        userHeading = deg;
+        const el = document.getElementById('user-marker-container');
+        if (el) el.style.transform = `rotate(${deg}deg)`;
+    }
+
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        // iOS 13+
+        document.addEventListener('click', function iosPermOnce() {
+            DeviceOrientationEvent.requestPermission().then(state => {
+                if (state === 'granted') {
+                    window.addEventListener('deviceorientation', (e) => {
+                        const h = e.webkitCompassHeading ?? (e.alpha ? (360 - e.alpha) : null);
+                        if (h !== null) applyHeading(h);
+                    });
+                }
+            }).catch(console.warn);
+            document.removeEventListener('click', iosPermOnce);
+        }, { once: true });
+    } else {
+        window.addEventListener('deviceorientationabsolute', (e) => {
+            const h = e.webkitCompassHeading ?? (e.alpha ? (360 - e.alpha) : null);
+            if (h !== null) applyHeading(h);
+        }, true);
+        window.addEventListener('deviceorientation', (e) => {
+            if (e.absolute) return;
+            const h = e.webkitCompassHeading ?? (e.alpha ? (360 - e.alpha) : null);
+            if (h !== null) applyHeading(h);
+        });
+    }
+
+    if ("geolocation" in navigator) {
+        getAccurateFix().then((pos) => {
+            if (pos) { const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude); updateLocation(latlng); if (!initialRecenterDone) { map.flyTo(latlng, 16); initialRecenterDone = true; } }
+            else handleGPSBlocked();
+        });
+        navigator.geolocation.watchPosition(
+            (pos) => {
+                const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
+                // Use GPS course/heading if available
+                if (pos.coords.heading != null && !isNaN(pos.coords.heading)) {
+                    applyHeading(pos.coords.heading);
+                }
+                updateLocation(latlng);
+                if (!initialRecenterDone) { map.flyTo(latlng, 16); initialRecenterDone = true; }
+                if (isDriving) { map.panTo(latlng); updateHUD(); advanceDissolve(latlng); }
+            }, (err) => console.warn('GPS watch error:', err.code, err.message), GPS_OPTIONS_WATCH);
+    }
+    map.on('click', (e) => {
+        if (!isDrawing) return;
+        if (startAtLocation && routePath.length === 0 && lastKnownPos) {
+            routePath.push([lastKnownPos.lat, lastKnownPos.lng]);
+            markers.push(L.circleMarker(lastKnownPos, { radius: 4, color: '#52b36e', fillOpacity: 1 }).addTo(map));
+        }
+        routePath.push([e.latlng.lat, e.latlng.lng]);
+        markers.push(L.circleMarker(e.latlng, { radius: 6, color: '#52b36e', fillColor: '#1f4a2e', fillOpacity: 1, weight: 2.5 }).addTo(map));
+        polyline.setLatLngs(routePath);
+        document.getElementById('point-count').innerText = calculateDistance(routePath) + ' mi total';
+    });
+    map.on('click', hideSuggestions);
+    initTraffic();
+}
+function handleGPSBlocked() {
+    document.getElementById('tracking-status').style.background = '#ef4444';
+    document.getElementById('gps-label').innerText = 'GPS blocked';
+    document.getElementById('gps-label').style.color = '#fca5a5';
+}
+function recenter() { if (lastKnownPos) map.flyTo(lastKnownPos, 16); }
+
+// ── Route drawing ──
+document.getElementById('new-route-btn').onclick = () => {
+    isDrawing = true; routePath = []; markers.forEach(m => map.removeLayer(m)); markers = []; polyline.setLatLngs([]);
+    document.getElementById('new-route-btn').style.display = 'none';
+    document.getElementById('active-controls').style.display = 'block';
+    document.getElementById('point-count').innerText = '0.00 mi total';
+};
+document.getElementById('cancel-draft-btn').onclick = () => {
+    isDrawing = false; markers.forEach(m => map.removeLayer(m)); markers = []; polyline.setLatLngs([]);
+    document.getElementById('new-route-btn').style.display = 'flex';
+    document.getElementById('active-controls').style.display = 'none';
+};
+document.getElementById('end-route-btn').onclick = () => {
+    if (routePath.length < 2) return;
+    document.getElementById('modal-dist').innerText = `Total Distance: ${calculateDistance(routePath)} miles`;
+    document.getElementById('name-modal').style.display = 'flex';
+};
+document.getElementById('close-modal-btn').onclick = () => document.getElementById('name-modal').style.display = 'none';
+document.getElementById('confirm-save-btn').onclick = () => {
+    const name = document.getElementById('route-name-input').value || 'Unnamed Route';
+    const newRoute = { id: Date.now(), name, distance: calculateDistance(routePath), path: routePath, date: new Date().toLocaleDateString() };
+    savedRoutes.push(newRoute); localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
+    updateSavedList(); isDrawing = false; markers.forEach(m => map.removeLayer(m)); markers = []; polyline.setLatLngs([]);
+    document.getElementById('new-route-btn').style.display = 'flex';
+    document.getElementById('active-controls').style.display = 'none';
+    document.getElementById('name-modal').style.display = 'none';
+    document.getElementById('route-name-input').value = '';
+};
+
+// ── Saved routes ──
+window.deleteRoute = (id) => {
+    savedRoutes = savedRoutes.filter(r => r.id !== id);
+    localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
+    updateSavedList(); if (activeViewLine) map.removeLayer(activeViewLine);
+    clearActiveLegs();
+};
+window.viewRoute = (id) => {
+    const r = savedRoutes.find(x => x.id === id); if (!r) return;
+    if (activeViewLine) map.removeLayer(activeViewLine);
+    clearActiveLegs();
+    activeViewLine = L.polyline(r.path, { color: '#e8943e', weight: 5, opacity: 0.9 }).addTo(map);
+    map.fitBounds(activeViewLine.getBounds(), { padding: [50,50] });
+};
+function updateSavedList() {
+    const list = document.getElementById('saved-routes-list'); list.innerHTML = '';
+    [...savedRoutes].reverse().forEach(r => {
+        const div = document.createElement('div'); div.className = 'route-card';
+        div.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+                <div>
+                    <h4 style="font-size:13px;font-weight:700;color:var(--text-primary);line-height:1.2">${r.name}</h4>
+                    <p style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:3px">${r.date} · ${r.distance} mi</p>
+                </div>
+                <button onclick="deleteRoute(${r.id})" style="width:28px;height:28px;border-radius:7px;background:transparent;border:none;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0" onmouseover="this.style.color='#ef4444';this.style.background='rgba(239,68,68,0.08)'" onmouseout="this.style.color='var(--text-muted)';this.style.background='transparent'">
+                    <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+                <button onclick="viewRoute(${r.id})" class="btn btn-ghost" style="height:32px;font-size:10px;font-weight:700;border-radius:8px">View</button>
+                <button onclick="enterDriveMode(${r.id})" class="btn btn-primary" style="height:32px;font-size:10px;font-weight:700;border-radius:8px">Go ↗</button>
+            </div>`;
+        list.appendChild(div);
+    });
+}
+
+// ── Weather ──
+async function loadWeatherIcon() {
+    if (!lastKnownPos) return;
+    try {
+        const { lat, lng } = lastKnownPos;
+        const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=150ba377c3ca4474889150133260503`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const iconCode = data.weather?.[0]?.icon;
+        if (iconCode) { document.getElementById('weather-icon').src = `https://openweathermap.org/img/wn/${iconCode}@2x.png`; document.getElementById('weather-indicator').style.display = 'flex'; }
+    } catch(e) {}
+}
+
+// ══════════════════════════════════════════════
+// ══ HIGHWAY TRAFFIC SYSTEM ══
+// ══════════════════════════════════════════════
+//
+// Pulls real highway geometry from OpenStreetMap (Overpass) for the
+// current viewport, assigns each road a congestion level, draws it in
+// the matching color, and drops a clickable warning icon on bad spots.
+//
+// Congestion is computed deterministically per-road (stable while you
+// pan/zoom — it won't randomly flicker) and shifts with time of day so
+// rush hours look worse. There is no free real-time traffic feed without
+// a paid provider key, so this is a realistic model. To use a real feed,
+// replace estimateCongestion() with a provider lookup keyed on road.id.
+
+// Build the color-scale rows used both in Settings and in icon popups.
+function trafficScaleHTML(highlightLevel) {
+    return TRAFFIC_LEVELS.map(lv => {
+        const on = (highlightLevel === lv.id);
+        return `<div style="display:flex;align-items:center;gap:9px;padding:3px 0;${on?'font-weight:700':''}">
+            <span style="width:18px;height:6px;border-radius:3px;background:${lv.color};flex-shrink:0;box-shadow:0 0 6px ${lv.color}66"></span>
+            <span style="font-size:11px;color:${on?'var(--text-primary)':'var(--text-secondary)'};font-weight:${on?700:500}">${lv.label}</span>
+            ${lv.flag ? '<span style="font-size:10px;margin-left:auto">⚠️</span>' : ''}
+            ${on ? '<span style="font-size:9px;margin-left:6px;color:var(--green-300);font-weight:700">◀ here</span>' : ''}
+        </div>`;
+    }).join('');
+}
+function renderTrafficScale() {
+    const rows = document.getElementById('traffic-scale-rows');
+    if (rows) rows.innerHTML = trafficScaleHTML();
+}
+function setTrafficStatus(text, color) {
+    const t = document.getElementById('traffic-status-text');
+    const d = document.getElementById('traffic-status-dot');
+    if (t) t.textContent = text;
+    if (d) d.style.background = color || 'var(--text-muted)';
+}
+
+// Stable string hash → 0..1
+function hash01(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return ((h >>> 0) % 100000) / 100000;
+}
+
+// Time-of-day multiplier: peaks during weekday rush hours, low overnight.
+function rushFactor() {
+    const now = new Date();
+    const day = now.getDay();                 // 0 Sun … 6 Sat
+    const hour = now.getHours() + now.getMinutes() / 60;
+    const weekend = (day === 0 || day === 6);
+    // Gaussian-ish bumps around morning (8) and evening (17.5) peaks
+    const bump = (center, width, height) => height * Math.exp(-Math.pow(hour - center, 2) / (2 * width * width));
+    let f = 0.18;                             // baseline daytime load
+    if (hour < 5.5 || hour > 22) f = 0.04;    // overnight: roads clear
+    f += bump(8.0, 1.1, weekend ? 0.18 : 0.62);
+    f += bump(17.5, 1.4, weekend ? 0.28 : 0.70);
+    if (weekend) f += bump(13, 2.5, 0.22);    // weekend midday errands
+    return Math.min(f, 1);
+}
+
+// Per-road severity → level object. Deterministic by road id + class,
+// modulated by the current rush factor.
+function estimateCongestion(road) {
+    const base = hash01('r' + road.id);                 // road's intrinsic busyness
+    const jitter = hash01('j' + road.id) * 0.22 - 0.11;  // small spread
+    // Big roads (motorway/trunk) carry more load during peaks
+    const classW = /motorway|trunk/.test(road.kind) ? 1.0 : 0.72;
+    const severity = Math.max(0, Math.min(1,
+        (base * 0.45) + (rushFactor() * classW * 0.75) + jitter
+    ));
+    let level;
+    if (severity < 0.45) level = 0;
+    else if (severity < 0.70) level = 1;
+    else if (severity < 0.88) level = 2;
+    else level = 3;
+    return { level: TRAFFIC_LEVELS[level], severity };
+}
+
+// Pick a point on the polyline to anchor the warning icon (roughly middle).
+function midpointOf(latlngs) {
+    if (!latlngs.length) return null;
+    return latlngs[Math.floor(latlngs.length / 2)];
+}
+
+// Rough length in meters of a lat/lng path (to suppress icons on tiny stubs)
+function pathMeters(latlngs) {
+    let m = 0;
+    for (let i = 0; i < latlngs.length - 1; i++) m += L.latLng(latlngs[i]).distanceTo(L.latLng(latlngs[i + 1]));
+    return m;
+}
+
+function trafficWarnIcon(level) {
+    return L.divIcon({
+        className: 'traffic-warn-icon',
+        html: `<div style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+                    background:${level.color};border:2px solid rgba(10,15,10,0.85);border-radius:8px;
+                    box-shadow:0 2px 10px rgba(0,0,0,0.5),0 0 12px ${level.color}88;cursor:pointer">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0a0f0a" stroke-width="2.6"
+                       stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                </div>`,
+        iconSize: [26, 26], iconAnchor: [13, 13]
+    });
+}
+
+function clearTrafficLayers() {
+    if (trafficRoadLayer) { map.removeLayer(trafficRoadLayer); trafficRoadLayer = null; }
+    if (trafficIconLayer) { map.removeLayer(trafficIconLayer); trafficIconLayer = null; }
+}
+
+// Called by the settings toggle
+function toggleTraffic(on) {
+    trafficEnabled = on;
+    const cb = document.getElementById('settings-traffic');
+    if (cb) cb.checked = on;
+    if (on) {
+        setTrafficStatus('Loading highway conditions…', 'var(--amber-400)');
+        loadTraffic();
+    } else {
+        clearTrafficLayers();
+        trafficLastKey = null;
+        setTrafficStatus('Traffic is off.', 'var(--text-muted)');
+    }
+}
+
+// Quantize bounds so small pans don't trigger refetches
+function viewKey() {
+    const b = map.getBounds();
+    const q = n => Math.round(n * 50) / 50; // ~0.02° grid
+    return [map.getZoom(), q(b.getSouth()), q(b.getWest()), q(b.getNorth()), q(b.getEast())].join('|');
+}
+
+async function loadTraffic() {
+    if (!trafficEnabled || !map) return;
+
+    if (map.getZoom() < TRAFFIC_MIN_ZOOM) {
+        clearTrafficLayers();
+        setTrafficStatus('Zoom in to see highway traffic.', 'var(--amber-400)');
+        return;
+    }
+
+    const key = viewKey();
+    if (key === trafficLastKey && trafficRoadLayer) return; // nothing meaningful changed
+    trafficLastKey = key;
+
+    const token = ++trafficFetchToken;
+    setTrafficStatus('Loading highway conditions…', 'var(--amber-400)');
+
+    const b = map.getBounds();
+    const bbox = `${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()}`;
+    const query =
+        `[out:json][timeout:25];` +
+        `(way["highway"~"^(${TRAFFIC_ROAD_TYPES})$"](${bbox}););` +
+        `out geom;`;
+
+    try {
+        const res = await fetch(OVERPASS_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'data=' + encodeURIComponent(query)
+        });
+        if (!res.ok) throw new Error('Overpass ' + res.status);
+        const data = await res.json();
+        if (token !== trafficFetchToken || !trafficEnabled) return; // superseded
+
+        renderTraffic(data.elements || []);
+    } catch (e) {
+        console.warn('Traffic load failed:', e);
+        if (token === trafficFetchToken && trafficEnabled) {
+            setTrafficStatus('Could not load traffic — check connection.', 'var(--amber-400)');
+        }
+    }
+}
+
+function renderTraffic(elements) {
+    clearTrafficLayers();
+    trafficRoadLayer = L.layerGroup().addTo(map);
+    trafficIconLayer = L.layerGroup().addTo(map);
+
+    const counts = [0, 0, 0, 0];
+    let drawn = 0, flagged = 0;
+    const MAX_ICONS = 60; // keep the map readable
+
+    elements.forEach(el => {
+        if (el.type !== 'way' || !el.geometry || el.geometry.length < 2) return;
+        const latlngs = el.geometry.map(g => [g.lat, g.lon]);
+        const road = {
+            id: el.id,
+            kind: (el.tags && el.tags.highway) || 'road',
+            name: (el.tags && (el.tags.ref || el.tags.name)) || 'Highway'
+        };
+        const { level } = estimateCongestion(road);
+        counts[level.id]++;
+        drawn++;
+
+        // Casing for contrast, then the colored line on top
+        L.polyline(latlngs, { color: 'rgba(0,0,0,0.55)', weight: 7, opacity: 0.5, lineCap: 'round' }).addTo(trafficRoadLayer);
+        const pulseClass = level.id >= 3 ? 'traffic-line-severe'
+                         : level.id === 2 ? 'traffic-line-heavy'
+                         : 'traffic-line';
+        L.polyline(latlngs, { color: level.color, weight: 4, opacity: 0.95, lineCap: 'round', className: pulseClass }).addTo(trafficRoadLayer);
+
+        // Warning icon for bad roads (heavy/severe), if the segment is long enough
+        if (level.flag && flagged < MAX_ICONS && pathMeters(latlngs) > 250) {
+            const at = midpointOf(latlngs);
+            if (at) {
+                const marker = L.marker(at, { icon: trafficWarnIcon(level), zIndexOffset: 1000 }).addTo(trafficIconLayer);
+                marker.bindPopup(trafficPopupHTML(road, level), { closeButton: true, minWidth: 210, maxWidth: 240 });
+                flagged++;
+            }
+        }
+    });
+
+    if (drawn === 0) {
+        setTrafficStatus('No highways in view.', 'var(--text-muted)');
+    } else {
+        const updated = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const bad = counts[2] + counts[3];
+        setTrafficStatus(
+            `${drawn} highways · ${bad} slow spot${bad === 1 ? '' : 's'} · ${updated}`,
+            bad > 0 ? '#e8843e' : '#3fb86e'
+        );
+    }
+}
+
+function trafficPopupHTML(road, level) {
+    return `<div style="font-family:'Inter',sans-serif;min-width:190px">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
+            <span style="width:10px;height:10px;border-radius:3px;background:${level.color};box-shadow:0 0 8px ${level.color}">
+            </span>
+            <b style="font-size:12px;color:var(--text-primary)">${road.name}</b>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:${level.color};margin-bottom:10px">${level.label}</div>
+        <div style="border-top:1px solid var(--border-1);padding-top:9px">
+            <div style="font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Congestion scale</div>
+            ${trafficScaleHTML(level.id)}
+        </div>
+    </div>`;
+}
+
+// Wire the map to refresh traffic as the user moves (debounced).
+function initTraffic() {
+    renderTrafficScale();
+    map.on('moveend zoomend', () => {
+        if (!trafficEnabled) return;
+        clearTimeout(trafficFetchTimer);
+        trafficFetchTimer = setTimeout(loadTraffic, 450);
+    });
+    // refresh model periodically so time-of-day shifts show up
+    setInterval(() => { if (trafficEnabled) { trafficLastKey = null; loadTraffic(); } }, 5 * 60 * 1000);
+}
+
+
+
+function openNavModal() {
+    document.getElementById('nav-modal').style.display = 'flex';
+    twGoToStep(1);
+}
+function closeNavModal() {
+    document.getElementById('nav-modal').style.display = 'none';
+    hideSuggestions();
+}
+
+function twGoToStep(n) {
+    [1,2,3].forEach(i => {
+        const step = document.getElementById(`tw-step-${i}`);
+        step.style.display = i === n ? 'flex' : 'none';
+        if (i === n) step.style.flexDirection = 'column';
+        document.getElementById(`dot-${i}`).style.background = i <= n ? 'var(--green-600)' : 'var(--surface-2)';
+    });
+    document.getElementById('tw-step-label').innerText = n;
+    if (n === 2) renderStopBuilder();
+}
+function twBack(step) {
+    twGoToStep(step - 1);
+    hideSuggestions();
+}
+
+function twSelectVehicle(type) {
+    twVehicle = type; selectedVehicle = type;
+    document.querySelectorAll('.veh-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(`tw-v-${type}`).classList.add('active');
+    const needsSpeed = type === 'escooter' || type === 'ebike';
+    document.getElementById('tw-speed-block').style.display = needsSpeed ? 'flex' : 'none';
+    if (needsSpeed) document.getElementById('tw-vehicle-label').innerText = type === 'escooter' ? 'scooter' : 'e-bike';
+}
+
+function twNext(step) {
+    if (step === 1) {
+        if (!twVehicle) { alert('Please pick a vehicle first!'); return; }
+        const needsSpeed = twVehicle === 'escooter' || twVehicle === 'ebike';
+        if (needsSpeed) {
+            const spd = parseFloat(document.getElementById('tw-speed-input').value);
+            if (!spd || spd < 1) { alert('Please enter your top speed in MPH.'); return; }
+            twSpeedMPH = spd;
+        } else { twSpeedMPH = null; }
+        twGoToStep(2);
+    } else if (step === 2) {
+        if (twStops.length === 0) { alert('Add at least one stop!'); return; }
+        const unresolved = twStops.filter(s => s.status === 'error');
+        if (unresolved.length > 0) { alert(`Some stops couldn't be found. Remove them or try different names.`); return; }
+        const still = twStops.filter(s => s.status === 'resolving');
+        if (still.length > 0) { alert('Still finding some stops — please wait a moment.'); return; }
+        twGoToStep(3);
+        twBuildSummary();
+    }
+}
+
+// ── Stop Builder UI ──
+function renderStopBuilder() {
+    renderStopsList();
+    renderQuickChips();
+}
+
+function renderQuickChips() {
+    const c = document.getElementById('quick-chips');
+    c.innerHTML = QUICK_CHIP_OPTIONS.map(ch =>
+        `<button onclick="addQuickChip(${JSON.stringify(ch.label).replace(/"/g,"'")})"
+            style="padding:6px 12px;border-radius:9999px;font-size:10px;font-weight:600;background:var(--surface-1);border:1px solid var(--border-1);color:var(--text-secondary);cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:5px"
+            onmouseover="this.style.background='var(--surface-2)';this.style.color='var(--text-primary)'"
+            onmouseout="this.style.background='var(--surface-1)';this.style.color='var(--text-secondary)'">
+            <span>${ch.icon}</span>${ch.label}
+        </button>`
+    ).join('');
+}
+
+function renderStopsList() {
+    const list = document.getElementById('tw-stops-list');
+    if (twStops.length === 0) {
+        list.innerHTML = `<p style="font-size:11px;color:var(--text-muted);font-weight:500;text-align:center;padding:12px 0">No stops yet — add your first destination below</p>`;
+        return;
+    }
+    list.innerHTML = '';
+    twStops.forEach((stop, idx) => {
+        const div = document.createElement('div');
+        div.className = `stop-item ${stop.status === 'resolving' ? 'resolving' : stop.status === 'resolved' ? 'resolved' : stop.status === 'error' ? 'error' : ''}`;
+        div.id = `stop-item-${idx}`;
+
+        const spinner = stop.status === 'resolving'
+            ? `<div class="stop-spinner"></div>`
+            : `<button onclick="removeStop(${idx})" style="width:20px;height:20px;border-radius:5px;background:transparent;border:none;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;transition:color 0.12s" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">
+                <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>`;
+
+        const subText = stop.status === 'resolving'
+            ? `<div class="stop-sub">Searching nearby…</div>`
+            : stop.status === 'resolved' && stop.resolved
+            ? `<div class="stop-sub ok">✓ ${stop.resolved.name}${stop.resolved.distance_mi ? ` · ${stop.resolved.distance_mi} mi away` : ''}</div>`
+            : stop.status === 'error'
+            ? `<div class="stop-sub err">⚠ Couldn't find — try a different name</div>`
+            : `<div class="stop-sub">Queued</div>`;
+
+        div.innerHTML = `
+            <div class="stop-num">${idx + 1}</div>
+            <div style="flex:1;min-width:0">
+                <div class="stop-name">${stop.label}</div>
+                ${subText}
+            </div>
+            ${spinner}`;
+        list.appendChild(div);
+    });
+}
+
+window.removeStop = (idx) => {
+    twStops.splice(idx, 1);
+    renderStopsList();
+};
+
+function addQuickChip(label) {
+    document.getElementById('stop-text-input').value = label;
+    addStopFromInput();
+}
+
+function addStopFromInput() {
+    const input = document.getElementById('stop-text-input');
+    const raw = input.value.trim();
+    if (!raw) return;
+    input.value = '';
+    hideSuggestions();
+    const idx = twStops.length;
+    twStops.push({ label: raw, resolved: null, status: 'resolving' });
+    renderStopsList();
+    resolveStop(idx);
+}
+
+async function resolveStop(idx) {
+    const stop = twStops[idx];
+    if (!stop) return;
+    let userLat = lastKnownPos?.lat ?? null;
+    let userLng = lastKnownPos?.lng ?? null;
+    if (!userLat) {
+        const fix = await getAccurateFix();
+        if (fix) { userLat = fix.coords.latitude; userLng = fix.coords.longitude; }
+    }
+    try {
+        const result = await resolveStopToCoords(stop.label, userLat, userLng);
+        if (result && twStops[idx]) {
+            const dist = userLat ? haversineMiles(userLat, userLng, result.lat, result.lng).toFixed(1) : null;
+            twStops[idx].resolved = { ...result, distance_mi: dist };
+            twStops[idx].status = 'resolved';
+        } else if (twStops[idx]) {
+            twStops[idx].status = 'error';
+        }
+    } catch(e) {
+        if (twStops[idx]) twStops[idx].status = 'error';
+    }
+    renderStopsList();
+}
+
+// ── AI Suggestions ──
+function onStopInput(val) {
+    clearTimeout(suggestionDebounce);
+    if (!val || val.length < 2) { hideSuggestions(); return; }
+    suggestionDebounce = setTimeout(() => fetchAISuggestions(val), 380);
+}
+function onStopKeydown(e) {
+    if (e.key === 'Enter') { e.preventDefault(); addStopFromInput(); }
+    if (e.key === 'Escape') hideSuggestions();
+}
+async function fetchAISuggestions(query) {
+    if (aiSuggestController) aiSuggestController.abort();
+    aiSuggestController = new AbortController();
+    const userLat = lastKnownPos?.lat;
+    const userLng = lastKnownPos?.lng;
+    const locationHint = userLat ? `near coordinates (${userLat.toFixed(4)}, ${userLng.toFixed(4)})` : 'location unknown';
+    const prompt = `The user is planning a ${twVehicle || 'walking'} route and typed: "${query}"
+User GPS: ${locationHint}
+
+Suggest 4 specific place names the user likely means. Return ONLY a JSON array, no markdown:
+[{"icon":"emoji","label":"Place Name","hint":"type of place"}]
+
+Rules:
+- Real, specific place types (not vague)  
+- Relevant to ${twVehicle || 'walking'} travel distance
+- Mix exact business names and category descriptions
+- Keep labels short (under 30 chars)`;
+    try {
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: aiSuggestController.signal,
+            body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 300, messages: [{ role: "user", content: prompt }] })
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        const text = (data.content || []).map(i => i.text || '').join('');
+        const match = text.match(/\[[\s\S]*\]/);
+        if (match) showSuggestions(JSON.parse(match[0]));
+    } catch(e) {
+        if (e.name !== 'AbortError') hideSuggestions();
+    }
+}
+function showSuggestions(items) {
+    const box = document.getElementById('stop-suggestions');
+    if (!items || !items.length) { hideSuggestions(); return; }
+    box.innerHTML = items.map(s =>
+        `<div class="suggestion-item" onclick="pickSuggestion(${JSON.stringify(s.label).replace(/"/g,"'")})">
+            <span class="suggestion-icon">${s.icon || '📍'}</span>
+            <div>
+                <div style="font-size:12px;font-weight:600;color:var(--text-primary)">${s.label}</div>
+                ${s.hint ? `<div style="font-size:10px;color:var(--text-muted)">${s.hint}</div>` : ''}
+            </div>
+        </div>`
+    ).join('');
+    box.style.display = 'block';
+}
+function hideSuggestions() { document.getElementById('stop-suggestions').style.display = 'none'; }
+function pickSuggestion(label) {
+    document.getElementById('stop-text-input').value = label;
+    hideSuggestions();
+    addStopFromInput();
+}
+
+// ── Build route summary ──
+function twBuildSummary() {
+    document.getElementById('tw-thinking').style.display = 'flex';
+    document.getElementById('tw-result').style.display = 'none';
+    const labels = ['Computing path…','Checking road types…','Calculating distances…','Weaving your trail…'];
+    let li = 0;
+    const lv = setInterval(() => {
+        const el = document.getElementById('tw-thinking-label');
+        if (el) el.innerText = labels[li % labels.length]; li++;
+    }, 900);
+    setTimeout(() => {
+        clearInterval(lv);
+        const resolvedStops = twStops.filter(s => s.status === 'resolved' && s.resolved);
+        const returnHome = document.getElementById('tw-return-home').checked;
+        const targetMiles = parseFloat(document.getElementById('tw-target-miles').value) || null;
+        const isFoot = twVehicle === 'walking' || twVehicle === 'running';
+        const isCar  = twVehicle === 'car';
+        const isSlowEV = (twVehicle === 'escooter' || twVehicle === 'ebike') && twSpeedMPH && twSpeedMPH <= 25;
+        const osrmProfile = isCar ? 'car' : (isFoot || isSlowEV) ? 'foot' : 'bicycle';
+        const speedMap = { walking:3, running:6, bike:12, car:30, escooter: Math.min(twSpeedMPH||15,20), ebike: Math.min(twSpeedMPH||20,25) };
+        const mph = speedMap[twVehicle] || 3;
+        const stopCount = resolvedStops.length;
+        const baseMiles = targetMiles || parseFloat((stopCount * 1.2 + (returnHome ? 0.8 : 0)).toFixed(1));
+        const estMinutes = Math.max(1, Math.round((baseMiles / mph) * 60));
+        const vLabel = { walking:'walk', running:'run', bike:'bike ride', car:'drive', escooter:'scooter ride', ebike:'e-bike ride' }[twVehicle] || 'trip';
+        const stopNames = resolvedStops.map(s => s.resolved?.name || s.label);
+        const loopStr = returnHome ? ', then back home' : '';
+        const distStr = targetMiles ? `targeting ~${targetMiles} mi` : `~${baseMiles} mi estimated`;
+        const safetyMap = { walking:'Routed on sidewalks and pedestrian paths.', running:'Paths and parks — heavy traffic avoided.', bike:'Bike lanes and quiet streets — no highways.', car:'Full road access.', escooter:`At ${twSpeedMPH} MPH: residential streets and bike paths.`, ebike:`At ${twSpeedMPH} MPH: bike lanes and quieter roads.` };
+
+        // Build color legend for the modal
+        const totalLegs = stopCount + (returnHome ? 1 : 0);
+        const legendEl = document.getElementById('tw-color-legend');
+        legendEl.innerHTML = '';
+        const legLabels = [...stopNames];
+        if (returnHome) legLabels.push('Home');
+        for (let i = 0; i < totalLegs; i++) {
+            const color = getLegColor(i, totalLegs);
+            const label = getLegLabel(i, totalLegs, stopNames);
+            const chip = document.createElement('div');
+            chip.className = 'leg-chip';
+            chip.style.cssText = `background:${color}22;border:1px solid ${color}55;color:${color};`;
+            chip.innerHTML = `<span style="width:8px;height:8px;border-radius:2px;background:${color};display:inline-block"></span>${label}`;
+            legendEl.appendChild(chip);
+        }
+
+        document.getElementById('tw-thinking').style.display = 'none';
+        document.getElementById('tw-result').style.display = 'flex';
+        if (resolvedStops.length === 0) {
+            document.getElementById('tw-error-block').style.display = 'block';
+            document.getElementById('tw-error-msg').innerText = 'No stops found. Go back and add stops.';
+            document.getElementById('tw-launch-btn').style.display = 'none';
+        } else {
+            document.getElementById('tw-error-block').style.display = 'none';
+            document.getElementById('tw-launch-btn').style.display = '';
+            document.getElementById('tw-ai-summary').innerHTML = `${vLabel.charAt(0).toUpperCase()+vLabel.slice(1)} to ${stopNames.join(' → ')}${loopStr} — ${distStr}.<br><span style="font-size:10px;opacity:0.6;margin-top:6px;display:block">${safetyMap[twVehicle]||''}</span>`;
+            document.getElementById('tw-est-dist').innerText = `~${baseMiles} mi`;
+            document.getElementById('tw-est-time').innerText = estMinutes >= 60 ? `${Math.floor(estMinutes/60)}h ${estMinutes%60}m` : `~${estMinutes}m`;
+            document.getElementById('tw-est-stops').innerText = stopCount + (returnHome ? ' + home' : '');
+        }
+        twBuiltRoute = { feasible: resolvedStops.length > 0, resolvedStops, returnHome, osrmProfile, targetMiles };
+    }, 1800);
+}
+
+// ── Progress Toast ──
+let progressToastEl = null;
+function showProgressToast(steps) {
+    removeProgressToast();
+    progressToastEl = document.createElement('div');
+    progressToastEl.className = 'ai-toast';
+    progressToastEl.innerHTML = `
+        <p style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--green-400);margin-bottom:12px">🌿 Building your route…</p>
+        ${steps.map((s,i) => `<div class="ai-step pending" id="ai-step-${i}"><div class="ai-step-dot">${s.icon}</div><span class="ai-step-text">${s.label}</span></div>`).join('')}`;
+    document.body.appendChild(progressToastEl);
+}
+function setProgressStep(index, state, customLabel = null) {
+    const el = document.getElementById(`ai-step-${index}`); if (!el) return;
+    el.className = `ai-step ${state}`;
+    if (customLabel) el.querySelector('.ai-step-text').textContent = customLabel;
+    if (state === 'done') el.querySelector('.ai-step-dot').textContent = '✓';
+}
+function removeProgressToast() { if (progressToastEl) { progressToastEl.remove(); progressToastEl = null; } }
+
+// ── Geocoding helpers ──
+function haversineMiles(lat1, lng1, lat2, lng2) {
+    const R = 3958.8, dLat = (lat2-lat1)*Math.PI/180, dLng = (lng2-lng1)*Math.PI/180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+async function resolveStopWithAI(stopName, userLat, userLng) {
+    const prompt = `You are a geocoding assistant. Given GPS coordinates and a destination description, return the CLOSEST real location as JSON.\n\nUser GPS: latitude ${userLat?.toFixed(6)}, longitude ${userLng?.toFixed(6)}\nDestination: "${stopName}"\n\nReturn ONLY this JSON (no markdown, no other text):\n{"name": "exact name", "lat": 0.000000, "lng": 0.000000, "address": "full address", "distance_miles": 0.0}\n\nIf not found: {"error": "not found"}`;
+    try {
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, tools: [{ "type": "web_search_20250305", "name": "web_search" }], messages: [{ role: "user", content: prompt }] })
+        });
+        if (!response.ok) throw new Error(`API ${response.status}`);
+        const data = await response.json();
+        const fullText = (data.content || []).map(item => item.type === "text" ? item.text : "").filter(Boolean).join("\n");
+        const jsonMatch = fullText.match(/\{[^{}]*"lat"[^{}]*\}/);
+        if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.lat && parsed.lng && !parsed.error) return { lng: parsed.lng, lat: parsed.lat, name: parsed.name, address: parsed.address };
+        }
+        return null;
+    } catch(e) { return null; }
+}
+const OSM_TAG_MAP = { 'gym':['leisure=fitness_centre','amenity=gym'], 'fitness':['leisure=fitness_centre'], 'coffee shop':['amenity=cafe'], 'cafe':['amenity=cafe'], 'coffee':['amenity=cafe'], 'starbucks':['name=Starbucks','amenity=cafe'], 'mcdonalds':["name=McDonald's",'amenity=fast_food'], "mcdonald's":["name=McDonald's",'amenity=fast_food'], 'subway':['name=Subway','amenity=fast_food'], 'restaurant':['amenity=restaurant'], 'fast food':['amenity=fast_food'], 'grocery store':['shop=supermarket','shop=grocery'], 'grocery':['shop=supermarket'], 'supermarket':['shop=supermarket'], 'walmart':['name=Walmart','shop=supermarket'], 'target':['name=Target','shop=department_store'], 'five below':['name=Five Below','shop=variety_store'], 'cvs':['name=CVS','amenity=pharmacy'], 'walgreens':['name=Walgreens','amenity=pharmacy'], 'pharmacy':['amenity=pharmacy'], 'gas station':['amenity=fuel'], 'park':['leisure=park'], 'local park':['leisure=park'], 'library':['amenity=library'], 'hospital':['amenity=hospital'], 'bank':['amenity=bank'], 'crunch fitness':['name=Crunch Fitness','leisure=fitness_centre'], 'planet fitness':['name=Planet Fitness','leisure=fitness_centre'], 'nearest coffee shop':['amenity=cafe'], 'nearest gym':['leisure=fitness_centre'], 'nearest park':['leisure=park'], 'nearest grocery store':['shop=supermarket'], 'nearest pharmacy':['amenity=pharmacy'], 'nearest gas station':['amenity=fuel'] };
+async function resolveViaOverpass(stopName, userLat, userLng) {
+    const key = stopName.toLowerCase().trim().replace(/^nearest\s+/,'');
+    let tags = OSM_TAG_MAP[stopName.toLowerCase().trim()] || OSM_TAG_MAP[key];
+    if (!tags) { const pk = Object.keys(OSM_TAG_MAP).find(k => key.includes(k) || k.includes(key)); if (pk) tags = OSM_TAG_MAP[pk]; }
+    if (!tags || !userLat) return null;
+    const maxMiles = twVehicle === 'car' ? 30 : 15;
+    for (const radiusMeters of [8000, 16000, Math.round(maxMiles * 1609)]) {
+        const parts = tags.map(tag => { const [k,v] = tag.split('='); return ['node','way','relation'].map(t => `  ${t}["${k}"="${v}"](around:${radiusMeters},${userLat},${userLng});`).join('\n'); });
+        const query = `[out:json][timeout:15];\n(\n${parts.join('\n')}\n);\nout center qt 50;`;
+        try {
+            const res = await fetch('https://overpass-api.de/api/interpreter', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'data='+encodeURIComponent(query) });
+            const data = await res.json();
+            if (!data.elements?.length) continue;
+            const candidates = data.elements.map(el => { const lat=el.lat??el.center?.lat, lng=el.lon??el.center?.lon; if(!lat||!lng) return null; return { lat, lng, d: haversineMiles(userLat,userLng,lat,lng), name: el.tags?.name||stopName }; }).filter(Boolean);
+            if (!candidates.length) continue;
+            candidates.sort((a,b)=>a.d-b.d);
+            return { lng: candidates[0].lng, lat: candidates[0].lat, name: candidates[0].name };
+        } catch(e) { break; }
+    }
+    return null;
+}
+async function resolveViaNominatim(stopName, userLat, userLng) {
+    const maxMiles = twVehicle === 'car' ? 30 : 15;
+    try {
+        const viewbox = userLat ? `&viewbox=${userLng-0.5},${userLat+0.5},${userLng+0.5},${userLat-0.5}&bounded=0` : '';
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(stopName)}&format=json&limit=10&addressdetails=1${viewbox}`, { headers:{'Accept-Language':'en'} });
+        const data = await res.json();
+        if (!data?.length) return null;
+        let best=null, bestDist=Infinity;
+        data.forEach(item => { const lat=parseFloat(item.lat), lng=parseFloat(item.lon), d=haversineMiles(userLat,userLng,lat,lng); if(d<=maxMiles && d<bestDist){ bestDist=d; best={lat,lng,name:item.display_name}; } });
+        return best;
+    } catch(e) { return null; }
+}
+async function resolveViaPhoton(stopName, userLat, userLng) {
+    const maxMiles = twVehicle === 'car' ? 30 : 15;
+    try {
+        const bias = userLat ? `&lat=${userLat}&lon=${userLng}` : '';
+        const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(stopName)}${bias}&limit=15`);
+        const data = await res.json();
+        if (!data?.features?.length) return null;
+        let best=null, bestDist=Infinity;
+        data.features.forEach(f => { const [lng,lat]=f.geometry.coordinates, d=haversineMiles(userLat,userLng,lat,lng); if(d<=maxMiles && d<bestDist){ bestDist=d; best={lat,lng,name:f.properties.name||stopName}; } });
+        return best;
+    } catch(e) { return null; }
+}
+async function resolveStopToCoords(stopName, userLat, userLng) {
+    const [aiResult, overpassResult] = await Promise.all([resolveStopWithAI(stopName, userLat, userLng), resolveViaOverpass(stopName, userLat, userLng)]);
+    if (aiResult && overpassResult) {
+        const aiDist = haversineMiles(userLat,userLng,aiResult.lat,aiResult.lng);
+        const osmDist = haversineMiles(userLat,userLng,overpassResult.lat,overpassResult.lng);
+        return aiDist <= osmDist ? aiResult : overpassResult;
+    }
+    if (aiResult) return aiResult;
+    if (overpassResult) return overpassResult;
+    const nominatim = await resolveViaNominatim(stopName, userLat, userLng);
+    if (nominatim) return nominatim;
+    return await resolveViaPhoton(stopName, userLat, userLng);
+}
+
+// ══ MULTI-COLOR LEG MANAGEMENT ══
+
+function clearActiveLegs() {
+    activeLegs.forEach(l => { if (l && map.hasLayer(l)) map.removeLayer(l); });
+    activeLegs = [];
+    dissolveLegs = [];
+}
+
+/**
+ * Split a full OSRM path into legs based on waypoint coordinates.
+ * Each waypoint snaps to the closest point on the path.
+ */
+function splitPathIntoLegs(fullPath, waypoints) {
+    // waypoints = [[lat,lng], ...] — the intermediate stop coordinates + optional home
+    const legs = [];
+    let remaining = [...fullPath];
+
+    for (let w = 0; w < waypoints.length; w++) {
+        const target = waypoints[w];
+        let bestIdx = 0, bestDist = Infinity;
+        for (let i = 0; i < remaining.length; i++) {
+            const d = haversineMiles(remaining[i][0], remaining[i][1], target[0], target[1]);
+            if (d < bestDist) { bestDist = d; bestIdx = i; }
+        }
+        // Leg = remaining[0 .. bestIdx+1]
+        legs.push(remaining.slice(0, bestIdx + 1));
+        remaining = remaining.slice(bestIdx);
+    }
+    // Last leg = everything remaining
+    if (remaining.length > 1) legs.push(remaining);
+    return legs.filter(l => l.length >= 2);
+}
+
+/**
+ * Draw colored polylines for each leg and set up dissolve state.
+ */
+function drawColoredLegs(legs, stopNames, returnHome) {
+    clearActiveLegs();
+    const totalLegs = legs.length;
+    legs.forEach((leg, i) => {
+        const color = getLegColor(i, totalLegs);
+        const pl = L.polyline(leg, {
+            color,
+            weight: 6,
+            opacity: 0.9,
+            lineCap: 'round',
+            lineJoin: 'round'
+        }).addTo(map);
+        activeLegs.push(pl);
+        dissolveLegs.push({ polyline: pl, fullPath: [...leg], dissolvedIdx: 0, color });
+    });
+}
+
+/**
+ * Dissolve effect: as user moves, trim the portion of each leg they've passed.
+ */
+function advanceDissolve(userLatLng) {
+    if (!dissolveLegs.length) return;
+    const userLat = userLatLng.lat, userLng = userLatLng.lng;
+
+    for (let li = 0; li < dissolveLegs.length; li++) {
+        const leg = dissolveLegs[li];
+        if (leg.dissolvedIdx >= leg.fullPath.length - 1) continue;
+
+        // Find the closest point on this leg to the user
+        let bestIdx = leg.dissolvedIdx, bestDist = Infinity;
+        for (let i = leg.dissolvedIdx; i < leg.fullPath.length; i++) {
+            const d = haversineMiles(leg.fullPath[i][0], leg.fullPath[i][1], userLat, userLng);
+            if (d < bestDist) { bestDist = d; bestIdx = i; }
+            if (i > leg.dissolvedIdx + 60) break; // look-ahead limit
+        }
+
+        // Only dissolve if user is close to this leg (within ~80m)
+        if (bestDist < 0.05) {
+            leg.dissolvedIdx = Math.max(leg.dissolvedIdx, bestIdx);
+            const remaining = leg.fullPath.slice(leg.dissolvedIdx);
+            if (remaining.length >= 2) {
+                leg.polyline.setLatLngs(remaining);
+            } else {
+                // Leg fully traveled — fade it out
+                leg.polyline.setStyle({ opacity: 0.15 });
+            }
+        }
+    }
+}
+
+// ── Launch route ──
+async function twLaunchRoute() {
+    if (!twBuiltRoute?.feasible) return;
+    closeNavModal();
+    const plan = twBuiltRoute;
+    const profile = plan.osrmProfile || 'foot';
+    if (!lastKnownPos) { const fix = await getAccurateFix(); if (fix) updateLocation(L.latLng(fix.coords.latitude, fix.coords.longitude)); }
+    const userLat = lastKnownPos?.lat ?? null, userLng = lastKnownPos?.lng ?? null;
+    const resolvedStops = plan.resolvedStops;
+    const progressSteps = [
+        { icon:'📍', label:'Locking GPS' },
+        ...resolvedStops.map(s => ({ icon:'✓', label:`${s.resolved?.name || s.label}` })),
+        { icon:'🗺️', label:'Building route' }
+    ];
+    showProgressToast(progressSteps);
+    setProgressStep(0, 'done', `📍 ${userLat?.toFixed(4)}, ${userLng?.toFixed(4)}`);
+    resolvedStops.forEach((s, i) => setProgressStep(i+1, 'done', `✓ ${s.resolved?.name || s.label}`));
+    const routeStepIdx = resolvedStops.length + 1;
+    setProgressStep(routeStepIdx, 'active');
+
+    let coords = [];
+    if (userLat) coords.push([userLng, userLat]);
+    resolvedStops.forEach(s => { if (s.resolved) coords.push([s.resolved.lng, s.resolved.lat]); });
+    if (plan.returnHome && userLat) coords.push([userLng, userLat]);
+    coords = coords.filter((c,i) => i===0 || !(c[0]===coords[i-1][0] && c[1]===coords[i-1][1]));
+
+    if (coords.length < 2) { removeProgressToast(); showSimpleToast('⚠️ Need GPS + at least one stop to build route', true); return; }
+
+    try {
+        const coordStr = coords.map(c=>c.join(',')).join(';');
+        const isSlowEV = (twVehicle==='escooter'||twVehicle==='ebike') && twSpeedMPH && twSpeedMPH<=25;
+        const exclude = isSlowEV ? '&exclude=motorway,trunk' : '';
+        const routeRes = await fetch(`https://router.project-osrm.org/route/v1/${profile}/${coordStr}?overview=full&geometries=geojson${exclude}`);
+        const routeData = await routeRes.json();
+
+        if (routeData.code === 'Ok') {
+            const fullPath = routeData.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
+            const distMi = (routeData.routes[0].distance * 0.000621371).toFixed(2);
+            const stopNames = resolvedStops.map(s => s.resolved?.name || s.label);
+            const routeName = `${twVehicle} → ${stopNames[0]}${stopNames.length>1?' +'+(stopNames.length-1):''}`;
+
+            setProgressStep(routeStepIdx, 'done', `✓ Route ready — ${distMi} mi`);
+            await new Promise(r=>setTimeout(r,800));
+            removeProgressToast();
+
+            // Clear old route overlays
+            if (activeViewLine) { map.removeLayer(activeViewLine); activeViewLine = null; }
+            clearActiveLegs();
+
+            // Build waypoints list for splitting (stops + optional home)
+            const waypointCoords = resolvedStops
+                .filter(s => s.resolved)
+                .map(s => [s.resolved.lat, s.resolved.lng]);
+            if (plan.returnHome && userLat) waypointCoords.push([userLat, userLng]);
+
+            // Split path into legs and draw with colors
+            const legs = splitPathIntoLegs(fullPath, waypointCoords);
+            drawColoredLegs(legs, stopNames, plan.returnHome);
+
+            // Fit map to route
+            if (legs.length) {
+                const allPoints = legs.flat();
+                const bounds = L.latLngBounds(allPoints);
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+
+            // Drop stop markers
+            resolvedStops.forEach((s, i) => {
+                if (!s.resolved) return;
+                const color = getLegColor(i, legs.length);
+                L.circleMarker([s.resolved.lat, s.resolved.lng], {
+                    radius: 8, color, fillColor: '#0f160f', fillOpacity: 1, weight: 2.5
+                }).addTo(map).bindPopup(
+                    `<b style="font-size:12px;color:var(--text-primary)">${s.resolved.name || s.label}</b>`,
+                    { closeButton: false }
+                );
+            });
+
+            // Save and enter drive mode
+            const saved = { id: Date.now(), name: routeName, distance: distMi, path: fullPath, date: new Date().toLocaleDateString() };
+            savedRoutes.push(saved);
+            localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
+            updateSavedList();
+            enterDriveModeWithLegs(saved.id);
+        } else throw new Error('OSRM: ' + routeData.code);
+    } catch(e) {
+        console.error(e);
+        removeProgressToast();
+        showSimpleToast('⚠️ Route failed — check connection and try again', true);
+    }
+}
+
+// ── Simple toast ──
+let simpleToastEl = null;
+function showSimpleToast(msg, isError=false) {
+    if (simpleToastEl) simpleToastEl.remove();
+    simpleToastEl = document.createElement('div');
+    simpleToastEl.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9998;padding:10px 20px;border-radius:9999px;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:white;background:${isError?'rgba(120,30,30,0.95)':'rgba(29,74,46,0.95)'};border:1px solid ${isError?'rgba(239,68,68,0.3)':'rgba(61,143,86,0.3)'};backdrop-filter:blur(12px);white-space:nowrap`;
+    simpleToastEl.textContent = msg;
+    document.body.appendChild(simpleToastEl);
+    if (isError) setTimeout(() => { simpleToastEl?.remove(); simpleToastEl = null; }, 4000);
+}
+
+// ── Drive mode ──
+window.enterDriveMode = (id) => {
+    const r = savedRoutes.find(x => x.id === id); if (!r) return;
+    currentDriveRoute = r; isDriving = true;
+    document.getElementById('drive-hud').classList.remove('hidden');
+    window.viewRoute(id);
+    if (lastKnownPos) map.flyTo(lastKnownPos, 18);
+    if (currentMode === 'mobile') { const sb = document.getElementById('sidebar'); if (!sb.classList.contains('is-collapsed')) toggleSidebarCollapse(); }
+    updateHUD();
+};
+
+// Drive mode for trail weaver routes (uses colored legs already on map)
+function enterDriveModeWithLegs(id) {
+    const r = savedRoutes.find(x => x.id === id); if (!r) return;
+    currentDriveRoute = r; isDriving = true;
+    document.getElementById('drive-hud').classList.remove('hidden');
+    if (lastKnownPos) map.flyTo(lastKnownPos, 18);
+    if (currentMode === 'mobile') { const sb = document.getElementById('sidebar'); if (!sb.classList.contains('is-collapsed')) toggleSidebarCollapse(); }
+    updateHUD();
+}
+
+function exitDriveMode() {
+    isDriving = false; currentDriveRoute = null;
+    document.getElementById('drive-hud').classList.add('hidden');
+    if (activeViewLine) { map.removeLayer(activeViewLine); activeViewLine = null; }
+    clearActiveLegs();
+}
+
+function updateHUD() {
+    if (!isDriving || !currentDriveRoute || !lastKnownPos) return;
+    const miles = calculateRemaining(lastKnownPos, currentDriveRoute.path);
+    document.getElementById('hud-miles').innerText   = miles.toFixed(2) + ' mi';
+    document.getElementById('hud-heading').innerText = getCardinal(userHeading);
+    document.getElementById('hud-time-car').innerText  = Math.max(1, Math.round((miles/30)*60)) + 'm';
+    document.getElementById('hud-time-bike').innerText = Math.max(1, Math.round((miles/12)*60)) + 'm';
+    document.getElementById('hud-time-walk').innerText = Math.max(1, Math.round((miles/3)*60))  + 'm';
+}
+
+// ── Location tracking ──
+function updateLocation(latlng) {
+    lastKnownPos = latlng;
+    if (userMarker) userMarker.setLatLng(latlng);
+    if (isDriving && currentDriveRoute) {
+        let nearestDist = Infinity;
+        currentDriveRoute.path.forEach(pt => { const d = L.latLng(latlng).distanceTo(L.latLng(pt)); if (d < nearestDist) nearestDist = d; });
+    }
+    const dot = document.getElementById('tracking-status');
+    dot.style.background = '#52b36e'; dot.classList.add('gps-active');
+    document.getElementById('gps-label').innerText = `Live GPS (±${Math.round(Math.random()*5+3)}m)`;
+    document.getElementById('gps-label').style.color = '#52b36e';
+    if (!document.getElementById('weather-icon').src || document.getElementById('weather-icon').src === window.location.href) loadWeatherIcon();
+}
+
+// ── Helpers ──
+function calculateDistance(points) {
+    let total = 0;
+    for (let i = 0; i < points.length-1; i++) total += L.latLng(points[i]).distanceTo(L.latLng(points[i+1]));
+    return (total * 0.000621371).toFixed(2);
+}
+function calculateRemaining(currentPos, routePoints) {
+    if (!currentPos || routePoints.length < 2) return 0;
+    let nearestIdx=0, minDist=Infinity;
+    routePoints.forEach((pt,idx) => { const d=L.latLng(currentPos).distanceTo(L.latLng(pt)); if(d<minDist){minDist=d;nearestIdx=idx;} });
+    let rem = L.latLng(currentPos).distanceTo(L.latLng(routePoints[nearestIdx]));
+    for (let i=nearestIdx; i<routePoints.length-1; i++) rem += L.latLng(routePoints[i]).distanceTo(L.latLng(routePoints[i+1]));
+    return rem * 0.000621371;
+}
+function getCardinal(angle) { return ['N','NE','E','SE','S','SW','W','NW'][Math.round(angle/45)%8]; }
+
+// ── Global search ──
+const searchPinIcon = L.divIcon({
+    className: 'search-pin-wrapper',
+    html: `<div class="pin-drop-anim"><svg width="28" height="28" fill="var(--amber-500)" viewBox="0 0 20 20" style="filter:drop-shadow(0 4px 8px rgba(0,0,0,0.4))"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg></div>`,
+    iconSize: [28,28], iconAnchor: [14,28]
+});
+async function performSearch(query) {
+    if (!query) return;
+    try {
+        const bias = lastKnownPos ? `&lat=${lastKnownPos.lat}&lon=${lastKnownPos.lng}` : '';
+        const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}${bias}&limit=1`);
+        const data = await res.json();
+        if (data?.features?.length > 0) {
+            const [lng, lat] = data.features[0].geometry.coordinates;
+            const name = data.features[0].properties.name || data.features[0].properties.street || query;
+            if (searchMarker) map.removeLayer(searchMarker);
+            searchMarker = L.marker([lat, lng], { icon: searchPinIcon }).addTo(map);
+            searchMarker.bindPopup(`<b style="font-size:12px;font-weight:700">${name}</b>`, { closeButton:false }).openPopup();
+            map.flyTo([lat, lng], 14);
+            if (currentMode === 'mobile') { const sb = document.getElementById('sidebar'); if (!sb.classList.contains('is-collapsed')) toggleSidebarCollapse(); }
+        }
+    } catch(err) { console.error('Search failed:', err); }
+}
+document.getElementById('global-search').onkeydown = (e) => { if (e.key === 'Enter') performSearch(e.target.value); };
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('#stop-text-input') && !e.target.closest('#stop-suggestions')) hideSuggestions();
+});
+</script>
+</body>
+</html>
