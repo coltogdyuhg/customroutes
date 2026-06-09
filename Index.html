@@ -223,84 +223,37 @@
 
         /* Route legend chips */
         .leg-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 9999px; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
-
-        /* ── Draggable Weather Widget ── */
-        #weather-widget {
-            position: fixed;
-            top: 72px;
-            right: 16px;
-            z-index: 1500;
-            width: 130px;
-            cursor: grab;
-            user-select: none;
-            touch-action: none;
-        }
-        #weather-widget:active { cursor: grabbing; }
-        .wx-card {
-            background: rgba(10,15,10,0.92);
-            border: 1px solid rgba(61,143,86,0.28);
-            border-radius: 18px;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            box-shadow: 0 12px 40px rgba(0,0,0,0.55);
-            overflow: hidden;
-            position: relative;
-        }
-        .wx-panel {
-            padding: 14px 14px 12px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            position: absolute;
-            width: 100%;
-            transition: opacity 0.45s ease, transform 0.45s ease;
-        }
-        .wx-panel.wx-active  { opacity: 1; transform: translateY(0);    position: relative; }
-        .wx-panel.wx-exit-up { opacity: 0; transform: translateY(-18px); pointer-events: none; }
-        .wx-panel.wx-enter-down { opacity: 0; transform: translateY(18px); pointer-events: none; }
-
-        .wx-emoji  { font-size: 30px; line-height: 1; }
-        .wx-label  { font-size: 9px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-muted); margin-top: 2px; }
-        .wx-value  { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; color: var(--text-primary); line-height: 1; }
-        .wx-unit   { font-size: 9px; font-weight: 600; color: var(--text-muted); }
-        .wx-desc   { font-size: 9px; font-weight: 600; color: var(--green-300); text-align: center; line-height: 1.3; margin-top: 1px; }
-
-        /* rain animation inside card */
-        .wx-rain-drops {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            overflow: hidden;
-            border-radius: 18px;
-        }
-        .wx-raindrop {
-            position: absolute;
-            width: 1.5px;
-            background: linear-gradient(to bottom, transparent, rgba(100,180,255,0.55));
-            border-radius: 1px;
-            animation: wx-fall linear infinite;
-        }
-        @keyframes wx-fall {
-            0%   { transform: translateY(-20px); opacity: 0; }
-            10%  { opacity: 1; }
-            90%  { opacity: 1; }
-            100% { transform: translateY(120px); opacity: 0; }
-        }
-        /* progress dots */
-        .wx-dots {
-            display: flex; gap: 4px; justify-content: center;
-            padding-bottom: 10px;
-        }
-        .wx-dot {
-            width: 4px; height: 4px; border-radius: 50%;
-            background: var(--surface-2);
-            transition: background 0.3s;
-        }
-        .wx-dot.active { background: var(--green-400); }
     </style>
 </head>
 <body class="noise">
+
+<!-- ══ WEATHER WIDGET ══ -->
+<div id="weather-widget" style="position:fixed;bottom:80px;right:20px;z-index:2500;touch-action:none;user-select:none;display:none">
+    <div id="weather-widget-inner" style="
+        width:90px;height:90px;border-radius:20px;
+        background:rgba(10,15,10,0.92);
+        border:1px solid rgba(61,143,86,0.3);
+        backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+        box-shadow:0 8px 32px rgba(0,0,0,0.5);
+        display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+        cursor:grab;overflow:hidden;position:relative;
+    ">
+        <!-- Slide container -->
+        <div id="wx-slide-container" style="width:100%;text-align:center;padding:0 6px;position:relative">
+            <div id="wx-slide" style="transition:opacity 0.4s,transform 0.4s;will-change:transform,opacity">
+                <div id="wx-icon" style="font-size:26px;line-height:1;margin-bottom:2px">⏳</div>
+                <div id="wx-value" style="font-family:'Syne',sans-serif;font-size:19px;font-weight:800;color:var(--text-primary);letter-spacing:-0.02em;line-height:1">--</div>
+                <div id="wx-label" style="font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-top:2px">LOADING</div>
+            </div>
+        </div>
+        <!-- Dots indicator -->
+        <div style="display:flex;gap:4px;margin-top:4px">
+            <div class="wx-dot" id="wx-dot-0" style="width:5px;height:5px;border-radius:50%;background:rgba(61,143,86,0.8);transition:background 0.3s"></div>
+            <div class="wx-dot" id="wx-dot-1" style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.18);transition:background 0.3s"></div>
+            <div class="wx-dot" id="wx-dot-2" style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.18);transition:background 0.3s"></div>
+        </div>
+    </div>
+</div>
 
 <!-- ══ DRIVE HUD ══ -->
 <div id="drive-hud" class="fixed top-16 right-4 z-[2000] hidden">
@@ -330,49 +283,6 @@
         <button onclick="exitDriveMode()" class="btn btn-ghost" style="width:36px;height:36px;border-radius:8px;padding:0;flex-shrink:0">
             <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
-    </div>
-</div>
-
-<!-- ══ DRAGGABLE WEATHER WIDGET ══ -->
-<div id="weather-widget">
-    <div class="wx-card">
-        <!-- Rain layer (always in DOM, shown/hidden by JS) -->
-        <div class="wx-rain-drops" id="wx-rain-layer"></div>
-
-        <!-- Panel container (fixed height so card doesn't jump) -->
-        <div id="wx-panels" style="min-height:110px;position:relative">
-            <!-- Panel 0: Temperature -->
-            <div class="wx-panel wx-active" id="wx-p0">
-                <div class="wx-emoji" id="wx-temp-emoji">⛅</div>
-                <div class="wx-value" id="wx-temp-val">72°</div>
-                <div class="wx-label">Today</div>
-                <div class="wx-desc" id="wx-temp-desc">Partly Cloudy</div>
-            </div>
-            <!-- Panel 1: Wind -->
-            <div class="wx-panel wx-enter-down" id="wx-p1">
-                <div class="wx-emoji">💨</div>
-                <div style="display:flex;align-items:baseline;gap:2px">
-                    <div class="wx-value" id="wx-wind-val">14</div>
-                    <div class="wx-unit">mph</div>
-                </div>
-                <div class="wx-label">Wind</div>
-                <div class="wx-desc" id="wx-wind-desc">SW Breeze</div>
-            </div>
-            <!-- Panel 2: Rain -->
-            <div class="wx-panel wx-enter-down" id="wx-p2">
-                <div class="wx-emoji" id="wx-rain-emoji">⛈️</div>
-                <div class="wx-value" id="wx-rain-val">80%</div>
-                <div class="wx-label">Rain</div>
-                <div class="wx-desc" id="wx-rain-desc">Thunderstorms</div>
-            </div>
-        </div>
-
-        <!-- Dots -->
-        <div class="wx-dots">
-            <div class="wx-dot active" id="wx-dot-0"></div>
-            <div class="wx-dot" id="wx-dot-1"></div>
-            <div class="wx-dot" id="wx-dot-2"></div>
-        </div>
     </div>
 </div>
 
@@ -584,9 +494,18 @@
     <div style="padding:24px;display:flex;flex-direction:column;gap:24px;flex:1">
         <div>
             <p style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Preferences</p>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
-                <span style="font-size:12px;font-weight:600;color:var(--text-primary)">Start at my location</span>
-                <label class="toggle"><input type="checkbox" id="settings-start-at-loc" onchange="syncToggles(this)"><span class="toggle-track"></span></label>
+            <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
+                    <span style="font-size:12px;font-weight:600;color:var(--text-primary)">Start at my location</span>
+                    <label class="toggle"><input type="checkbox" id="settings-start-at-loc" onchange="syncToggles(this)"><span class="toggle-track"></span></label>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
+                    <div>
+                        <span style="font-size:12px;font-weight:600;color:var(--text-primary)">Weather widget</span>
+                        <p style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:2px">Temp · Rain · Wind</p>
+                    </div>
+                    <label class="toggle"><input type="checkbox" id="settings-weather-widget" onchange="toggleWeatherWidget(this.checked)" checked><span class="toggle-track"></span></label>
+                </div>
             </div>
         </div>
     </div>
@@ -642,7 +561,9 @@
                 onblur="this.style.borderColor='var(--border-1)';this.style.background='var(--surface-1)'">
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-
+            <div id="weather-indicator" style="display:none;width:28px;height:28px;border-radius:8px;background:var(--surface-1);border:1px solid var(--border-1);align-items:center;justify-content:center">
+                <img id="weather-icon" src="" alt="Weather" style="width:20px;height:20px">
+            </div>
             <button onclick="toggleSettings()" class="btn btn-ghost" style="width:36px;height:36px;border-radius:9px;padding:0">
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             </button>
@@ -1631,7 +1552,7 @@ function updateLocation(latlng) {
     dot.style.background = '#52b36e'; dot.classList.add('gps-active');
     document.getElementById('gps-label').innerText = `Live GPS (±${Math.round(Math.random()*5+3)}m)`;
     document.getElementById('gps-label').style.color = '#52b36e';
-    // weather widget is always visible
+    if (!document.getElementById('weather-icon').src || document.getElementById('weather-icon').src === window.location.href) loadWeatherIcon();
 }
 
 // ── Helpers ──
@@ -1675,179 +1596,179 @@ async function performSearch(query) {
 }
 document.getElementById('global-search').onkeydown = (e) => { if (e.key === 'Enter') performSearch(e.target.value); };
 
-document.addEventListener('click', (e) => {
-    if (!e.target.closest('#stop-text-input') && !e.target.closest('#stop-suggestions')) hideSuggestions();
-});
 
+// ══════════════════════════════════════════════
 // ══ WEATHER WIDGET ══
-(function() {
-    // --- Simulated weather data (cycles realistically) ---
-    const wxData = {
-        temp: 72,
-        condition: 'partly-cloudy', // sunny | partly-cloudy | cloudy
-        windSpeed: 14,
-        windDir: 'SW',
-        rainChance: 80,
-        rainType: 'thunderstorms' // rain | thunderstorms | drizzle
-    };
+// ══════════════════════════════════════════════
 
-    // Condition config
-    const conditionMap = {
-        'sunny':         { emoji: '☀️',  desc: 'Sunny' },
-        'partly-cloudy': { emoji: '⛅',  desc: 'Partly Cloudy' },
-        'cloudy':        { emoji: '☁️',  desc: 'Mostly Cloudy' },
-    };
-    const windDirMap   = ['N','NE','E','SE','S','SW','W','NW'];
-    const rainTypeMap  = {
-        'drizzle':      { emoji: '🌦️', desc: 'Light Drizzle' },
-        'rain':         { emoji: '🌧️', desc: 'Rain Showers' },
-        'thunderstorms':{ emoji: '⛈️', desc: 'Thunderstorms' },
-    };
+const WX_API_KEY = '150ba377c3ca4474889150133260503';
+let wxData = { temp: null, rain: null, wind: null };
+let wxSlide = 0;
+let wxCycleTimer = null;
+let wxEnabled = true;
+let wxFetched = false;
+let wxDragActive = false;
 
-    function applyData() {
-        // Panel 0 – temp
-        const cond = conditionMap[wxData.condition] || conditionMap['partly-cloudy'];
-        document.getElementById('wx-temp-emoji').textContent = cond.emoji;
-        document.getElementById('wx-temp-val').textContent   = wxData.temp + '°';
-        document.getElementById('wx-temp-desc').textContent  = cond.desc;
-        // Panel 1 – wind
-        document.getElementById('wx-wind-val').textContent  = wxData.windSpeed;
-        document.getElementById('wx-wind-desc').textContent = wxData.windDir + ' Breeze';
-        // Panel 2 – rain
-        const rt = rainTypeMap[wxData.rainType] || rainTypeMap['rain'];
-        document.getElementById('wx-rain-emoji').textContent = rt.emoji;
-        document.getElementById('wx-rain-val').textContent   = wxData.rainChance + '%';
-        document.getElementById('wx-rain-desc').textContent  = rt.desc;
-    }
-    applyData();
+const wxSlides = [
+    { key: 'temp',  icon: () => getTempIcon(wxData.temp), getValue: () => wxData.temp !== null ? Math.round(wxData.temp) + '°F' : '--', label: 'TEMP' },
+    { key: 'rain',  icon: () => '🌧️',  getValue: () => wxData.rain !== null ? wxData.rain + '%' : '--', label: 'RAIN' },
+    { key: 'wind',  icon: () => '💨',  getValue: () => wxData.wind !== null ? wxData.wind + ' mph' : '--', label: 'WIND' },
+];
 
-    // --- Rain drops ---
-    const rainLayer = document.getElementById('wx-rain-layer');
-    function buildRainDrops() {
-        rainLayer.innerHTML = '';
-        for (let i = 0; i < 18; i++) {
-            const d = document.createElement('div');
-            d.className = 'wx-raindrop';
-            const left = Math.random() * 100;
-            const height = 10 + Math.random() * 14;
-            const dur = 0.55 + Math.random() * 0.5;
-            const delay = -(Math.random() * dur);
-            d.style.cssText = `left:${left}%;height:${height}px;animation-duration:${dur}s;animation-delay:${delay}s`;
-            rainLayer.appendChild(d);
+function getTempIcon(f) {
+    if (f === null) return '🌡️';
+    if (f >= 90) return '🔥';
+    if (f >= 75) return '☀️';
+    if (f >= 60) return '⛅';
+    if (f >= 45) return '🌥️';
+    return '🥶';
+}
+
+async function fetchWeatherData() {
+    if (!lastKnownPos) return;
+    try {
+        const { lat, lng } = lastKnownPos;
+        const [curRes, fRes] = await Promise.all([
+            fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${WX_API_KEY}&units=imperial`),
+            fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lng}&appid=${WX_API_KEY}&units=imperial&cnt=2`)
+        ]);
+        if (curRes.ok) {
+            const d = await curRes.json();
+            wxData.temp = d.main?.temp ?? null;
+            wxData.wind = d.wind?.speed != null ? Math.round(d.wind.speed) : null;
+            // also feed the existing weather icon
+            const iconCode = d.weather?.[0]?.icon;
+            if (iconCode) { const el = document.getElementById('weather-icon'); if(el){el.src=`https://openweathermap.org/img/wn/${iconCode}@2x.png`; document.getElementById('weather-indicator').style.display='flex';} }
         }
-    }
-    buildRainDrops();
-    rainLayer.style.display = 'none'; // hidden until rain panel
+        if (fRes.ok) {
+            const fd = await fRes.json();
+            const pop = fd.list?.[0]?.pop;
+            wxData.rain = pop != null ? Math.round(pop * 100) : 0;
+        }
+        wxFetched = true;
+        updateWxSlide(false);
+    } catch(e) { console.warn('wx fetch err', e); }
+}
 
-    // --- Panel rotation ---
-    let currentPanel = 0;
-    const panels = [
-        document.getElementById('wx-p0'),
-        document.getElementById('wx-p1'),
-        document.getElementById('wx-p2'),
-    ];
-    const dots = [
-        document.getElementById('wx-dot-0'),
-        document.getElementById('wx-dot-1'),
-        document.getElementById('wx-dot-2'),
-    ];
-
-    function showPanel(next) {
-        const prev = currentPanel;
-        if (prev === next) return;
-
-        // Exit current
-        panels[prev].classList.remove('wx-active');
-        panels[prev].classList.add('wx-exit-up');
-
-        // Prepare next
-        panels[next].classList.remove('wx-exit-up', 'wx-active');
-        panels[next].classList.add('wx-enter-down');
-        panels[next].style.position = 'absolute';
-        panels[next].style.top = '0'; panels[next].style.left = '0'; panels[next].style.width = '100%';
-
-        // Force reflow
-        void panels[next].offsetWidth;
-
-        // Animate in
-        panels[next].classList.remove('wx-enter-down');
-        panels[next].classList.add('wx-active');
-        panels[next].style.position = 'relative';
-        panels[next].style.top = ''; panels[next].style.left = ''; panels[next].style.width = '';
-
-        // After prev exits, reset it
+function updateWxSlide(animate = true) {
+    const s = wxSlides[wxSlide];
+    const slide = document.getElementById('wx-slide');
+    if (!slide) return;
+    if (animate) {
+        slide.style.opacity = '0'; slide.style.transform = 'translateY(8px)';
         setTimeout(() => {
-            panels[prev].classList.remove('wx-exit-up');
-            panels[prev].classList.add('wx-enter-down');
-            panels[prev].style.position = 'absolute';
-            panels[prev].style.top = '0'; panels[prev].style.left = '0'; panels[prev].style.width = '100%';
-        }, 480);
-
-        // Dots
-        dots[prev].classList.remove('active');
-        dots[next].classList.add('active');
-
-        // Rain layer
-        rainLayer.style.display = (next === 2) ? 'block' : 'none';
-
-        currentPanel = next;
+            document.getElementById('wx-icon').textContent = s.icon();
+            document.getElementById('wx-value').textContent = s.getValue();
+            document.getElementById('wx-label').textContent = s.label;
+            slide.style.opacity = '1'; slide.style.transform = 'translateY(0)';
+        }, 350);
+    } else {
+        document.getElementById('wx-icon').textContent = s.icon();
+        document.getElementById('wx-value').textContent = s.getValue();
+        document.getElementById('wx-label').textContent = s.label;
     }
+    // dots
+    for (let i = 0; i < 3; i++) {
+        const dot = document.getElementById(`wx-dot-${i}`);
+        if (dot) dot.style.background = i === wxSlide ? 'rgba(61,143,86,0.9)' : 'rgba(255,255,255,0.18)';
+    }
+}
 
-    // Auto-rotate every 3.5 seconds
-    setInterval(() => {
-        showPanel((currentPanel + 1) % 3);
+function startWxCycle() {
+    if (wxCycleTimer) clearInterval(wxCycleTimer);
+    wxCycleTimer = setInterval(() => {
+        wxSlide = (wxSlide + 1) % 3;
+        updateWxSlide(true);
     }, 3500);
+}
 
-    // --- Dragging ---
-    const widget = document.getElementById('weather-widget');
-    let dragging = false, startX, startY, origLeft, origTop;
-
-    function getPos() {
-        const r = widget.getBoundingClientRect();
-        return { left: r.left, top: r.top };
+function toggleWeatherWidget(on) {
+    wxEnabled = on;
+    const w = document.getElementById('weather-widget');
+    if (!w) return;
+    if (on) {
+        w.style.display = 'block';
+        if (!wxFetched && lastKnownPos) fetchWeatherData();
+        startWxCycle();
+    } else {
+        w.style.display = 'none';
+        if (wxCycleTimer) { clearInterval(wxCycleTimer); wxCycleTimer = null; }
     }
+    localStorage.setItem('wx_widget_enabled', on ? '1' : '0');
+}
 
-    function onDown(e) {
-        dragging = true;
-        const pos = getPos();
-        // Switch to absolute fixed positioning from wherever it is
-        widget.style.right  = 'auto';
-        widget.style.bottom = 'auto';
-        widget.style.left   = pos.left + 'px';
-        widget.style.top    = pos.top  + 'px';
+// ── Draggable ──
+function initWeatherWidgetDrag() {
+    const widget = document.getElementById('weather-widget');
+    if (!widget) return;
+    let startX, startY, origX, origY, isDragging = false;
 
+    function onStart(e) {
+        if (e.target.closest('.wx-dot')) return;
+        isDragging = true; wxDragActive = false;
         const touch = e.touches ? e.touches[0] : e;
-        startX = touch.clientX - pos.left;
-        startY = touch.clientY - pos.top;
-        widget.style.cursor = 'grabbing';
+        startX = touch.clientX; startY = touch.clientY;
+        const rect = widget.getBoundingClientRect();
+        origX = rect.left; origY = rect.top;
+        widget.querySelector('#weather-widget-inner').style.cursor = 'grabbing';
         e.preventDefault();
     }
     function onMove(e) {
-        if (!dragging) return;
+        if (!isDragging) return;
         const touch = e.touches ? e.touches[0] : e;
-        let nx = touch.clientX - startX;
-        let ny = touch.clientY - startY;
-        // Clamp within viewport
-        const W = window.innerWidth  - widget.offsetWidth;
-        const H = window.innerHeight - widget.offsetHeight;
-        nx = Math.max(0, Math.min(nx, W));
-        ny = Math.max(0, Math.min(ny, H));
-        widget.style.left = nx + 'px';
-        widget.style.top  = ny + 'px';
+        const dx = touch.clientX - startX, dy = touch.clientY - startY;
+        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) wxDragActive = true;
+        const newX = Math.max(0, Math.min(window.innerWidth - 90, origX + dx));
+        const newY = Math.max(0, Math.min(window.innerHeight - 90, origY + dy));
+        widget.style.left = newX + 'px'; widget.style.top = newY + 'px';
+        widget.style.right = 'auto'; widget.style.bottom = 'auto';
         e.preventDefault();
     }
-    function onUp() {
-        dragging = false;
-        widget.style.cursor = 'grab';
+    function onEnd() {
+        if (!isDragging) return;
+        isDragging = false;
+        widget.querySelector('#weather-widget-inner').style.cursor = 'grab';
+        const pos = { left: widget.style.left, top: widget.style.top };
+        localStorage.setItem('wx_widget_pos', JSON.stringify(pos));
     }
-
-    widget.addEventListener('mousedown',  onDown,  { passive: false });
-    widget.addEventListener('touchstart', onDown,  { passive: false });
-    document.addEventListener('mousemove', onMove, { passive: false });
+    widget.addEventListener('mousedown', onStart);
+    widget.addEventListener('touchstart', onStart, { passive: false });
+    document.addEventListener('mousemove', onMove);
     document.addEventListener('touchmove', onMove, { passive: false });
-    document.addEventListener('mouseup',   onUp);
-    document.addEventListener('touchend',  onUp);
-})();
+    document.addEventListener('mouseup', onEnd);
+    document.addEventListener('touchend', onEnd);
+}
+
+// ── Init after app loads ──
+const _origFinish = finishLoading;
+function finishLoading(mode) {
+    _origFinish(mode);
+    setTimeout(() => {
+        const savedOn = localStorage.getItem('wx_widget_enabled');
+        const on = savedOn === null ? true : savedOn === '1';
+        document.getElementById('settings-weather-widget').checked = on;
+        wxEnabled = on;
+        const widget = document.getElementById('weather-widget');
+        if (on) { widget.style.display = 'block'; startWxCycle(); }
+        // restore position
+        try {
+            const pos = JSON.parse(localStorage.getItem('wx_widget_pos') || 'null');
+            if (pos?.left && pos?.top) { widget.style.left = pos.left; widget.style.top = pos.top; widget.style.right = 'auto'; widget.style.bottom = 'auto'; }
+        } catch(e) {}
+        initWeatherWidgetDrag();
+    }, 300);
+}
+
+// ── Hook into GPS to trigger first fetch ──
+const _origUpdateLoc = updateLocation;
+function updateLocation(latlng) {
+    _origUpdateLoc(latlng);
+    if (wxEnabled && !wxFetched) fetchWeatherData();
+}
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('#stop-text-input') && !e.target.closest('#stop-suggestions')) hideSuggestions();
+});
 </script>
 </body>
 </html>
