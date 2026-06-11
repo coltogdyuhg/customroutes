@@ -527,6 +527,9 @@
                         <div style="display:flex;align-items:center;gap:7px;font-size:10px;font-weight:500;color:var(--text-muted)">
                             <span style="color:var(--amber-400)">📊</span> Delta badge shows if you're ahead or behind
                         </div>
+                        <div style="display:flex;align-items:center;gap:7px;font-size:10px;font-weight:600;color:var(--text-muted);margin-top:2px;padding-top:8px;border-top:1px solid var(--border-1)">
+                            <span style="font-size:11px">🚶🏃🚲</span> Walking, running &amp; cycling only
+                        </div>
                     </div>
                     <button onclick="clearAllGhostData()" style="margin-top:12px;width:100%;height:32px;border-radius:8px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);color:rgba(252,165,165,0.7);font-size:10px;font-weight:700;cursor:pointer;letter-spacing:0.04em;transition:all 0.15s" onmouseover="this.style.background='rgba(239,68,68,0.12)';this.style.color='#fca5a5'" onmouseout="this.style.background='rgba(239,68,68,0.06)';this.style.color='rgba(252,165,165,0.7)'">
                         Clear all ghost records
@@ -539,23 +542,38 @@
             </div>
         </div>
 
-        <!-- Navigator Voice -->
+        <!-- Navigator Voice — Coming Soon -->
         <div>
-            <p style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Navigator Voice</p>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
-                <div style="min-width:0;padding-right:10px"><span style="font-size:12px;font-weight:600;color:var(--text-primary)">Voice guidance</span><p style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:2px">Energetic, live turn-by-turn callouts</p></div>
-                <label class="toggle"><input type="checkbox" id="settings-voice" onchange="Navigator.setEnabled(this.checked)"><span class="toggle-track"></span></label>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <p style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">Navigator Voice</p>
+                <span style="font-size:8px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;padding:3px 8px;border-radius:9999px;background:rgba(212,117,42,0.15);border:1px solid rgba(212,117,42,0.3);color:var(--amber-400)">Coming Soon</span>
             </div>
-            <div id="voice-detail-wrap" style="margin-top:10px;padding:14px 16px;border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1)">
-                <p style="font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">How much should it talk?</p>
-                <div class="seg" id="voice-level-seg">
-                    <button class="seg-btn" data-level="low" onclick="Navigator.setLevel('low')">Low</button>
-                    <button class="seg-btn" data-level="medium" onclick="Navigator.setLevel('medium')">Medium</button>
-                    <button class="seg-btn" data-level="high" onclick="Navigator.setLevel('high')">High</button>
+            <div style="border-radius:12px;background:var(--surface-1);border:1px solid var(--border-1);overflow:hidden;opacity:0.55;pointer-events:none;user-select:none">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px">
+                    <div style="min-width:0;padding-right:10px">
+                        <span style="font-size:12px;font-weight:600;color:var(--text-primary)">Voice guidance</span>
+                        <p style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:2px">Energetic, live turn-by-turn callouts</p>
+                    </div>
+                    <label class="toggle" style="pointer-events:none"><input type="checkbox" id="settings-voice" disabled><span class="toggle-track"></span></label>
                 </div>
-                <p id="voice-level-hint" style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:10px;line-height:1.45"></p>
-                <button id="voice-test-btn" onclick="Navigator.test()" class="btn btn-ghost" style="width:100%;height:36px;font-size:11px;font-weight:700;margin-top:12px;gap:6px"><svg width="13" height="13" fill="currentColor" viewBox="0 0 20 20"><path d="M6 4l10 6-10 6V4z"/></svg>Test voice</button>
+                <div style="padding:0 16px 14px;border-top:1px solid var(--border-1);padding-top:12px">
+                    <div class="seg" id="voice-level-seg" style="pointer-events:none">
+                        <button class="seg-btn" data-level="low">Low</button>
+                        <button class="seg-btn" data-level="medium">Medium</button>
+                        <button class="seg-btn" data-level="high">High</button>
+                    </div>
+                    <button id="voice-test-btn" class="btn btn-ghost" style="width:100%;height:36px;font-size:11px;font-weight:700;margin-top:10px;gap:6px;pointer-events:none"><svg width="13" height="13" fill="currentColor" viewBox="0 0 20 20"><path d="M6 4l10 6-10 6V4z"/></svg>Test voice</button>
+                </div>
             </div>
+            <div style="display:flex;align-items:flex-start;gap:9px;margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(212,117,42,0.06);border:1px solid rgba(212,117,42,0.15)">
+                <span style="font-size:14px;flex-shrink:0;margin-top:1px">🔔</span>
+                <p style="font-size:10px;font-weight:500;color:var(--text-muted);line-height:1.5">Voice navigation is in development. We're fine-tuning turn detection and timing — it'll be ready in a future update.</p>
+            </div>
+        </div>
+        <!-- Hidden inputs to keep JS from erroring -->
+        <div style="display:none">
+            <div id="voice-detail-wrap"></div>
+            <p id="voice-level-hint"></p>
         </div>
 
         <!-- Highway Traffic -->
@@ -681,6 +699,15 @@ const OFF_ROUTE_THRESHOLD = 50;
 
 // ══ Ghost Mode enabled flag ══
 let ghostModeEnabled = localStorage.getItem('ghost_mode_enabled') !== 'false'; // default ON
+// Ghost is only meaningful for foot/bike modes — not for motorised vehicles
+const GHOST_UNSUPPORTED_VEHICLES = ['car', 'escooter', 'ebike'];
+function isGhostSupportedRoute(route) {
+    // Routes store their vehicle type in the name prefix (e.g. "car → Starbucks")
+    // Also check the global twVehicle for freshly-created routes
+    if (!route) return true; // unknown = allow, safer
+    const nameLower = (route.name || '').toLowerCase();
+    return !GHOST_UNSUPPORTED_VEHICLES.some(v => nameLower.startsWith(v + ' ') || nameLower.startsWith(v + '\u2192') || nameLower.startsWith(v + '→'));
+}
 
 function setGhostModeEnabled(on) {
     ghostModeEnabled = on;
@@ -795,6 +822,9 @@ const Ghost = {
 
     startRecording(routeId) {
         if (!ghostModeEnabled) return; // respect setting
+        // Skip ghost recording for motorised vehicle routes
+        const route = savedRoutes.find(r => r.id === routeId);
+        if (!isGhostSupportedRoute(route)) return;
         this.recording = true;
         this.recordingTrack = [];
         this.recordingStart = Date.now();
@@ -1087,8 +1117,10 @@ const Navigator = {
     },
 
     init() {
+        // Voice navigation is disabled (coming soon) — only paint level UI, don't hook toggle
         const t = document.getElementById('settings-voice');
-        if (t) t.checked = this.enabled;
+        if (t) { t.checked = false; t.disabled = true; }
+        this.enabled = false; // force off
         this.paintLevel();
         this.refreshDetailVisibility();
         this.loadVoice();
@@ -1479,9 +1511,10 @@ function updateSavedList() {
         const hasPB = Ghost.hasRecords(r.id);
         const best  = hasPB ? Ghost.getBest(r.id) : null;
 
-        // Ghost button — only show race option if ghost mode is enabled AND there's a PB
+        // Ghost button — only show race option if ghost mode is enabled, route is supported, AND there's a PB
+        const ghostSupported = isGhostSupportedRoute(r);
         let goBtn;
-        if (ghostModeEnabled && hasPB) {
+        if (ghostModeEnabled && ghostSupported && hasPB) {
             goBtn = `<button onclick="enterDriveMode(${r.id})" class="btn btn-ghost-mode" style="height:32px;font-size:10px;font-weight:800;border-radius:8px;gap:4px"><span>👻</span>Race!</button>`;
         } else {
             goBtn = `<button onclick="enterDriveMode(${r.id})" class="btn btn-primary" style="height:32px;font-size:10px;font-weight:700;border-radius:8px">Go ↗</button>`;
@@ -1495,6 +1528,12 @@ function updateSavedList() {
                 <span style="font-size:11px;opacity:0.5">👻</span>
                 <span>Ghost Mode is off — enable in Settings</span>
             </div>`;
+        } else if (!ghostSupported) {
+            // Vehicle type doesn't support ghost (car / e-scooter / e-bike)
+            ghostArea = `<div class="ghost-disabled-hint">
+                <span style="font-size:11px;opacity:0.4">👻</span>
+                <span>Ghost not available for this mode</span>
+            </div>`;
         } else if (hasPB && best) {
             // Has a personal best — show PB badge
             ghostArea = `<div style="display:flex;align-items:center;gap:5px;margin-top:7px;padding:5px 8px;border-radius:7px;background:rgba(107,63,181,0.12);border:1px solid rgba(139,85,212,0.2)">
@@ -1503,7 +1542,7 @@ function updateSavedList() {
                  <span style="font-size:9px;color:var(--text-muted);font-weight:500;margin-left:2px">PB · ${best.date}</span>
                </div>`;
         } else {
-            // Ghost mode ON but no records yet — show "Ghost available" invite
+            // Ghost mode ON, supported, but no records yet — show "Ghost available" invite
             ghostArea = `<div class="ghost-available-badge">
                 <span class="ghost-icon">👻</span>
                 <span class="label">Ghost available</span>
@@ -1940,7 +1979,8 @@ function showSimpleToast(msg,isError=false){
 
 // ── Drive mode — with Ghost Mode integration ──
 window.enterDriveMode = (id) => {
-    if (ghostModeEnabled && Ghost.hasRecords(id)) {
+    const r = savedRoutes.find(x => x.id === id);
+    if (ghostModeEnabled && isGhostSupportedRoute(r) && Ghost.hasRecords(id)) {
         openGhostModal(id);
     } else {
         beginDriveWithGhost(id, false);
@@ -1948,7 +1988,8 @@ window.enterDriveMode = (id) => {
 };
 
 function enterDriveModeWithLegs(id) {
-    if (ghostModeEnabled && Ghost.hasRecords(id)) {
+    const r = savedRoutes.find(x => x.id === id);
+    if (ghostModeEnabled && isGhostSupportedRoute(r) && Ghost.hasRecords(id)) {
         openGhostModal(id);
     } else {
         _enterDriveModeWithLegsActual(id, false);
@@ -1985,7 +2026,8 @@ window.beginDriveWithGhost = function(routeId, useGhost) {
 
 const _origEnterDriveModeWithLegs = enterDriveModeWithLegs;
 window.enterDriveModeWithLegs = function(id) {
-    if (ghostModeEnabled && Ghost.hasRecords(id)) {
+    const r = savedRoutes.find(x => x.id === id);
+    if (ghostModeEnabled && isGhostSupportedRoute(r) && Ghost.hasRecords(id)) {
         Ghost._pendingIsLegs = true;
         openGhostModal(id);
     } else {
